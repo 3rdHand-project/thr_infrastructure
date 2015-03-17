@@ -1,6 +1,7 @@
 # Command describes a command executable on the robot and its parameters
 
 # Constants defining the type of command
+uint8 WAIT=0
 uint8 HOLD=1
 uint8 GIVE=2
 uint8 type
