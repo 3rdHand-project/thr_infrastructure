@@ -1,0 +1,7 @@
+# GetNextAction: Ask to the predictor what is the next action to execute
+
+# The current state of the scene
+SceneState scene_state
+---
+# Predictor returns the command to execute and its parameters
+Command command
