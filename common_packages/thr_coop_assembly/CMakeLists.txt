@@ -48,7 +48,7 @@ find_package(catkin REQUIRED
 # Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   Command.msg
+   Action.msg
    Give.msg
    Hold.msg
    Predicate.msg
@@ -62,7 +62,7 @@ find_package(catkin REQUIRED
    GetNextAction.srv
    GetSceneState.srv
    GetUserCommands.srv
-   SetReward.srv
+   SetNewTrainingExample.srv
  )
 
 ## Generate actions in the 'action' folder

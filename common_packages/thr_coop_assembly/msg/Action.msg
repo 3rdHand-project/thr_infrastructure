@@ -1,4 +1,4 @@
-# Command describes a command executable on the robot and its parameters
+# Action describes a command executable on the robot and its parameters
 
 # Constants defining the type of command
 uint8 WAIT=0

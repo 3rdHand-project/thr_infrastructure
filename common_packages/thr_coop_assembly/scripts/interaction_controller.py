@@ -11,7 +11,7 @@ class InteractionController(object):
         self.running = True
         self.scene_before_action = None
         self.current_scene = None
-        self.current_command = None
+        self.current_action = None
         self.user_commands = []
 
         # Parameters to be tweaked
@@ -43,8 +43,8 @@ class InteractionController(object):
         return len(self.user_commands)
 
     def send_reward(self, good):
-        request = SetRewardRequest()
-        request.command = self.current_command
+        request = SetNewTrainingExampleRequest()
+        request.action = self.current_action
         request.scene_state = self.scene_before_action
         request.good = good
         try:
@@ -64,29 +64,29 @@ class InteractionController(object):
     def predict(self):
         request = GetNextActionRequest()
         request.scene_state = self.scene_before_action
-        predicted_cmd = Command(type=Command.WAIT)
+        predicted_cmd = Action(type=Action.WAIT)
         try:
             predict = rospy.ServiceProxy(self.predictor_service, GetNextAction)
             predicted_cmd = predict(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
-        return Command
+        return predicted_cmd
     ###################################################################################################################
 
     def command_mapper(self, usercommand):
         """
-        Map symbolic user commands in geometric system commands
+        Map symbolic user commands in system actions
         :param usercommand:
-        :return: The system command passed in input with updated geometric information, or wait if mapping unknown
+        :return: The system action passed in input, or wait if mapping unknown
         """
-        c = Command()
-        c.type = Command.WAIT
+        c = Action()
+        c.type = Action.WAIT
         if usercommand.type==UserCommand.GIVE:
-            c.type = Command.GIVE
+            c.type = Action.GIVE
             c.give = Give()
             raise Exception("Must tf.lookupTransform() and fill the parameters of Action")
         elif usercommand.type==UserCommand.HOLD:
-            c.type = Command.HOLD
+            c.type = Action.HOLD
             c.hold = Hold()
         return c
 
@@ -109,19 +109,19 @@ class InteractionController(object):
             cmd = self.predict()
             self.run_action(cmd)
             self.user_commands = []
-            self.current_command = None
+            self.current_action = None
             self.interaction_loop_rate.sleep()
 
-    def run_action(self, command):
-        self.current_command = command
+    def run_action(self, action):
+        self.current_action = action
 
-        if command.type!=Command.WAIT:
+        if action.type!=Action.WAIT:
             self.update_scene()
             self.scene_before_action = deepcopy(self.current_scene)
-            goal = RunActionActionGoal(command)
+            goal = RunActionActionGoal(action)
 
             # Action is started
-            rospy.loginfo("Starting action {}".format(command.type))
+            rospy.loginfo("Starting action {}".format(action.type))
             self.runaction_client.send_goal(goal)   # feedback and transition callbacks, it's here
             while self.runaction_client.last_status_msg in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
                 if self.get_user_commands():
@@ -138,10 +138,10 @@ class InteractionController(object):
                 # Check for success or failure
                 state = self.run_action_client.get_state()
                 if state == GoalStatus.SUCCEEDED:
-                    rospy.loginfo("Action {} succeeded!".format(self.current_command.type))
+                    rospy.loginfo("Action {} succeeded!".format(self.current_action.type))
                     self.send_reward(True)
                 elif set(self.get_user_commands_types()).intersection(set(self.bad_user_commands)):
-                    rospy.logwarn("Cancelling action {}".format(self.current_command.type))
+                    rospy.logwarn("Cancelling action {}".format(self.current_action.type))
                     self.runaction_client.cancel_goal()
                     self.send_reward(False)
                     self.run_action(self.command_mapper(self.user_commands[0]))
