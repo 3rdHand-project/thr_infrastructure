@@ -8,6 +8,7 @@ from thr_coop_assembly.msg import SceneState, Predicate
 class SceneStateManager(object):
     def __init__(self):
         self.state = SceneState()
+        self.world = "base"
         try:
             self.objects = rospy.get_param('/optitrack/objects')
         except KeyError:
@@ -22,7 +23,7 @@ class SceneStateManager(object):
 
     def update_state(self):
         for obj in self.objects:
-            self.poses[obj] = self.tfl.lookupTransform("base", obj, rospy.Time(0))
+            self.poses[obj] = self.tfl.lookupTransform(self.world, obj, rospy.Time(0))
         self.generate_predicate()
 
     def handle_request(self, req):

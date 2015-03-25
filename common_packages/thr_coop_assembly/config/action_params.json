@@ -1,0 +1,9 @@
+{
+    "sleep_step": 0.1,
+    "action_duration": 5.0,
+    "action_num_points": 150
+    "give": {
+        "sphere_radius": 0.25
+        "give_pose": [[0, 0, 0], [0, 0, 0, 1]]
+    }
+}
