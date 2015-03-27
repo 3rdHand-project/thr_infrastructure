@@ -2,8 +2,10 @@
     "sleep_step": 0.1,
     "action_speed": 0.2,
     "action_num_points": 150,
+    "releasing_disturbance": 0.01,
+    "releasing_min_time": 2.0,
     "give": {
-        "sphere_radius": 0.25,
+        "sphere_radius": 0.30,
         "give_pose": [[0.05, 0, 0.2], [-0.5, -0.5, 0.5, 0.5]]
     }
 }
