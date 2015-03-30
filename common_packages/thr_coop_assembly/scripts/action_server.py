@@ -3,6 +3,7 @@ import rospy
 import rospkg
 import json
 import tf
+import time
 import actionlib
 import moveit_commander
 import move_group_extras
@@ -192,8 +193,9 @@ class ActionServer:
 
 
         # 4. Wait for human wrist and approach object until we are close enough to release object
+        rospy.loginfo("Bringing {} to human wrist".format(object))
         while not self.should_interrupt():
-            rospy.loginfo("Bringing {} to human wrist".format(object))
+            can_release = False
             try:
                 distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform("left_gripper", "/human/wrist", rospy.Time(0)))
             except:
@@ -211,18 +213,18 @@ class ActionServer:
                 give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_duration('left_gripper', world_give_pose), self.action_params['action_num_points'])
                 #self.arms['left'].execute(give_traj)
                 self.low_level_execute_workaround('left', give_traj)
+                t0 = time.time()
             else:
-                break
+                can_release = True
 
-        # 3. Wait for position disturbance of the gripper and open it to release object
-        rospy.sleep(self.action_params['releasing_min_time'])   # Minimum compulsory time before releasing object (absorbing motion noise)
-        while not self.should_interrupt():
-            perturbation = self.extract_perturbation('left')
-            rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['releasing_disturbance']))
-            if perturbation>self.action_params['releasing_disturbance']:
-                rospy.loginfo("Releasing suction for {}".format(object))
-                self.grippers['left'].open(True)
-                break
+            # 5. Wait for position disturbance of the gripper and open it to release object
+            if can_release and time.time()-t0 > self.action_params['releasing_min_time']:   # Minimum compulsory time after t0 before releasing object (absorbing motion noise)
+                perturbation = self.extract_perturbation('left')
+                rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['releasing_disturbance']))
+                if perturbation>self.action_params['releasing_disturbance']:
+                    rospy.loginfo("Releasing suction for {}".format(object))
+                    self.grippers['left'].open(True)
+                    break
             else:
                 rospy.sleep(self.action_params['sleep_step'])
 
