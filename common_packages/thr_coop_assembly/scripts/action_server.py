@@ -99,21 +99,6 @@ class ActionServer:
         self.server.set_succeeded(self.result.result)
         return succeeded
 
-    def action_duration(self, start_pose, goal_pose):
-        """
-        Outputs the duration to go from start_state to goal_state based on the speed in config files.
-        If no start_pose is provided the current pose is used as start pose
-        :param start_pose: A PoseStamped() defining start pose or the name of the tf
-        :param goal_pose: A PoseStamped() defining goal pose or the name of the tf
-        :return: duration to go from start_pose to goal_pose in seconds (float)
-        """
-        speed = self.action_params['action_speed']  # Speed of action in m/s
-        if isinstance(start_pose, str):
-            start_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, start_pose, rospy.Time(0)), self.world)
-        if isinstance(goal_pose, str):
-            goal_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, goal_pose, rospy.Time(0)), self.world)
-        return transformations.distance(start_pose, goal_pose)/float(speed)
-
     def low_level_execute_workaround(self, side, rt):
         """
         Since moveit_commander.execute() either blocks threads or does not give feedback on trajectory, this is an
@@ -159,9 +144,9 @@ class ActionServer:
         if not goal_action:
             rospy.logerr("Unable to reach give pose")
             return self.set_motion_ended(False)
-        approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_duration('left_gripper', world_approach_pose), self.action_params['action_num_points'])
-        action_traj = self.extras['left'].interpolate_joint_space(goal_action, self.action_duration(world_approach_pose, world_action_pose), self.action_params['action_num_points'], goal_approach)
-        reapproach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_duration(world_action_pose, world_approach_pose), self.action_params['action_num_points'], goal_action)
+        approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
+        action_traj = self.extras['left'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8, start=goal_approach)
+        reapproach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8, start=goal_action)
 
 
         # 1. Go to approach pose
@@ -210,7 +195,7 @@ class ActionServer:
                     rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
                     rospy.sleep(self.action_params['sleep_step'])
                     continue
-                give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_duration('left_gripper', world_give_pose), self.action_params['action_num_points'])
+                give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
                 #self.arms['left'].execute(give_traj)
                 self.low_level_execute_workaround('left', give_traj)
                 t0 = time.time()
@@ -218,10 +203,10 @@ class ActionServer:
                 can_release = True
 
             # 5. Wait for position disturbance of the gripper and open it to release object
-            if can_release and time.time()-t0 > self.action_params['releasing_min_time']:   # Minimum compulsory time after t0 before releasing object (absorbing motion noise)
+            if can_release and time.time()-t0 > self.action_params['give']['releasing_min_time']:   # Minimum compulsory time after t0 before releasing object (absorbing motion noise)
                 perturbation = self.extract_perturbation('left')
-                rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['releasing_disturbance']))
-                if perturbation>self.action_params['releasing_disturbance']:
+                rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['give']['releasing_disturbance']))
+                if perturbation>self.action_params['give']['releasing_disturbance']:
                     rospy.loginfo("Releasing suction for {}".format(object))
                     self.grippers['left'].open(True)
                     break
@@ -231,7 +216,7 @@ class ActionServer:
         # 4. Return to pick approach pose in order not to bother human
         if not self.should_interrupt():
             rospy.loginfo("Going back to picking area")
-            ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_duration('left_gripper', world_approach_pose), self.action_params['action_num_points'])
+            ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
 
         # TODO execute True=>False with asynchronous motion
@@ -241,9 +226,87 @@ class ActionServer:
         # Parameters could be "/thr/handle 0", it asks the robot to hold the handle using its first hold pose
         rospy.loginfo("[ActionServer] Executing hold{}".format(str(parameters)))
         object = parameters[0]
-        pose = parameters[1]
-        pass
+        pose = int(parameters[1])
 
+        # 0. Trajectories generation
+        starting_state = self.extras['right'].get_current_state()
+        try:
+            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][0]['approach'], object)  # Pose of the approach
+            world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][0]['action'], object)  # Pose of the pickup (named action)
+        except:
+            rospy.logerr("Object {} not found".format(object))
+            return self.set_motion_ended(False)
+        goal_approach = self.extras['right'].get_ik(world_approach_pose)
+        goal_action = self.extras['right'].get_ik(world_action_pose, goal_approach)
+        if not goal_approach:
+            rospy.logerr("Unable to reach approach pose")
+            return self.set_motion_ended(False)
+        if not goal_action:
+            rospy.logerr("Unable to reach hold pose")
+            return self.set_motion_ended(False)
+        approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
+        action_traj = self.extras['right'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.1, ka_max=0.1, start=goal_approach)
+        reapproach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_action)
+        leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
+
+
+        # 1. Go to approach pose
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Approaching {}".format(object))
+        #self.arms['right'].execute(approach_traj, False)
+        self.low_level_execute_workaround('right', approach_traj)
+
+        # 2. Go to "hold" pose
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Grasping {}".format(object))
+        #self.arms['right'].execute(action_traj)
+        self.low_level_execute_workaround('right', action_traj)
+
+        # 3. Close gripper to grasp object
+        if not self.should_interrupt():
+            rospy.loginfo("Closing gripper around {}".format(object))
+            self.grippers['right'].close(True)
+
+        # 4. Wait for interruption
+        last_seen_working = -1 # timestamp storing when the human has been last seen in the working area, -1 = never seen
+        while not self.should_interrupt():
+            try:
+                distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform("right_gripper", "/human/wrist", rospy.Time(0)))
+            except:
+                rospy.logwarn("Human wrist not found")
+                distance_wrist_gripper = float('inf')
+            if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
+                last_seen_working = time.time()
+                rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
+            elif time.time()-last_seen_working > self.action_params['hold']['releasing_min_time']:
+                break
+            rospy.sleep(self.action_params['sleep_step'])
+
+        # 5. Release object
+        rospy.loginfo("Human has stopped working with {}, now releasing".format(object))
+        if not self.should_interrupt():
+            rospy.loginfo("Releasing {}".format(object))
+            self.grippers['right'].open(True)
+
+        # 6. Go to approach pose again (to avoid touching the fingers)
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Reapproaching {}".format(object))
+        #self.arms['right'].execute(approach_traj, False)
+        self.low_level_execute_workaround('right', reapproach_traj)
+
+        # 7. Return home
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Returning in idle mode")
+        #self.arms['right'].execute(approach_traj, False)
+        self.low_level_execute_workaround('right', leaving_traj)
+
+
+        # TODO execute True=>False with asynchronous motion
+        return self.set_motion_ended(not self.should_interrupt())
 
 if __name__ == '__main__':
     rospy.init_node('action_server')
