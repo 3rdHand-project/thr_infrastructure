@@ -9,6 +9,7 @@ import moveit_commander
 import move_group_extras
 import transformations
 from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAction
+from copy import deepcopy
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
 from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
@@ -103,8 +104,9 @@ class ActionServer:
         """
         Since moveit_commander.execute() either blocks threads or does not give feedback on trajectory, this is an
         ugly workaround to send a RobotTrajectory() to a FollowJointTrajectory action client. It comes with the
-
-        :return:
+        :param side: 'right' or 'left'
+        :param rt: The RobotTrajectory to execute
+        :return: None
         """
         ftg = FollowJointTrajectoryGoal()
         ftg.trajectory = rt.joint_trajectory
@@ -222,6 +224,8 @@ class ActionServer:
         # TODO execute True=>False with asynchronous motion
         return self.set_motion_ended(not self.should_interrupt())
 
+
+
     def execute_hold(self, parameters):
         # Parameters could be "/thr/handle 0", it asks the robot to hold the handle using its first hold pose
         rospy.loginfo("[ActionServer] Executing hold{}".format(str(parameters)))
@@ -231,24 +235,21 @@ class ActionServer:
         # 0. Trajectories generation
         starting_state = self.extras['right'].get_current_state()
         try:
-            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][0]['approach'], object)  # Pose of the approach
-            world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][0]['action'], object)  # Pose of the pickup (named action)
+            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)  # Pose of the approach
+            #world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['action'], object)  # Pose of the pickup (named action)
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.set_motion_ended(False)
         goal_approach = self.extras['right'].get_ik(world_approach_pose)
-        goal_action = self.extras['right'].get_ik(world_action_pose, goal_approach)
+        #goal_action = self.extras['right'].get_ik(world_action_pose, goal_approach)
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.set_motion_ended(False)
-        if not goal_action:
-            rospy.logerr("Unable to reach hold pose")
-            return self.set_motion_ended(False)
+        #if not goal_action:
+        #    rospy.logerr("Unable to reach hold pose")
+        #    return self.set_motion_ended(False)
         approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
-        action_traj = self.extras['right'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.1, ka_max=0.1, start=goal_approach)
-        reapproach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_action)
-        leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
-
+        #action_traj = self.extras['right'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.1, ka_max=0.1, start=goal_approach)
 
         # 1. Go to approach pose
         if self.should_interrupt():
@@ -262,6 +263,7 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Grasping {}".format(object))
         #self.arms['right'].execute(action_traj)
+        action_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['descent'], object, 3)
         self.low_level_execute_workaround('right', action_traj)
 
         # 3. Close gripper to grasp object
@@ -269,7 +271,15 @@ class ActionServer:
             rospy.loginfo("Closing gripper around {}".format(object))
             self.grippers['right'].close(True)
 
-        # 4. Wait for interruption
+        # 4. Force down
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Forcing down on {}".format(object))
+        #self.arms['right'].execute(action_traj)
+        force_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['force'], object, 1)
+        self.low_level_execute_workaround('right', force_traj)
+
+        # 5. Wait for interruption
         last_seen_working = -1 # timestamp storing when the human has been last seen in the working area, -1 = never seen
         while not self.should_interrupt():
             try:
@@ -284,20 +294,24 @@ class ActionServer:
                 break
             rospy.sleep(self.action_params['sleep_step'])
 
-        # 5. Release object
+        # 6. Release object
         rospy.loginfo("Human has stopped working with {}, now releasing".format(object))
         if not self.should_interrupt():
             rospy.loginfo("Releasing {}".format(object))
             self.grippers['right'].open(True)
 
-        # 6. Go to approach pose again (to avoid touching the fingers)
+        # Generation of next trajectories starting from the current state
+        reapproach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
+        leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
+
+        # 7. Go to approach pose again (to avoid touching the fingers)
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Reapproaching {}".format(object))
         #self.arms['right'].execute(approach_traj, False)
         self.low_level_execute_workaround('right', reapproach_traj)
 
-        # 7. Return home
+        # 8. Return home
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Returning in idle mode")
