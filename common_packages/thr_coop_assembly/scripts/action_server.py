@@ -242,9 +242,8 @@ class ActionServer:
                 ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
 
-        # TODO execute True=>False with asynchronous motion
+        rospy.loginfo("[ActionServer] Executed give{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.set_motion_ended(not self.should_interrupt())
-
 
 
     def execute_hold(self, parameters):
@@ -255,22 +254,27 @@ class ActionServer:
 
         # 0. Trajectories generation
         starting_state = self.extras['right'].get_current_state()
+        starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "right_gripper", rospy.Time(0)))
         try:
             world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)  # Pose of the approach
             #world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['action'], object)  # Pose of the pickup (named action)
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.set_motion_ended(False)
+
+        # Comment: goal approach is needed in both interpolate and planning mode (planning = for reapproach)
         goal_approach = self.extras['right'].get_ik(world_approach_pose)
-        #goal_action = self.extras['right'].get_ik(world_action_pose, goal_approach)
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.set_motion_ended(False)
-        #if not goal_action:
-        #    rospy.logerr("Unable to reach hold pose")
-        #    return self.set_motion_ended(False)
-        approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
-        #action_traj = self.extras['right'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.1, ka_max=0.1, start=goal_approach)
+
+        if self.planning:
+            approach_traj = self.arms['right'].plan(world_approach_pose.pose)
+            if len(approach_traj.joint_trajectory.points)<1:
+                rospy.logerr("Sorry, object {} is too far away for me".format(object))
+                return self.set_motion_ended(False)
+        else:
+            approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
 
         # 1. Go to approach pose
         if self.should_interrupt():
@@ -323,7 +327,6 @@ class ActionServer:
 
         # Generation of next trajectories starting from the current state
         reapproach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
-        leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
 
         # 7. Go to approach pose again (to avoid touching the fingers)
         if self.should_interrupt():
@@ -336,11 +339,16 @@ class ActionServer:
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Returning in idle mode")
-        #self.arms['right'].execute(approach_traj, False)
+        if self.planning:
+            leaving_traj = self.arms['right'].plan(starting_pose.pose)
+            if len(leaving_traj.joint_trajectory.points)<1:
+                rospy.logerr("Sorry, I can't find a path to go back to idle position ")
+                return self.set_motion_ended(False)
+        else:
+            leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
         self.low_level_execute_workaround('right', leaving_traj)
 
-
-        # TODO execute True=>False with asynchronous motion
+        rospy.loginfo("[ActionServer] Executed hold{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.set_motion_ended(not self.should_interrupt())
 
 if __name__ == '__main__':
