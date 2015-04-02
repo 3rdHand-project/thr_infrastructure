@@ -15,10 +15,19 @@ import baxter_interface  # TODO Use a generic stuff instead for gripper closure 
 from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
 
 class ActionServer:
-    def __init__(self):
+    """
+    This is the action server that executes actions the robot is capable of.
+    It requires two config files:
+    * poses.json: poses relative to actions and objects
+    * action_params.json: generic parameters for action execution and scenario
+    """
+    def __init__(self, planning):
+        """
+        :param planning: True if motion should be planned with collision avoidance (where possible), False means joints interpolation
+        """
         # General attributes
-        rospy.loginfo("Starting rospack...")
         self.rospack = rospkg.RosPack()
+        self.planning = planning
 
         # Transform/Geometric attributes
         self.tfl = tf.TransformListener()
@@ -48,6 +57,10 @@ class ActionServer:
         self.grippers = {}
         self.grippers['left'] = baxter_interface.gripper.Gripper('left')
         self.grippers['right'] = baxter_interface.gripper.Gripper('right')
+        self.arms['left'].set_planner_id(str(self.action_params['planning']['planner_id']))
+        self.arms['left'].set_planning_time(self.action_params['planning']['time'])
+        self.arms['right'].set_planner_id(str(self.action_params['planning']['planner_id']))
+        self.arms['right'].set_planning_time(self.action_params['planning']['time'])
 
         # Action server attributes
         rospy.loginfo("Starting server...")
@@ -124,7 +137,6 @@ class ActionServer:
         return transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
                                         self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0)))
 
-
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)
 
@@ -192,12 +204,18 @@ class ActionServer:
             rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
                 world_give_pose = self.object_grasp_pose_to_world(self.action_params['give']['give_pose'], "/human/wrist")
-                goal_give = self.extras['left'].get_ik(world_give_pose)
-                if not goal_give:
-                    rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
-                    rospy.sleep(self.action_params['sleep_step'])
-                    continue
-                give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
+                if self.planning:
+                    give_traj = self.arms['left'].plan(world_give_pose.pose)
+                    if len(give_traj.joint_trajectory.points)<1:
+                        rospy.logwarn("Unable to plan to that pose, please move a little bit...")
+                        continue
+                else:
+                    goal_give = self.extras['left'].get_ik(world_give_pose)
+                    if not goal_give:
+                        rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
+                        rospy.sleep(self.action_params['sleep_step'])
+                        continue
+                    give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
                 #self.arms['left'].execute(give_traj)
                 self.low_level_execute_workaround('left', give_traj)
                 t0 = time.time()
@@ -218,7 +236,10 @@ class ActionServer:
         # 4. Return to pick approach pose in order not to bother human
         if not self.should_interrupt():
             rospy.loginfo("Going back to picking area")
-            ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
+            if self.planning:
+                ending_traj = self.arms['left'].plan(world_approach_pose.pose)
+            else:
+                ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
 
         # TODO execute True=>False with asynchronous motion
@@ -324,5 +345,5 @@ class ActionServer:
 
 if __name__ == '__main__':
     rospy.init_node('action_server')
-    server = ActionServer()
+    server = ActionServer(planning=True)
     rospy.spin()

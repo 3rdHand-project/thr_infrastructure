@@ -11,5 +11,9 @@
     "hold": {
         "sphere_radius": 0.5,
         "releasing_min_time": 1.0
+    },
+    "planning": {
+        "planner_id": "RRTkConfigDefault",
+        "time": 0.5
     }
 }
