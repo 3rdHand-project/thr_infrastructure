@@ -21,13 +21,15 @@ class ActionServer:
     * poses.json: poses relative to actions and objects
     * action_params.json: generic parameters for action execution and scenario
     """
-    def __init__(self, planning):
+    def __init__(self, planning, orientation_matters, allow_replanning):
         """
         :param planning: True if motion should be planned with collision avoidance (where possible), False means joints interpolation
         """
         # General attributes
         self.rospack = rospkg.RosPack()
         self.planning = planning
+        self.orientation_matters = orientation_matters
+        self.replan = allow_replanning
 
         # Transform/Geometric attributes
         self.tfl = tf.TransformListener()
@@ -61,6 +63,8 @@ class ActionServer:
         self.arms['left'].set_planning_time(self.action_params['planning']['time'])
         self.arms['right'].set_planner_id(str(self.action_params['planning']['planner_id']))
         self.arms['right'].set_planning_time(self.action_params['planning']['time'])
+        self.arms['left'].allow_replanning(self.replan)
+        self.arms['right'].allow_replanning(self.replan)
 
         # Action server attributes
         rospy.loginfo("Starting server...")
@@ -205,7 +209,12 @@ class ActionServer:
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
                 world_give_pose = self.object_grasp_pose_to_world(self.action_params['give']['give_pose'], "/human/wrist")
                 if self.planning:
-                    give_traj = self.arms['left'].plan(world_give_pose.pose)
+                    if self.orientation_matters:
+                        self.arms['left'].set_pose_target(world_give_pose.pose)
+                    else:
+                        self.arms['left'].set_position_target([world_give_pose.pose.position.x, world_give_pose.pose.position.y, world_give_pose.pose.position.z])
+                    give_traj = self.arms['left'].plan()
+                    self.arms['left'].clear_pose_targets()
                     if len(give_traj.joint_trajectory.points)<1:
                         rospy.logwarn("Unable to plan to that pose, please move a little bit...")
                         continue
@@ -237,7 +246,9 @@ class ActionServer:
         if not self.should_interrupt():
             rospy.loginfo("Going back to picking area")
             if self.planning:
-                ending_traj = self.arms['left'].plan(world_approach_pose.pose)
+                while True:
+                    ending_traj = self.arms['left'].plan(world_approach_pose.pose)
+                    if len(approach_traj.joint_trajectory.points)>0: break
             else:
                 ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
@@ -340,10 +351,9 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Returning in idle mode")
         if self.planning:
-            leaving_traj = self.arms['right'].plan(starting_pose.pose)
-            if len(leaving_traj.joint_trajectory.points)<1:
-                rospy.logerr("Sorry, I can't find a path to go back to idle position ")
-                return self.set_motion_ended(False)
+            while True:
+                leaving_traj = self.arms['right'].plan(starting_pose.pose)
+                if len(approach_traj.joint_trajectory.points)>0: break
         else:
             leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
         self.low_level_execute_workaround('right', leaving_traj)
@@ -353,5 +363,5 @@ class ActionServer:
 
 if __name__ == '__main__':
     rospy.init_node('action_server')
-    server = ActionServer(planning=True)
+    server = ActionServer(planning=True, orientation_matters=True, allow_replanning=True)
     rospy.spin()
