@@ -118,19 +118,27 @@ class ActionServer:
         self.server.set_succeeded(self.result.result)
         return succeeded
 
-    def low_level_execute_workaround(self, side, rt):
+    def low_level_execute_workaround(self, side, rt, callback_stop=None):
         """
         Since moveit_commander.execute() either blocks threads or does not give feedback on trajectory, this is an
         ugly workaround to send a RobotTrajectory() to a FollowJointTrajectory action client. It comes with the
         :param side: 'right' or 'left'
         :param rt: The RobotTrajectory to execute
-        :return: None
+        :param callback_stop: the function to call at each step returning True if motion stop has been requested
+        :return: True if the full motion has been executed, False if it has been stopped
         """
         ftg = FollowJointTrajectoryGoal()
         ftg.trajectory = rt.joint_trajectory
         self.clients[side].send_goal(ftg)
-        while self.clients[side].simple_state != actionlib.SimpleGoalState.DONE:
-            rospy.sleep(self.action_params['sleep_step'])
+        stop = False
+        while not stop and self.clients[side].simple_state != actionlib.SimpleGoalState.DONE:
+            if callback_stop!=None and callback_stop():
+                stop = True
+            else:
+                rospy.sleep(self.action_params['sleep_step'])
+        if stop and self.clients[side].simple_state != actionlib.SimpleGoalState.DONE:
+            self.clients[side].cancel_goal()
+        return not stop
 
     def extract_perturbation(self, side):
         """
@@ -199,6 +207,7 @@ class ActionServer:
 
         # 4. Wait for human wrist and approach object until we are close enough to release object
         rospy.loginfo("Bringing {} to human wrist".format(object))
+
         while not self.should_interrupt():
             can_release = False
             try:
@@ -228,13 +237,20 @@ class ActionServer:
                         continue
                     give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
                 #self.arms['left'].execute(give_traj)
-                self.low_level_execute_workaround('left', give_traj)
-                t0 = time.time()
+
+                # The function below returns True if human as moved enough so that we need to replan the trajectory
+                def needs_update():
+                    p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
+                    return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
+                if not self.low_level_execute_workaround('left', give_traj, needs_update):
+                    rospy.logwarn("Human has moved, changing the goal...")
+                    rospy.sleep(self.action_params['give']['inter_goal_sleep'])
+                    continue
             else:
                 can_release = True
 
             # 5. Wait for position disturbance of the gripper and open it to release object
-            if can_release and time.time()-t0 > self.action_params['give']['releasing_min_time']:   # Minimum compulsory time after t0 before releasing object (absorbing motion noise)
+            if can_release:
                 perturbation = self.extract_perturbation('left')
                 rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['give']['releasing_disturbance']))
                 if perturbation>self.action_params['give']['releasing_disturbance']:
@@ -329,7 +345,7 @@ class ActionServer:
             if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
                 last_seen_working = time.time()
                 rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
-            elif time.time()-last_seen_working > self.action_params['hold']['releasing_min_time']:
+            else:
                 break
             rospy.sleep(self.action_params['sleep_step'])
 
