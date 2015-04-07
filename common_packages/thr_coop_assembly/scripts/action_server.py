@@ -65,6 +65,7 @@ class ActionServer:
         self.arms['right'].set_planning_time(self.action_params['planning']['time'])
         self.arms['left'].allow_replanning(self.replan)
         self.arms['right'].allow_replanning(self.replan)
+        self.scene = moveit_commander.PlanningSceneInterface()
 
         # Action server attributes
         rospy.loginfo("Starting server...")
@@ -186,6 +187,7 @@ class ActionServer:
         if not self.should_interrupt():
             rospy.loginfo("Activating suction for {}".format(object))
             self.grippers['left'].close(True)
+            self.scene.attach_box('left_gripper', object)
 
         # 4. Go to approach pose again with object in-hand (to avoid touching the table)
         if self.should_interrupt():
@@ -238,6 +240,7 @@ class ActionServer:
                 if perturbation>self.action_params['give']['releasing_disturbance']:
                     rospy.loginfo("Releasing suction for {}".format(object))
                     self.grippers['left'].open(True)
+                    self.scene.remove_attached_object('left_gripper')
                     break
             else:
                 rospy.sleep(self.action_params['sleep_step'])
