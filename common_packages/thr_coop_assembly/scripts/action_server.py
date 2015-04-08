@@ -186,7 +186,7 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Grasping {}".format(object))
         #self.arms['left'].execute(action_traj)
-        action_traj = self.extras['left'].generate_descent(self.poses[object]["give"][0]['descent'], object, 3)
+        action_traj = self.extras['left'].generate_descent(self.poses[object]["give"][0]['descent'], object, 1.5)
         self.low_level_execute_workaround('left', action_traj)
 
         # 3. Close gripper to grasp object
@@ -226,7 +226,7 @@ class ActionServer:
                         self.arms['left'].set_position_target([world_give_pose.pose.position.x, world_give_pose.pose.position.y, world_give_pose.pose.position.z])
                     give_traj = self.arms['left'].plan()
                     self.arms['left'].clear_pose_targets()
-                    if len(give_traj.joint_trajectory.points)<1:
+                    if len(give_traj.joint_trajectory.points)<2:
                         rospy.logwarn("Unable to plan to that pose, please move a little bit...")
                         continue
                 else:
@@ -267,7 +267,7 @@ class ActionServer:
             if self.planning:
                 while True:
                     ending_traj = self.arms['left'].plan(world_approach_pose.pose)
-                    if len(approach_traj.joint_trajectory.points)>0: break
+                    if len(approach_traj.joint_trajectory.points)>1: break
             else:
                 ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
@@ -300,7 +300,7 @@ class ActionServer:
 
         if self.planning:
             approach_traj = self.arms['right'].plan(world_approach_pose.pose)
-            if len(approach_traj.joint_trajectory.points)<1:
+            if len(approach_traj.joint_trajectory.points)<2:
                 rospy.logerr("Sorry, object {} is too far away for me".format(object))
                 return self.set_motion_ended(False)
         else:
@@ -372,7 +372,7 @@ class ActionServer:
         if self.planning:
             while True:
                 leaving_traj = self.arms['right'].plan(starting_pose.pose)
-                if len(approach_traj.joint_trajectory.points)>0: break
+                if len(approach_traj.joint_trajectory.points)>1: break
         else:
             leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
         self.low_level_execute_workaround('right', leaving_traj)
