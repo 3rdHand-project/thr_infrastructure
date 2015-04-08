@@ -9,7 +9,7 @@ import moveit_commander
 import move_group_extras
 import transformations
 from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAction
-from copy import deepcopy
+from numpy import mean, array
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
 from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
@@ -142,13 +142,20 @@ class ActionServer:
 
     def extract_perturbation(self, side):
         """
-        Extracts the difference between command state and current state
+        Sleeps a sleep step and extracts the difference between command state and current state
         CAUTION: Baxter-only method, /reference/* TFs don't exist elsewhere and will trigger LookupExceptions
         :param side: left or right
         :return: The cartesian distance in meters between command and current
         """
-        return transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
-                                        self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0)))
+        d = 0
+        diffs = []
+        window = 50
+        while d < self.action_params['give']['releasing_disturbance']:
+            diffs = []
+            for i in range(window):
+                diffs.append(transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
+                                                      self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0))))
+                rospy.sleep(self.action_params['sleep_step']/window)
 
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)
@@ -159,22 +166,14 @@ class ActionServer:
         # 0. Trajectories generation
         try:
             world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["give"][0]['approach'], object)  # Pose of the approach
-            world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["give"][0]['action'], object)  # Pose of the pickup (named action)
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.set_motion_ended(False)
         goal_approach = self.extras['left'].get_ik(world_approach_pose)
-        goal_action = self.extras['left'].get_ik(world_action_pose, goal_approach)
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.set_motion_ended(False)
-        if not goal_action:
-            rospy.logerr("Unable to reach give pose")
-            return self.set_motion_ended(False)
         approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
-        action_traj = self.extras['left'].interpolate_joint_space(goal_action, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8, start=goal_approach)
-        reapproach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8, start=goal_action)
-
 
         # 1. Go to approach pose
         if self.should_interrupt():
@@ -188,6 +187,7 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Grasping {}".format(object))
         #self.arms['left'].execute(action_traj)
+        action_traj = self.extras['left'].generate_descent(self.poses[object]["give"][0]['descent'], object, 3)
         self.low_level_execute_workaround('left', action_traj)
 
         # 3. Close gripper to grasp object
@@ -202,6 +202,7 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Reapproaching {}".format(object))
         #self.arms['left'].execute(approach_traj, False)
+        reapproach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
         self.low_level_execute_workaround('left', reapproach_traj)
 
 
