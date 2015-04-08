@@ -5,7 +5,7 @@
     "give": {
         "sphere_radius": 0.30,
         "give_pose": [[0.05, 0, 0.2], [-0.5, -0.5, 0.5, 0.5]],
-        "releasing_disturbance": 0.01,
+        "releasing_disturbance": 0.035,
         "inter_goal_sleep": 0.4
     },
     "hold": {

@@ -9,7 +9,7 @@ import moveit_commander
 import move_group_extras
 import transformations
 from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAction
-from numpy import mean, array
+import numpy
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
 from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
@@ -147,15 +147,14 @@ class ActionServer:
         :param side: left or right
         :return: The cartesian distance in meters between command and current
         """
-        d = 0
         diffs = []
         window = 50
-        while d < self.action_params['give']['releasing_disturbance']:
-            diffs = []
-            for i in range(window):
-                diffs.append(transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
-                                                      self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0))))
-                rospy.sleep(self.action_params['sleep_step']/window)
+        for i in range(window):
+            diffs.append(transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
+                                                  self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0))))
+            rospy.sleep(self.action_params['sleep_step']/window)
+        print "max", numpy.max(diffs)
+        return numpy.max(diffs)
 
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)
