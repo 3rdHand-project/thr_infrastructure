@@ -69,7 +69,7 @@ class ActionServer:
 
         # Action server attributes
         rospy.loginfo("Starting server...")
-        self.server = actionlib.SimpleActionServer('/thr/action', RunActionAction, self.execute, False)
+        self.server = actionlib.SimpleActionServer('/thr/run_action', RunActionAction, self.execute, False)
         self.result = RunActionActionResult()
         self.server.start()
         rospy.loginfo('Server ready')

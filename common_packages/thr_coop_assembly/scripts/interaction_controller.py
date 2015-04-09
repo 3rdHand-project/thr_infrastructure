@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 import actionlib
 
@@ -16,15 +17,15 @@ class InteractionController(object):
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
-        self.bad_user_commands = [UserCommand.GIVE, UserCommand.HOLD, UserCommand.REWARD_BAD] # User commands implying a BAD reward during execution of an action
+        self.bad_user_commands = [UserCommand.GIVE, UserCommand.HOLD] # User commands implying a BAD reward during execution of an action
         self.user_cmd_service = '/thr/usercommands'
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
-        self.runaction_name = '/thr/runaction'
+        self.run_action_name = '/thr/run_action'
 
         # Initiating links to services and actions
-        self.runaction_client = actionlib.SimpleActionClient(self.runaction_name, RunActionAction)
+        self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunActionAction)
         rospy.loginfo("Waiting action client RunAction...")
         self.run_action_client.wait_for_server()
         for service in [self.user_cmd_service, self.reward_service, self.predictor_service, self.scene_state_service]:
@@ -122,8 +123,8 @@ class InteractionController(object):
 
             # Action is started
             rospy.loginfo("Starting action {}".format(action.type))
-            self.runaction_client.send_goal(goal)   # feedback and transition callbacks, it's here
-            while self.runaction_client.last_status_msg in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
+            self.run_action_client.send_goal(goal)   # feedback and transition callbacks, it's here
+            while self.run_action_client.last_status_msg in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
                 if self.get_user_commands():
                     if UserCommand.PAUSE in self.get_user_commands_types():
                         rospy.loginfo("Interaction paused")
@@ -142,9 +143,10 @@ class InteractionController(object):
                     self.send_reward(True)
                 elif set(self.get_user_commands_types()).intersection(set(self.bad_user_commands)):
                     rospy.logwarn("Cancelling action {}".format(self.current_action.type))
-                    self.runaction_client.cancel_goal()
+                    self.run_action_client.cancel_goal()
                     self.send_reward(False)
                     self.run_action(self.command_mapper(self.user_commands[0]))
 
 if __name__=='__main__':
+    rospy.init_node("interaction_controller")
     InteractionController().run()

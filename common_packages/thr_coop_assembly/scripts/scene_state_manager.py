@@ -4,6 +4,7 @@ import rospy
 import tf
 from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
 from thr_coop_assembly.msg import SceneState, Predicate
+from itertools import combinations
 
 class SceneStateManager(object):
     def __init__(self):
@@ -18,6 +19,15 @@ class SceneStateManager(object):
 
     def generate_predicate(self):
         self.state.header.stamp = rospy.Time.now()
+
+        # Predicate Attached()
+        for o1, o2 in combinations(self.objects):
+            pass
+
+        # InRobotHand
+        for o in self.objects:
+            pass
+
         raise NotImplementedError("scene_state_manager.generate_predicate() should update self.state.predicates "
                                   "based on the self.poses map {'/human/wrist':[[x, y, z], [x, y, z, w]], ...}")
 
