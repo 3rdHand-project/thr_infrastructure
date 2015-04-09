@@ -8,4 +8,4 @@ uint8 HOLDBYHUMAN=3
 uint8 type
 
 # Parameters of the predicate
-string objects
+string[] objects
