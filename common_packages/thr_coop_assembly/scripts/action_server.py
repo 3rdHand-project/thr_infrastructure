@@ -25,6 +25,7 @@ class ActionServer:
         """
         :param planning: True if motion should be planned with collision avoidance (where possible), False means joints interpolation
         """
+        rospy.sleep(3) # Moveit should have started first
         # General attributes
         self.rospack = rospkg.RosPack()
         self.planning = planning
@@ -267,7 +268,7 @@ class ActionServer:
             if self.planning:
                 while True:
                     ending_traj = self.arms['left'].plan(world_approach_pose.pose)
-                    if len(approach_traj.joint_trajectory.points)>1: break
+                    if len(ending_traj.joint_trajectory.points)>1: break
             else:
                 ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
             self.low_level_execute_workaround('left', ending_traj)
@@ -372,7 +373,7 @@ class ActionServer:
         if self.planning:
             while True:
                 leaving_traj = self.arms['right'].plan(starting_pose.pose)
-                if len(approach_traj.joint_trajectory.points)>1: break
+                if len(leaving_traj.joint_trajectory.points)>1: break
         else:
             leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5, start=goal_approach)
         self.low_level_execute_workaround('right', leaving_traj)
