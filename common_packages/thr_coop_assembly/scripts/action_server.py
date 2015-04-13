@@ -356,7 +356,7 @@ class ActionServer:
             self.grippers['right'].open(True)
 
         # Generation of next trajectories starting from the current state
-        reapproach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
+        reapproach_traj = self.extras['right'].generate_descent(-numpy.array(self.poses[object]["hold"][pose]['descent']), object, 1)
 
         # 7. Go to approach pose again (to avoid touching the fingers)
         if self.should_interrupt():

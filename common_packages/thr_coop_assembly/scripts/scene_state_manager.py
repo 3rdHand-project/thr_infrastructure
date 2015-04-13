@@ -64,7 +64,7 @@ class SceneStateManager(object):
     def pred_in_human_ws(self, obj):
         try:
             return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
-        except tf.LookupException:
+        except:
             return False
 
     def handle_request(self, req):
@@ -81,7 +81,7 @@ class SceneStateManager(object):
             for o in self.objects:
                 try:
                     dist = transformations.norm(self.tfl.lookupTransform("/tools/screwdriver", o, rospy.Time(0)))
-                except tf.LookupException:
+                except:
                     pass
                 else:
                     if dist<self.config['dist_working_screwdriver'] and not self.screwdriver_close_to.has_key(o):
