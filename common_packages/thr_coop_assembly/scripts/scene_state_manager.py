@@ -62,7 +62,10 @@ class SceneStateManager(object):
         return attached
 
     def pred_in_human_ws(self, obj):
-        return False
+        try:
+            return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
+        except tf.LookupException:
+            return False
 
     def handle_request(self, req):
         resp = GetSceneStateResponse()
@@ -109,9 +112,14 @@ class SceneStateManager(object):
                         p.type = Predicate.POSITIONED
                         p.objects = [o1, o2]
                         self.state.predicates.append(p)
+                for o in self.objects:
+                    if self.pred_in_human_ws(o):
+                        p = Predicate()
+                        p.type = Predicate.IN_HUMAN_WS
+                        p.objects = [o]
+                        self.state.predicates.append(p)
             finally:
                 self.state_lock.release()
-            print self.screwdriver_close_to
             self.rate.sleep()
 
     def start(self):
