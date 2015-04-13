@@ -47,8 +47,8 @@ class SceneStateManager(object):
         else:
             key = o1+'_'+o2 if o1<o2 else o2+'_'+o1
             cart_dist = transformations.distance(self.constraints[key], relative)
-            # TODO this measures only cartesian distance, missing quaternions
-            return cart_dist<self.config['position_tolerance']
+            quat_dist = transformations.distance_quat(self.constraints[key], relative)
+            return cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']
         return False
 
     def pred_attached(self, o1, o2):
