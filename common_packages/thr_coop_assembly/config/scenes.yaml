@@ -1,0 +1,6 @@
+toolbox:
+  - /toolbox/handle
+  - /toolbox/side_front
+  - /toolbox/side_back
+  - /toolbox/side_left
+  - /toolbox/side_right
