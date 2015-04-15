@@ -22,8 +22,8 @@ class SceneStateManager(object):
         self.scene = rospy.get_param('/thr/scene')
 
         self.rospack = rospkg.RosPack()
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/constraints.json") as f:
-            self.constraints = json.load(f)[self.scene]
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/poses.json") as f:
+            self.poses = json.load(f) # TODO separate with scene name [self.scene]
 
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/perception.json") as f:
             self.config = json.load(f)
@@ -36,30 +36,36 @@ class SceneStateManager(object):
 
     def pred_positioned(self, o1, o2):
         """
-        :param o1: name of the first object SUCH AS o1 < o2 !!!
-        :param o2: name of the second object SUCH AS o1 < o2 !!!
+        Checks if any constraint between o1 and o2 exists and returns True if at least one constraint is within the tolerance
         :return: True if predicate POSITIONED(o1, o2) is True
         """
         try:
             relative = self.tfl.lookupTransform(o1, o2, rospy.Time(0))
+            inv_relative = self.tfl.lookupTransform(o2, o1, rospy.Time(0))
         except:
             pass
         else:
-            key = o1+'_'+o2 if o1<o2 else o2+'_'+o1
-            cart_dist = transformations.distance(self.constraints[key], relative)
-            quat_dist = transformations.distance_quat(self.constraints[key], relative)
-            return cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']
+            possible_constraints = []
+            possible_relative = []
+            if self.poses[o1].has_key('constraints'):  # o1 is the master, o2 the slave, same than constraints
+                for c in self.poses[o1]['constraints']:
+                    if c.has_key(o2):
+                        possible_constraints.append(c[o2])
+                        possible_relative.append(relative)
+            if self.poses[o2].has_key('constraints'): # o1 is the slave, o2 the master, the opposite of the constraints
+                for c in self.poses[o2]['constraints']:
+                    if c.has_key(o1):
+                        possible_constraints.append(c[o1])
+                        possible_relative.append(inv_relative)
+            for c in range(len(possible_constraints)):
+                cart_dist = transformations.distance(possible_constraints[c], possible_relative[c])
+                quat_dist = transformations.distance_quat(possible_constraints[c], possible_relative[c])
+                if cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']:
+                    return True
         return False
 
     def pred_attached(self, o1, o2):
-        attached = False
-        duration = rospy.Duration(self.config['time_working_screwdriver'])
-        if self.pred_positioned(o1, o2):
-            if self.screwdriver_close_to.has_key(o1):
-                attached = self.screwdriver_close_to[o1][1]-self.screwdriver_close_to[o1][0]>duration
-            if not attached and self.screwdriver_close_to.has_key(o2):
-                attached =  self.screwdriver_close_to[o2][1]-self.screwdriver_close_to[o2][0]>duration
-        return attached
+        return False
 
     def pred_in_human_ws(self, obj):
         try:

@@ -1,6 +1,6 @@
 {
     "position_tolerance": 0.02,
-    "orientation_tolerance": 0.1,
+    "orientation_tolerance": 0.5,
     "dist_working_screwdriver": 0.05,
     "time_working_screwdriver": 7.0,
     "in_human_ws_distance": 0.6
