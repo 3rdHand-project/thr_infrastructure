@@ -7,13 +7,15 @@ from itertools import combinations
 from threading import Lock
 import json
 
+
 class SceneStateManager(object):
     def __init__(self, rate):
         self.state = SceneState()
         self.rate = rospy.Rate(rate)
         self.world = "base"
+        self.screwdriver = '/tools/screwdriver'
         self.state_lock = Lock()
-        self.screwdriver_close_to = {}  # dict {object: [timestamp_first_seen, timestamp_last_seen], ...} storing the timestamps where each object as been seen close to the screwdriver
+        self.attached = set()
 
         try:
             self.objects = rospy.get_param('/thr/objects')[rospy.get_param('/thr/scene')]
@@ -31,40 +33,40 @@ class SceneStateManager(object):
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
         self.tfl = tf.TransformListener()
 
-    def pred_attached(self, o1, o2):
-        return False
-
-    def pred_positioned(self, o1, o2):
+    def pred_positioned(self, master, slave, atp):
         """
-        Checks if any constraint between o1 and o2 exists and returns True if at least one constraint is within the tolerance
-        :return: True if predicate POSITIONED(o1, o2) is True
+        Checks if any constraint between master and slave exists at attach point atp and returns True if the constraint is within the tolerance
+        :param master:
+        :param slave:
+        :param atp: (int)
+        :return: True if predicate POSITIONED(master, slave, atp) is True
         """
+        if master+slave+str(atp) in self.attached:
+            return True
         try:
-            relative = self.tfl.lookupTransform(o1, o2, rospy.Time(0))
-            inv_relative = self.tfl.lookupTransform(o2, o1, rospy.Time(0))
+            relative = self.tfl.lookupTransform(master, slave, rospy.Time(0))
         except:
             pass
         else:
-            possible_constraints = []
-            possible_relative = []
-            if self.poses[o1].has_key('constraints'):  # o1 is the master, o2 the slave, same than constraints
-                for c in self.poses[o1]['constraints']:
-                    if c.has_key(o2):
-                        possible_constraints.append(c[o2])
-                        possible_relative.append(relative)
-            if self.poses[o2].has_key('constraints'): # o1 is the slave, o2 the master, the opposite of the constraints
-                for c in self.poses[o2]['constraints']:
-                    if c.has_key(o1):
-                        possible_constraints.append(c[o1])
-                        possible_relative.append(inv_relative)
-            for c in range(len(possible_constraints)):
-                cart_dist = transformations.distance(possible_constraints[c], possible_relative[c])
-                quat_dist = transformations.distance_quat(possible_constraints[c], possible_relative[c])
-                if cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']:
-                    return True
+            constraint = self.poses[master]['constraints'][atp][slave]
+            cart_dist = transformations.distance(constraint, relative)
+            quat_dist = transformations.distance_quat(constraint, relative)
+            return cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']
         return False
 
-    def pred_attached(self, o1, o2):
+    def pred_attached(self, master, slave, atp):
+        if master+slave+str(atp) in self.attached:
+            return True
+        elif self.pred_positioned(master, slave, atp):
+            try:
+                relative = self.tfl.lookupTransform(master, self.screwdriver, rospy.Time(0))
+            except:
+                pass
+            else:
+                cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
+                if cart_dist<self.config['tool_position_tolerance']:
+                    self.attached.append(master+slave+str(atp))
+                    return True
         return False
 
     def pred_in_human_ws(self, obj):
@@ -84,46 +86,36 @@ class SceneStateManager(object):
 
     def run(self):
         while not rospy.is_shutdown():
-            for o in self.objects:
-                try:
-                    dist = transformations.norm(self.tfl.lookupTransform("/tools/screwdriver", o, rospy.Time(0)))
-                except:
-                    pass
-                else:
-                    if dist<self.config['dist_working_screwdriver'] and not self.screwdriver_close_to.has_key(o):
-                        # The screwdriver is inside the area for the first time
-                        self.screwdriver_close_to[o] = [rospy.Time.now(), rospy.Time.now()]
-                    elif dist<self.config['dist_working_screwdriver']:
-                        # The screwdriver has already seen in the area in the past
-                        self.screwdriver_close_to[o][1] = rospy.Time.now()
-                    elif self.screwdriver_close_to.has_key(o):
-                        # The screwdriver has just quit the area
-                        del self.screwdriver_close_to[o]
-                    else:
-                        # The screwdriver is only not found
-                        pass
-
             self.state_lock.acquire()
             try:
                 self.state.predicates = []
                 self.state.header.stamp = rospy.Time.now()
-                for o1, o2 in combinations(self.objects, 2):
-                    if self.pred_attached(o1, o2):
-                        p = Predicate()
-                        p.type = Predicate.ATTACHED
-                        p.objects = [o1, o2]
-                        self.state.predicates.append(p)
-                    if self.pred_positioned(o1, o2):
-                        p = Predicate()
-                        p.type = Predicate.POSITIONED
-                        p.objects = [o1, o2]
-                        self.state.predicates.append(p)
                 for o in self.objects:
                     if self.pred_in_human_ws(o):
                         p = Predicate()
                         p.type = Predicate.IN_HUMAN_WS
                         p.objects = [o]
                         self.state.predicates.append(p)
+                for o1, o2 in combinations(self.objects, 2):
+                    if self.poses[o1].has_key('constraints') and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
+                        master = o1
+                        slave = o2
+                    elif self.poses[o2].has_key('constraints') and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
+                        slave = o1
+                        master = o2
+                    else:
+                        continue
+                    for atp in range(len(self.poses[master]['constraints'])):
+                        if self.pred_positioned(master, slave, atp):
+                            p = Predicate()
+                            p.type = Predicate.POSITIONED
+                            p.objects = [master, slave, str(atp)]
+                            self.state.predicates.append(p)
+                        if self.pred_attached(master, slave, atp):
+                            p = Predicate()
+                            p.type = Predicate.ATTACHED
+                            p.objects = [master, slave, str(atp)]
+                            self.state.predicates.append(p)
             finally:
                 self.state_lock.release()
             self.rate.sleep()
