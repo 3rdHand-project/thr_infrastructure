@@ -313,6 +313,7 @@ class ActionServer:
         rospy.loginfo("Approaching {}".format(object))
         #self.arms['right'].execute(approach_traj, False)
         self.low_level_execute_workaround('right', approach_traj)
+        rospy.sleep(0.5)
 
         # 2. Go to "hold" pose
         if self.should_interrupt():
@@ -342,7 +343,7 @@ class ActionServer:
                 distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform("right_gripper", "/human/wrist", rospy.Time(0)))
             except:
                 rospy.logwarn("Human wrist not found")
-                distance_wrist_gripper = float('inf')
+                distance_wrist_gripper = 0
             if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
                 last_seen_working = time.time()
                 rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))

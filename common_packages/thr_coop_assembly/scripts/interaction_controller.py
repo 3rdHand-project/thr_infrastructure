@@ -28,7 +28,7 @@ class InteractionController(object):
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunActionAction)
         rospy.loginfo("Waiting action client RunAction...")
         self.run_action_client.wait_for_server()
-        for service in [self.user_cmd_service, self.reward_service, self.predictor_service, self.scene_state_service]:
+        for service in [self.reward_service, self.predictor_service, self.scene_state_service]:#, self.user_cmd_service]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
@@ -49,7 +49,7 @@ class InteractionController(object):
         request.scene_state = self.scene_before_action
         request.good = good
         try:
-            reward = rospy.ServiceProxy(self.reward_service, SetReward)
+            reward = rospy.ServiceProxy(self.reward_service, SetNewTrainingExample)
             reward(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot send reward {}:".format('good' if good else 'bad', e.message))
@@ -58,20 +58,20 @@ class InteractionController(object):
         request = GetSceneStateRequest()
         try:
             getscene = rospy.ServiceProxy(self.scene_state_service, GetSceneState)
-            self.current_scene = getscene(request)
+            self.current_scene = getscene(request).state
         except rospy.ServiceException, e:
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
     def predict(self):
         request = GetNextActionRequest()
-        request.scene_state = self.scene_before_action
+        request.scene_state = self.current_scene
         predicted_cmd = Action(type=Action.WAIT)
         try:
             predict = rospy.ServiceProxy(self.predictor_service, GetNextAction)
             predicted_cmd = predict(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
-        return predicted_cmd
+        return predicted_cmd.action
     ###################################################################################################################
 
     def command_mapper(self, usercommand):
@@ -117,14 +117,14 @@ class InteractionController(object):
         self.current_action = action
 
         if action.type!=Action.WAIT:
-            self.update_scene()
             self.scene_before_action = deepcopy(self.current_scene)
-            goal = RunActionActionGoal(action)
+            goal = RunActionGoal()
+            goal.action = action
 
             # Action is started
             rospy.loginfo("Starting action {}".format(action.type))
             self.run_action_client.send_goal(goal)   # feedback and transition callbacks, it's here
-            while self.run_action_client.last_status_msg in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
+            while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
                 if self.get_user_commands():
                     if UserCommand.PAUSE in self.get_user_commands_types():
                         rospy.loginfo("Interaction paused")

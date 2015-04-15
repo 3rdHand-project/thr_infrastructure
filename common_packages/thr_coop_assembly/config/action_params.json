@@ -9,7 +9,7 @@
         "inter_goal_sleep": 0.4
     },
     "hold": {
-        "sphere_radius": 0.5,
+        "sphere_radius": 0.75,
         "releasing_min_time": 1.0
     },
     "planning": {
