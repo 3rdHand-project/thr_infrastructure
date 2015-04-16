@@ -33,7 +33,7 @@ class ActionServer:
         self.replan = allow_replanning
 
         # Transform/Geometric attributes
-        self.tfl = tf.TransformListener()
+        self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.world = "base"
         rospy.loginfo("Loading config...")
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/poses.json") as f:
@@ -154,7 +154,6 @@ class ActionServer:
             diffs.append(transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
                                                   self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0))))
             rospy.sleep(self.action_params['sleep_step']/window)
-        print "max", numpy.max(diffs)
         return numpy.max(diffs)
 
     def execute_give(self, parameters):
@@ -229,6 +228,7 @@ class ActionServer:
                     self.arms['left'].clear_pose_targets()
                     if len(give_traj.joint_trajectory.points)<2:
                         rospy.logwarn("Unable to plan to that pose, please move a little bit...")
+                        rospy.sleep(self.action_params['sleep_step']) # TODO Moveit bug, tfl is not updated during planning
                         continue
                 else:
                     goal_give = self.extras['left'].get_ik(world_give_pose)
@@ -260,7 +260,7 @@ class ActionServer:
                     self.scene.remove_attached_object('left_gripper')
                     break
             else:
-                rospy.sleep(self.action_params['sleep_step'])
+                rospy.sleep(self.action_params['short_sleep_step'])
 
         # 4. Return to pick approach pose in order not to bother human
         if not self.should_interrupt():
@@ -283,37 +283,47 @@ class ActionServer:
         object = parameters[0]
         pose = int(parameters[1])
 
-        # 0. Trajectories generation
         starting_state = self.extras['right'].get_current_state()
         starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "right_gripper", rospy.Time(0)))
-        try:
-            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)  # Pose of the approach
-            #world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['action'], object)  # Pose of the pickup (named action)
-        except:
-            rospy.logerr("Object {} not found".format(object))
-            return self.set_motion_ended(False)
 
-        # Comment: goal approach is needed in both interpolate and planning mode (planning = for reapproach)
-        goal_approach = self.extras['right'].get_ik(world_approach_pose)
-        if not goal_approach:
-            rospy.logerr("Unable to reach approach pose")
-            return self.set_motion_ended(False)
 
-        if self.planning:
-            approach_traj = self.arms['right'].plan(world_approach_pose.pose)
-            if len(approach_traj.joint_trajectory.points)<2:
-                rospy.logerr("Sorry, object {} is too far away for me".format(object))
+        # 0. Trajectories generation
+        cart_dist = float('inf')
+        angular_dist = float('inf')
+        while cart_dist>self.action_params['hold']['approach_cartesian_dist'] and angular_dist>self.action_params['hold']['approach_angular_dist']:
+            try:
+                world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)  # Pose of the approach
+                #world_action_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['action'], object)  # Pose of the pickup (named action)
+            except:
+                rospy.logerr("Object {} not found".format(object))
                 return self.set_motion_ended(False)
-        else:
-            approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
 
-        # 1. Go to approach pose
-        if self.should_interrupt():
-            return self.set_motion_ended(False)
-        rospy.loginfo("Approaching {}".format(object))
-        #self.arms['right'].execute(approach_traj, False)
-        self.low_level_execute_workaround('right', approach_traj)
-        rospy.sleep(0.5)
+            # Comment: goal approach is needed in both interpolate and planning mode (planning = for reapproach)
+            goal_approach = self.extras['right'].get_ik(world_approach_pose)
+            if not goal_approach:
+                rospy.logerr("Unable to reach approach pose")
+                return self.set_motion_ended(False)
+
+            if self.planning:
+                approach_traj = self.arms['right'].plan(world_approach_pose.pose)
+                if len(approach_traj.joint_trajectory.points)<2:
+                    rospy.logerr("Sorry, object {} is too far away for me".format(object))
+                    return self.set_motion_ended(False)
+            else:
+                approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
+
+            # 1. Go to approach pose
+            if self.should_interrupt():
+                return self.set_motion_ended(False)
+            rospy.loginfo("Approaching {}".format(object))
+            #self.arms['right'].execute(approach_traj, False)
+            self.low_level_execute_workaround('right', approach_traj)
+            try:
+                new_world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)
+            except:
+                new_world_approach_pose = world_approach_pose
+            cart_dist = transformations.distance(world_approach_pose, new_world_approach_pose)
+            angular_dist = transformations.distance_quat(world_approach_pose, new_world_approach_pose)
 
         # 2. Go to "hold" pose
         if self.should_interrupt():

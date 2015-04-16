@@ -34,6 +34,7 @@ class InteractionController(object):
 
     ################################################# SERVICE CALLERS #################################################
     def get_user_commands(self):
+        return 0 # TODO TODO TODO
         request = GetUserCommandsRequest()
         self.user_commands = []
         try:
@@ -41,6 +42,7 @@ class InteractionController(object):
             self.current_scene = getusercmd(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot fetch user commands {}:".format(e.message))
+            return 0
         return len(self.user_commands)
 
     def send_reward(self, good):

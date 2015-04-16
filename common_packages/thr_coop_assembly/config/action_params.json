@@ -1,16 +1,19 @@
 {
     "sleep_step": 0.1,
+    "short_sleep_step": 0.01,
     "action_speed": 0.2,
     "action_num_points": 150,
     "give": {
-        "sphere_radius": 0.30,
+        "sphere_radius": 0.33,
         "give_pose": [[0.05, 0, 0.2], [-0.5, -0.5, 0.5, 0.5]],
         "releasing_disturbance": 0.025,
         "inter_goal_sleep": 0.4
     },
     "hold": {
-        "sphere_radius": 0.75,
-        "releasing_min_time": 1.0
+        "sphere_radius": 0.7,
+        "releasing_min_time": 1.0,
+        "approach_cartesian_dist": 0.01,
+        "approach_angular_dist": 0.09 
     },
     "planning": {
         "planner_id": "RRTkConfigDefault",
