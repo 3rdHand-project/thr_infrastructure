@@ -190,7 +190,6 @@ class ActionServer:
         self.low_level_execute_workaround('left', action_traj)
 
         # 3. Close gripper to grasp object
-        give_traj = None
         if not self.should_interrupt():
             rospy.loginfo("Activating suction for {}".format(object))
             self.grippers['left'].close(True)
@@ -201,7 +200,7 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Reapproaching {}".format(object))
         #self.arms['left'].execute(approach_traj, False)
-        reapproach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
+        reapproach_traj = self.extras['left'].reverse_trajectory(action_traj)
         self.low_level_execute_workaround('left', reapproach_traj)
 
 
@@ -286,7 +285,6 @@ class ActionServer:
         starting_state = self.extras['right'].get_current_state()
         starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "right_gripper", rospy.Time(0)))
 
-
         # 0. Trajectories generation
         cart_dist = float('inf')
         angular_dist = float('inf')
@@ -367,12 +365,10 @@ class ActionServer:
             rospy.loginfo("Releasing {}".format(object))
             self.grippers['right'].open(True)
 
-        # Generation of next trajectories starting from the current state
-        reapproach_traj = self.extras['right'].generate_descent(-numpy.array(self.poses[object]["hold"][pose]['descent']), object, 1)
-
         # 7. Go to approach pose again (to avoid touching the fingers)
         if self.should_interrupt():
             return self.set_motion_ended(False)
+        reapproach_traj = self.extras['right'].reverse_trajectory(action_traj)
         rospy.loginfo("Reapproaching {}".format(object))
         #self.arms['right'].execute(approach_traj, False)
         self.low_level_execute_workaround('right', reapproach_traj)
