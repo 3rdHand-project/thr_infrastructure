@@ -56,6 +56,27 @@ class InteractionController(object):
         except rospy.ServiceException, e:
             rospy.logerr("Cannot send reward {}:".format('good' if good else 'bad', e.message))
 
+    def horrible_print_preds(self):
+        attached = []
+        inhws = []
+        positioned=[]
+        for p in self.current_scene.predicates:
+            if p.type==Predicate.ATTACHED:
+                attached.append(p)
+            elif p.type==Predicate.IN_HUMAN_WS:
+                inhws.append(p)
+            elif p.type==Predicate.POSITIONED:
+                positioned.append(p)
+        rospy.logwarn("ATTACHED")
+        for a in attached:
+            rospy.logwarn(' '.join(a.objects))
+        rospy.logwarn("IN_HUMAN_WS")
+        for a in inhws:
+            rospy.logwarn(' '.join(a.objects))
+        rospy.logwarn("POSITIONNED")
+        for a in positioned:
+            rospy.logwarn(' '.join(a.objects))
+
     def update_scene(self):
         request = GetSceneStateRequest()
         try:
@@ -109,6 +130,7 @@ class InteractionController(object):
         print 'Interaction starting!'
         while self.running and not rospy.is_shutdown():
             self.update_scene()
+            #self.horrible_print_preds()
             cmd = self.predict()
             self.run_action(cmd)
             self.user_commands = []
@@ -117,37 +139,35 @@ class InteractionController(object):
 
     def run_action(self, action):
         self.current_action = action
+        self.scene_before_action = deepcopy(self.current_scene)
+        goal = RunActionGoal()
+        goal.action = action
 
-        if action.type!=Action.WAIT:
-            self.scene_before_action = deepcopy(self.current_scene)
-            goal = RunActionGoal()
-            goal.action = action
+        # Action is started
+        rospy.loginfo("Starting action {}".format(action.type))
+        self.run_action_client.send_goal(goal)   # feedback and transition callbacks, it's here
+        while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
+            if self.get_user_commands():
+                if UserCommand.PAUSE in self.get_user_commands_types():
+                    rospy.loginfo("Interaction paused")
+                    self.pause_interaction()
+                    rospy.loginfo("Interaction restarted")
+                    self.user_commands = []
+            else:
+                self.interaction_loop_rate.sleep()
 
-            # Action is started
-            rospy.loginfo("Starting action {}".format(action.type))
-            self.run_action_client.send_goal(goal)   # feedback and transition callbacks, it's here
-            while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
-                if self.get_user_commands():
-                    if UserCommand.PAUSE in self.get_user_commands_types():
-                        rospy.loginfo("Interaction paused")
-                        self.pause_interaction()
-                        rospy.loginfo("Interaction restarted")
-                        self.user_commands = []
-                else:
-                    self.interaction_loop_rate.sleep()
-
-            # Action has now finished, been cancelled, or failed
-            if not rospy.is_shutdown():
-                # Check for success or failure
-                state = self.run_action_client.get_state()
-                if state == GoalStatus.SUCCEEDED:
-                    rospy.loginfo("Action {} succeeded!".format(self.current_action.type))
-                    self.send_reward(True)
-                elif set(self.get_user_commands_types()).intersection(set(self.bad_user_commands)):
-                    rospy.logwarn("Cancelling action {}".format(self.current_action.type))
-                    self.run_action_client.cancel_goal()
-                    self.send_reward(False)
-                    self.run_action(self.command_mapper(self.user_commands[0]))
+        # Action has now finished, been cancelled, or failed
+        if not rospy.is_shutdown():
+            # Check for success or failure
+            state = self.run_action_client.get_state()
+            if state == GoalStatus.SUCCEEDED:
+                rospy.loginfo("Action {} succeeded!".format(self.current_action.type))
+                self.send_reward(True)
+            elif set(self.get_user_commands_types()).intersection(set(self.bad_user_commands)):
+                rospy.logwarn("Cancelling action {}".format(self.current_action.type))
+                self.run_action_client.cancel_goal()
+                self.send_reward(False)
+                self.run_action(self.command_mapper(self.user_commands[0]))
 
 if __name__=='__main__':
     rospy.init_node("interaction_controller")

@@ -92,7 +92,8 @@ class ActionServer:
         Executes a WAIT action (always successful)
         """
         rospy.loginfo("[ActionServer] Executing wait()")
-        while not self.server.is_preempt_requested() and not rospy.is_shutdown():
+        t0 = rospy.Time.now()
+        while not self.server.is_preempt_requested() and (rospy.Time.now()-t0).to_sec()<self.action_params['wait']['duration'] and not rospy.is_shutdown():
             rospy.sleep(self.action_params['sleep_step'])
         self.set_motion_ended(True)
 
@@ -161,6 +162,8 @@ class ActionServer:
 
         rospy.loginfo("[ActionServer] Executing give{}".format(str(parameters)))
         object = parameters[0]
+        starting_state = self.extras['left'].get_current_state()
+        starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "left_gripper", rospy.Time(0)))
 
         # 0. Trajectories generation
         try:
@@ -261,16 +264,17 @@ class ActionServer:
             else:
                 rospy.sleep(self.action_params['short_sleep_step'])
 
-        # 4. Return to pick approach pose in order not to bother human
-        if not self.should_interrupt():
-            rospy.loginfo("Going back to picking area")
-            if self.planning:
-                while True:
-                    ending_traj = self.arms['left'].plan(world_approach_pose.pose)
-                    if len(ending_traj.joint_trajectory.points)>1: break
-            else:
-                ending_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.8, ka_max=0.8)
-            self.low_level_execute_workaround('left', ending_traj)
+        # 4. Return home
+        if self.should_interrupt():
+            return self.set_motion_ended(False)
+        rospy.loginfo("Returning in idle mode")
+        if self.planning:
+            while True:
+                leaving_traj = self.arms['left'].plan(starting_pose.pose)
+                if len(leaving_traj.joint_trajectory.points)>1: break
+        else:
+            leaving_traj = self.extras['left'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.5, ka_max=0.5)
+        self.low_level_execute_workaround('left', leaving_traj)
 
         rospy.loginfo("[ActionServer] Executed give{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.set_motion_ended(not self.should_interrupt())
@@ -341,8 +345,12 @@ class ActionServer:
             return self.set_motion_ended(False)
         rospy.loginfo("Forcing down on {}".format(object))
         #self.arms['right'].execute(action_traj)
-        force_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['force'], object, 1)
-        self.low_level_execute_workaround('right', force_traj)
+        try:
+            force_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['force'], object, 1)
+        except:
+            rospy.logwarn('Cannot compute descent forcing down, but continuing instead')
+        else:
+            self.low_level_execute_workaround('right', force_traj)
 
         # 5. Wait for interruption
         last_seen_working = -1 # timestamp storing when the human has been last seen in the working area, -1 = never seen

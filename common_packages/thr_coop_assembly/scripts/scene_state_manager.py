@@ -31,7 +31,7 @@ class SceneStateManager(object):
             self.config = json.load(f)
 
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
-        self.tfl = tf.TransformListener()
+        self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
 
     def pred_positioned(self, master, slave, atp):
         """
@@ -44,10 +44,13 @@ class SceneStateManager(object):
         if master+slave+str(atp) in self.attached:
             return True
         try:
-            relative = self.tfl.lookupTransform(master, slave, rospy.Time(0))
-        except:
+            # WARNING: Do not ask the relative tf directly, it is outdated!
+            tf_slave = self.tfl.lookupTransform(self.world, slave, rospy.Time(0))
+            tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
+        except Exception, e:
             pass
         else:
+            relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
             constraint = self.poses[master]['constraints'][atp][slave]
             cart_dist = transformations.distance(constraint, relative)
             quat_dist = transformations.distance_quat(constraint, relative)
@@ -59,11 +62,15 @@ class SceneStateManager(object):
             return True
         elif self.pred_positioned(master, slave, atp):
             try:
-                relative = self.tfl.lookupTransform(master, self.screwdriver, rospy.Time(0))
+                # WARNING: Do not ask the relative tf directly, it is outdated!
+                screwdriver = self.tfl.lookupTransform(self.world, self.screwdriver, rospy.Time(0))
+                tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
             except:
-                pass
+                rospy.logwarn("screwdriver or {} not found, I consider that you're NOT attaching {} and {}".format(master, master, slave))
             else:
+                relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
+                rospy.logwarn("Cartesian distance: {}".format(cart_dist))
                 if cart_dist<self.config['tool_position_tolerance']:
                     self.attached.append(master+slave+str(atp))
                     return True
