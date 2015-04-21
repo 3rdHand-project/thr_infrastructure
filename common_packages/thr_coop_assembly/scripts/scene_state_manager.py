@@ -70,8 +70,8 @@ class SceneStateManager(object):
             else:
                 relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                rospy.logwarn("Cartesian distance: {}".format(cart_dist))
                 if cart_dist<self.config['tool_position_tolerance']:
+                    rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
                     self.attached.append(master+slave+str(atp))
                     return True
         return False
