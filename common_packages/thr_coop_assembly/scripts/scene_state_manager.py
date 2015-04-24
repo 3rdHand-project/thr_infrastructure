@@ -5,8 +5,9 @@ from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
 from thr_coop_assembly.msg import SceneState, Predicate
 from itertools import combinations
 from threading import Lock
-import json
-
+import json, cv2, cv_bridge
+from numpy import zeros, uint8
+from sensor_msgs.msg import Image
 
 class SceneStateManager(object):
     def __init__(self, rate):
@@ -32,6 +33,8 @@ class SceneStateManager(object):
 
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
+        self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
+
 
     def pred_positioned(self, master, slave, atp):
         """
@@ -91,6 +94,34 @@ class SceneStateManager(object):
             self.state_lock.release()
         return resp
 
+    def display_image(self, width, height):
+        img = zeros((height,width, 3), uint8)
+        preds = {"attached": [], "in_hws": [], "positioned": []}
+        self.state_lock.acquire()
+        try:
+            for p in self.state.predicates:
+                if p.type==Predicate.IN_HUMAN_WS:
+                    preds["in_hws"].append(p)
+                elif p.type==Predicate.POSITIONED:
+                    preds["positioned"].append(p)
+                elif p.type==Predicate.ATTACHED:
+                    preds["attached"].append(p)
+        finally:
+            self.state_lock.release()
+
+        # Now draw the image with opencv
+        line = 1
+        for i_pred, pred in preds.iteritems():
+            cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 40*line), cv2.FONT_HERSHEY_SIMPLEX, 0.8, [255]*3)
+            line+=1
+            for i, p in enumerate(pred):
+                cv2.putText(img, str(p.objects), (50, 40*line), cv2.FONT_HERSHEY_SIMPLEX, 0.7, [180]*3)
+                line += 1
+        #cv2.imshow("Predicates", img)
+        #cv2.waitKey(1)
+        msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
+        self.image_pub.publish(msg)
+
     def run(self):
         while not rospy.is_shutdown():
             self.state_lock.acquire()
@@ -125,6 +156,7 @@ class SceneStateManager(object):
                             self.state.predicates.append(p)
             finally:
                 self.state_lock.release()
+            self.display_image(1024, 600)
             self.rate.sleep()
 
     def start(self):
