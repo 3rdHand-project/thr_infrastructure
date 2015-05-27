@@ -1,7 +1,8 @@
 {
     "sleep_step": 0.1,
     "short_sleep_step": 0.01,
-    "action_speed": 0.2,
+    "kv_max": 0.9,
+    "ka_max": 0.6,
     "action_num_points": 150,
     "wait": {
         "duration": 1.0
@@ -14,7 +15,6 @@
     },
     "hold": {
         "sphere_radius": 0.7,
-        "releasing_min_time": 1.0,
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
     },

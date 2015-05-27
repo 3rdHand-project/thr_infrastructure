@@ -178,7 +178,7 @@ class ActionServer:
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.set_motion_ended(False)
-        approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.85, ka_max=0.5)
+        approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
 
         # 1. Go to approach pose
         if self.should_interrupt():
@@ -237,7 +237,7 @@ class ActionServer:
                         rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
                         rospy.sleep(self.action_params['sleep_step'])
                         continue
-                    give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=0.85, ka_max=0.5)
+                    give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
 
                 # The function below returns True if human as moved enough so that we need to replan the trajectory
                 def needs_update():
@@ -271,7 +271,7 @@ class ActionServer:
                 leaving_traj = self.arms['left'].plan(starting_pose.pose)
                 if len(leaving_traj.joint_trajectory.points)>1: break
         else:
-            leaving_traj = self.extras['left'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.85, ka_max=0.5)
+            leaving_traj = self.extras['left'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
         self.low_level_execute_workaround('left', leaving_traj)
 
         rospy.loginfo("[ActionServer] Executed give{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
@@ -298,7 +298,7 @@ class ActionServer:
         # 0. Trajectories generation
         cart_dist = float('inf')
         angular_dist = float('inf')
-        while cart_dist>self.action_params['hold']['approach_cartesian_dist'] and angular_dist>self.action_params['hold']['approach_angular_dist']:
+        while cart_dist>self.action_params['hold']['approach_cartesian_dist'] or angular_dist>self.action_params['hold']['approach_angular_dist']:
             try:
                 world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)  # Pose of the approach
             except:
@@ -317,7 +317,7 @@ class ActionServer:
                     rospy.logerr("Sorry, object {} is too far away for me".format(object))
                     return self.set_motion_ended(False)
             else:
-                approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=0.85, ka_max=0.5)
+                approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
 
             # 1. Go to approach pose
             if self.should_interrupt():
@@ -390,7 +390,7 @@ class ActionServer:
                 leaving_traj = self.arms['right'].plan(starting_pose.pose)
                 if len(leaving_traj.joint_trajectory.points)>1: break
         else:
-            leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=0.85, ka_max=0.5, start=goal_approach)
+            leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'], start=goal_approach)
         self.low_level_execute_workaround('right', leaving_traj)
 
         rospy.loginfo("[ActionServer] Executed hold{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
