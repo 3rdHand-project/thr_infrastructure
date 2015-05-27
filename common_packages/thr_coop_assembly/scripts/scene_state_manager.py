@@ -112,10 +112,10 @@ class SceneStateManager(object):
         # Now draw the image with opencv
         line = 1
         for i_pred, pred in preds.iteritems():
-            cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 40*line), cv2.FONT_HERSHEY_SIMPLEX, 0.8, [255]*3)
+            cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
             line+=1
             for i, p in enumerate(pred):
-                cv2.putText(img, str(p.objects), (50, 40*line), cv2.FONT_HERSHEY_SIMPLEX, 0.7, [180]*3)
+                cv2.putText(img, str(p.objects), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
                 line += 1
         #cv2.imshow("Predicates", img)
         #cv2.waitKey(1)
