@@ -7,6 +7,7 @@ from itertools import combinations
 from threading import Lock
 import json, cv2, cv_bridge
 from numpy import zeros, uint8
+from time import time
 from sensor_msgs.msg import Image
 
 class SceneStateManager(object):
@@ -17,6 +18,7 @@ class SceneStateManager(object):
         self.screwdriver = '/tools/screwdriver'
         self.state_lock = Lock()
         self.attached = set()
+        self.attaching_stamps = {}
 
         try:
             self.objects = rospy.get_param('/thr/objects')[rospy.get_param('/thr/scene')]
@@ -74,9 +76,16 @@ class SceneStateManager(object):
                 relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
                 if cart_dist<self.config['tool_position_tolerance']:
-                    rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
-                    self.attached.append(master+slave+str(atp))
-                    return True
+                    try:
+                        if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
+                            rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
+                            self.attached.append(master+slave+str(atp))
+                            return True
+                    except KeyError:
+                        if not self.attaching_stamps.has_key(master):
+                            self.attaching_stamps[master] = {}
+                        self.attaching_stamps[master][slave] = time()
+                        return False
         return False
 
     def pred_in_human_ws(self, obj):
