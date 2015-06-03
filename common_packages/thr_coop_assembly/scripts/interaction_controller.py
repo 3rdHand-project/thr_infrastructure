@@ -110,7 +110,7 @@ class InteractionController(object):
                     # Publish the event to the action history topic
                     event = ActionHistoryEvent()
                     event.header.stamp = rospy.Time.now()
-                    event.type = ActionHistoryEvent.FINISHED
+                    event.type = ActionHistoryEvent.FINISHED_SUCCESS if state == GoalStatus.SUCCEEDED else ActionHistoryEvent.FINISHED_FAILURE
                     event.action = self.current_action
                     self.action_history.publish(event)
 

@@ -117,7 +117,10 @@ class ActionServer:
     def set_motion_ended(self, succeeded):
         self.result.header.stamp = rospy.Time.now()
         self.result.result.succeeded = succeeded
-        self.server.set_succeeded(self.result.result)
+        if succeeded:
+            self.server.set_succeeded(self.result.result)
+        else:
+            self.server.set_aborted(self.result.result)
         return succeeded
 
     def low_level_execute_workaround(self, side, rt, callback_stop=None):
