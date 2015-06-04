@@ -96,18 +96,14 @@ class SceneStateManager(object):
 
     def handle_request(self, req):
         resp = GetSceneStateResponse()
-        self.state_lock.acquire()
-        try:
+        with self.state_lock:
             resp.state = self.state # TODO deepcopy?
-        finally:
-            self.state_lock.release()
         return resp
 
     def display_image(self, width, height):
         img = zeros((height,width, 3), uint8)
         preds = {"attached": [], "in_hws": [], "positioned": []}
-        self.state_lock.acquire()
-        try:
+        with self.state_lock:
             for p in self.state.predicates:
                 if p.type==Predicate.IN_HUMAN_WS:
                     preds["in_hws"].append(p)
@@ -115,8 +111,6 @@ class SceneStateManager(object):
                     preds["positioned"].append(p)
                 elif p.type==Predicate.ATTACHED:
                     preds["attached"].append(p)
-        finally:
-            self.state_lock.release()
 
         # Now draw the image with opencv
         line = 1
@@ -133,8 +127,7 @@ class SceneStateManager(object):
 
     def run(self):
         while not rospy.is_shutdown():
-            self.state_lock.acquire()
-            try:
+            with self.state_lock:
                 self.state.predicates = []
                 self.state.header.stamp = rospy.Time.now()
                 for o in self.objects:
@@ -163,8 +156,6 @@ class SceneStateManager(object):
                             p.type = Predicate.ATTACHED
                             p.objects = [master, slave, str(atp)]
                             self.state.predicates.append(p)
-            finally:
-                self.state_lock.release()
             self.display_image(1024, 600)
             self.rate.sleep()
 
@@ -175,4 +166,4 @@ class SceneStateManager(object):
 
 if __name__ == "__main__":
     rospy.init_node('scene_state_manager')
-    SceneStateManager(2).start()
+    SceneStateManager(20).start()
