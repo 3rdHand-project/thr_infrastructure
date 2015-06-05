@@ -10,7 +10,7 @@ from numpy import zeros, uint8
 from time import time
 from sensor_msgs.msg import Image
 
-class SceneStateManager(object):
+class SequentialSceneStateManager(object):
     def __init__(self, rate):
         self.state = SceneState()
         self.rate = rospy.Rate(rate)
@@ -166,4 +166,4 @@ class SceneStateManager(object):
 
 if __name__ == "__main__":
     rospy.init_node('scene_state_manager')
-    SceneStateManager(20).start()
+    SequentialSceneStateManager(20).start()

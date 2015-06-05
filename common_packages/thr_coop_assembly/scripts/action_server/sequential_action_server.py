@@ -13,7 +13,7 @@ import baxter_interface  # TODO Use a generic stuff instead for gripper closure 
 
 from thr_coop_assembly.msg import RunActionAction, RunActionActionResult
 
-class ActionServer:
+class SequentialActionServer:
     """
     This is the action server that executes actions the robot is capable of.
     It requires two config files:
@@ -397,5 +397,5 @@ class ActionServer:
 
 if __name__ == '__main__':
     rospy.init_node('action_server')
-    server = ActionServer(planning=False, orientation_matters=True, allow_replanning=True)
+    server = SequentialActionServer(planning=False, orientation_matters=True, allow_replanning=True)
     rospy.spin()
