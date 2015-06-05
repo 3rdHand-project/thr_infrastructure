@@ -1,5 +1,2 @@
-# MDPAction describing a MDP action
-
-# Constants defining the type of command
 string type
 string[] parameters
