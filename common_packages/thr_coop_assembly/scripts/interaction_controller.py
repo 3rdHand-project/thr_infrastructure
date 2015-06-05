@@ -61,7 +61,7 @@ class InteractionController(object):
             predicted_cmd = predict(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
-            return Action(type=Action.WAIT)
+            return MDPAction(type='wait')
         return predicted_cmd.action
     ###################################################################################################################
 
@@ -77,7 +77,7 @@ class InteractionController(object):
 
     def run_action(self, action):
         if not self.current_action:
-            if action.type!=Action.WAIT:
+            if action.type!='wait':
                 os.system('beep')
             self.scene_before_action = deepcopy(self.current_scene)
             goal = RunActionGoal()

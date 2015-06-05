@@ -3,7 +3,6 @@ import rospy
 import rospkg
 import json
 import tf
-import time
 import actionlib
 import moveit_commander
 import move_group_extras
@@ -12,7 +11,7 @@ from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAct
 import numpy
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
-from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
+from thr_coop_assembly.msg import RunActionAction, RunActionActionResult
 
 class ActionServer:
     """
@@ -80,9 +79,9 @@ class ActionServer:
         Dispatches a new goal on the method executing each type of action
         :param goal:
         """
-        if goal.action.type==Action.GIVE:
+        if goal.action.type=='give':
             self.execute_give(goal.action.parameters)
-        elif goal.action.type==Action.HOLD:
+        elif goal.action.type=='hold':
             self.execute_hold(goal.action.parameters)
         else:
             self.execute_wait()
