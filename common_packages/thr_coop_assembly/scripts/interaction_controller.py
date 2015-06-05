@@ -21,8 +21,7 @@ class InteractionController(object):
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
-        self.run_action_name = '/thr/run_action'
-        self.action_history_name = '/thr/action_history'
+        self.run_action_name = '/thr/run_mdp_action'
 
         # Initiating topics ands links to services/actions
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunActionAction)
@@ -31,7 +30,6 @@ class InteractionController(object):
         for service in [self.reward_service, self.predictor_service, self.scene_state_service]:#, self.user_cmd_service]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
-        self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
     ################################################# SERVICE CALLERS #################################################
     def send_reward(self, good, scene_before_action):
@@ -83,15 +81,7 @@ class InteractionController(object):
             goal = RunActionGoal()
             goal.action = action
             self.run_action_client.send_goal(goal)
-
             self.current_action = action
-
-            # Publish the event to the action history topic
-            event = ActionHistoryEvent()
-            event.header.stamp = rospy.Time.now()
-            event.type = ActionHistoryEvent.STARTING
-            event.action = action
-            self.action_history.publish(event)
 
     def action_postprocessing(self):
             if self.current_action: # If an action is running for this arm...
@@ -106,14 +96,6 @@ class InteractionController(object):
                     #    self.run_action_client.cancel_goal()
                     #    self.send_reward(False, self.scene_before_action)
                     #    self.run_action(self.command_mapper(self.user_commands[0]))
-
-                    # Publish the event to the action history topic
-                    event = ActionHistoryEvent()
-                    event.header.stamp = rospy.Time.now()
-                    event.type = ActionHistoryEvent.FINISHED_SUCCESS if state == GoalStatus.SUCCEEDED else ActionHistoryEvent.FINISHED_FAILURE
-                    event.action = self.current_action
-                    self.action_history.publish(event)
-
                     self.current_action = None
 
 

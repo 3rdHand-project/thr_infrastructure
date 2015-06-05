@@ -2,7 +2,7 @@
 
 import rospy, rospkg, tf, transformations
 from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
-from thr_coop_assembly.msg import SceneState, Predicate
+from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, Action
 from itertools import combinations
 from threading import Lock
 import json, cv2, cv_bridge
@@ -10,15 +10,24 @@ from numpy import zeros, uint8
 from time import time
 from sensor_msgs.msg import Image
 
-class SequentialSceneStateManager(object):
+class ConcurrentSceneStateManager(object):
     def __init__(self, rate):
         self.state = SceneState()
         self.rate = rospy.Rate(rate)
         self.world = "base"
         self.screwdriver = '/tools/screwdriver'
         self.state_lock = Lock()
+        self.history_lock = Lock()
         self.attached = set()
         self.attaching_stamps = {}
+        self.action_history_name = '/thr/action_history'
+
+        # Action History
+        # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HOLDED, PICKED
+        self.at_home = {'left': True, 'right': True}
+        self.busy = {'left': False, 'right': False}
+        self.holded = []
+        self.picked = []
 
         try:
             self.objects = rospy.get_param('/thr/objects')[rospy.get_param('/thr/scene')]
@@ -36,7 +45,57 @@ class SequentialSceneStateManager(object):
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
+        rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
+    def affected_to(self, type, side):
+        return type in [Action.GO_HOME_LEFT, Action.PICK, Action.GIVE] and side=='left' or \
+               type in [Action.GO_HOME_RIGHT, Action.HOLD] and side=='right'
+
+    def cb_action_event_received(self, msg):
+        #with self.history_lock:
+            # Listening action history for predicate AT_HOME
+            if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GO_HOME_LEFT:
+                self.at_home['left'] = True
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GO_HOME_RIGHT:
+                self.at_home['right'] = True
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'right') and msg.action.type!=Action.GO_HOME_RIGHT:
+                self.at_home['right'] = False
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'left') and msg.action.type!=Action.GO_HOME_LEFT:
+                self.at_home['left'] = False
+
+            # Listening action events for predicate BUSY
+            if self.affected_to(msg.action.type, 'left'):
+                self.busy['left'] = msg.type==ActionHistoryEvent.STARTING
+            elif self.affected_to(msg.action.type, 'right'):
+                self.busy['right'] = msg.type==ActionHistoryEvent.STARTING
+            else:
+                rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
+
+            # Listening action events for predicates PICKED + HOLDED
+            if msg.type==ActionHistoryEvent.STARTING and msg.action.type==Action.HOLD:
+                self.holded = msg.action.parameters
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.PICK:
+                self.picked = msg.action.parameters
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.HOLD:
+                self.holded = []
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GIVE:
+                self.picked = []
+
+    def pred_holded(self, obj):
+        #with self.history_lock:
+            return obj in self.holded
+
+    def pred_picked(self, obj):
+        #with self.history_lock:
+            return obj in self.picked
+
+    def pred_at_home(self, side):
+        #with self.history_lock:
+            return self.at_home[side]
+
+    def pred_busy(self, side):
+        #with self.history_lock:
+            return self.busy[side]
 
     def pred_positioned(self, master, slave, atp):
         """
@@ -96,14 +155,18 @@ class SequentialSceneStateManager(object):
 
     def handle_request(self, req):
         resp = GetSceneStateResponse()
-        with self.state_lock:
+        self.state_lock.acquire()
+        try:
             resp.state = self.state # TODO deepcopy?
+        finally:
+            self.state_lock.release()
         return resp
 
     def display_image(self, width, height):
         img = zeros((height,width, 3), uint8)
-        preds = {"attached": [], "in_hws": [], "positioned": []}
-        with self.state_lock:
+        preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "holded": [], "at_home": []}
+        self.state_lock.acquire()
+        try:
             for p in self.state.predicates:
                 if p.type=='in_human_ws':
                     preds["in_hws"].append(p)
@@ -111,6 +174,16 @@ class SequentialSceneStateManager(object):
                     preds["positioned"].append(p)
                 elif p.type=='attached':
                     preds["attached"].append(p)
+                elif p.type=='picked':
+                    preds["picked"].append(p)
+                elif p.type=='holded':
+                    preds["holded"].append(p)
+                elif p.type=='busy':
+                    preds["busy"].append(p)
+                elif p.type=='at_home':
+                    preds["at_home"].append(p)
+        finally:
+            self.state_lock.release()
 
         # Now draw the image with opencv
         line = 1
@@ -136,6 +209,16 @@ class SequentialSceneStateManager(object):
                         p.type = 'in_human_ws'
                         p.parameters = [o]
                         self.state.predicates.append(p)
+                    elif self.pred_picked(o):
+                        p = Predicate()
+                        p.type = 'picked'
+                        p.parameters = [o]
+                        self.state.predicates.append(p)
+                    elif self.pred_picked(o):
+                        p = Predicate()
+                        p.type = 'holded'
+                        p.parameters = [o]
+                        self.state.predicates.append(p)
                 for o1, o2 in combinations(self.objects, 2):
                     if self.poses[o1].has_key('constraints') and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
                         master = o1
@@ -156,6 +239,19 @@ class SequentialSceneStateManager(object):
                             p.type = 'attached'
                             p.parameters = [master, slave, str(atp)]
                             self.state.predicates.append(p)
+                with self.history_lock:
+                    for side in ['left', 'right']:
+                        if self.pred_busy(side):
+                            p = Predicate()
+                            p.type = 'busy'
+                            p.parameters.append(side)
+                            self.state.predicates.append(p)
+                        if self.pred_at_home(side):
+                            p = Predicate()
+                            p.type = 'at_home'
+                            p.parameters.append(side)
+                            self.state.predicates.append(p)
+
             self.display_image(1024, 600)
             self.rate.sleep()
 
@@ -165,5 +261,5 @@ class SequentialSceneStateManager(object):
         self.run()
 
 if __name__ == "__main__":
-    rospy.init_node('sequential_scene_state_manager')
-    SequentialSceneStateManager(20).start()
+    rospy.init_node('concurrent_scene_state_manager')
+    ConcurrentSceneStateManager(20).start()

@@ -49,6 +49,7 @@ find_package(catkin REQUIRED
  add_message_files(
    FILES
    MDPAction.msg
+   RobotAction.msg
    Predicate.msg
    SceneState.msg
    UserCommand.msg
@@ -67,7 +68,8 @@ find_package(catkin REQUIRED
 ## Generate actions in the 'action' folder
  add_action_files(
    FILES
-   RunAction.action
+   RunMDPAction.action
+   RunRobotAction.action
  )
 
 ## Generate added messages and services with any dependencies listed here

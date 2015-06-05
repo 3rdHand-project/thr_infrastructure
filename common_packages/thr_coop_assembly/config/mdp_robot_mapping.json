@@ -1,0 +1,8 @@
+{
+    "start_give": {"client": "left", "type":"give"},
+    "start_hold": {"client": "right", "type":"hold"},
+    "start_pick": {"client": "left", "type":"pick"},
+    "start_go_home_left": {"client": "left", "type":"go_home"},
+    "start_go_home_right": {"client": "right", "type":"go_home"},
+    "start_wait": {"client": "left", "type":"wait"}
+}

@@ -69,7 +69,7 @@ class SequentialActionServer:
 
         # Action server attributes
         rospy.loginfo("Starting server...")
-        self.server = actionlib.SimpleActionServer('/thr/run_action', RunActionAction, self.execute, False)
+        self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunActionAction, self.execute, False)
         self.result = RunActionActionResult()
         self.server.start()
         rospy.loginfo('Server ready')
@@ -79,12 +79,16 @@ class SequentialActionServer:
         Dispatches a new goal on the method executing each type of action
         :param goal:
         """
-        if goal.action.type=='give':
-            self.execute_give(goal.action.parameters)
-        elif goal.action.type=='hold':
-            self.execute_hold(goal.action.parameters)
-        else:
-            self.execute_wait()
+        try:
+            if goal.action.type=='give':
+                self.execute_give(goal.action.parameters)
+            elif goal.action.type=='hold':
+                self.execute_hold(goal.action.parameters)
+            else:
+                self.execute_wait()
+        except:
+            self.set_motion_ended(False)
+            raise
 
     def execute_wait(self):
         """
@@ -115,7 +119,6 @@ class SequentialActionServer:
 
     def set_motion_ended(self, succeeded):
         self.result.header.stamp = rospy.Time.now()
-        self.result.result.succeeded = succeeded
         if succeeded:
             self.server.set_succeeded(self.result.result)
         else:
@@ -396,6 +399,6 @@ class SequentialActionServer:
         return self.set_motion_ended(not self.should_interrupt())
 
 if __name__ == '__main__':
-    rospy.init_node('action_server')
+    rospy.init_node('sequential_action_server')
     server = SequentialActionServer(planning=False, orientation_matters=True, allow_replanning=True)
     rospy.spin()
