@@ -2,7 +2,7 @@
 
 import rospy, rospkg, tf, transformations
 from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
-from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, Action
+from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, RobotAction
 from itertools import combinations
 from threading import Lock
 import json, cv2, cv_bridge
@@ -48,19 +48,19 @@ class ConcurrentSceneStateManager(object):
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
     def affected_to(self, type, side):
-        return type in [Action.GO_HOME_LEFT, Action.PICK, Action.GIVE] and side=='left' or \
-               type in [Action.GO_HOME_RIGHT, Action.HOLD] and side=='right'
+        return type in ['go_home_left', 'pick', 'give'] and side=='left' or \
+               type in ['go_home_right', 'hold'] and side=='right'
 
     def cb_action_event_received(self, msg):
         #with self.history_lock:
             # Listening action history for predicate AT_HOME
-            if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GO_HOME_LEFT:
+            if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_left':
                 self.at_home['left'] = True
-            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GO_HOME_RIGHT:
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
                 self.at_home['right'] = True
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'right') and msg.action.type!=Action.GO_HOME_RIGHT:
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'right') and msg.action.type!='go_home_right':
                 self.at_home['right'] = False
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'left') and msg.action.type!=Action.GO_HOME_LEFT:
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'left') and msg.action.type!='go_home_left':
                 self.at_home['left'] = False
 
             # Listening action events for predicate BUSY
@@ -72,13 +72,13 @@ class ConcurrentSceneStateManager(object):
                 rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
 
             # Listening action events for predicates PICKED + HOLDED
-            if msg.type==ActionHistoryEvent.STARTING and msg.action.type==Action.HOLD:
+            if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
                 self.holded = msg.action.parameters
-            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.PICK:
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='pick':
                 self.picked = msg.action.parameters
-            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.HOLD:
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='hold':
                 self.holded = []
-            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type==Action.GIVE:
+            elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='give':
                 self.picked = []
 
     def pred_holded(self, obj):

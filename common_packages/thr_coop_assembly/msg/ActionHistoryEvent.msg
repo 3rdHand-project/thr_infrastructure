@@ -2,7 +2,7 @@
 # A message of this history is an ActionHistoryEvent
 
 Header header
-MDPAction action # The performed action
+RobotAction action # The performed action
 string side # The arm performing this action
 
 uint8 STARTING = 0

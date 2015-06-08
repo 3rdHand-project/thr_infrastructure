@@ -24,7 +24,7 @@ class InteractionController(object):
         self.run_action_name = '/thr/run_mdp_action'
 
         # Initiating topics ands links to services/actions
-        self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunActionAction)
+        self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
         rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
         self.run_action_client.wait_for_server()
         for service in [self.reward_service, self.predictor_service, self.scene_state_service]:#, self.user_cmd_service]:
@@ -78,7 +78,7 @@ class InteractionController(object):
             if action.type!='wait':
                 os.system('beep')
             self.scene_before_action = deepcopy(self.current_scene)
-            goal = RunActionGoal()
+            goal = RunMDPActionGoal()
             goal.action = action
             self.run_action_client.send_goal(goal)
             self.current_action = action

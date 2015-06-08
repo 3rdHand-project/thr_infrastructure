@@ -11,7 +11,7 @@ from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAct
 import numpy
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
-from thr_coop_assembly.msg import RunActionAction, RunActionActionResult
+from thr_coop_assembly.msg import RunMDPActionAction, RunMDPActionActionResult
 
 class SequentialActionServer:
     """
@@ -69,8 +69,8 @@ class SequentialActionServer:
 
         # Action server attributes
         rospy.loginfo("Starting server...")
-        self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunActionAction, self.execute, False)
-        self.result = RunActionActionResult()
+        self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
+        self.result = RunMDPActionActionResult()
         self.server.start()
         rospy.loginfo('Server ready')
 
@@ -122,6 +122,7 @@ class SequentialActionServer:
         if succeeded:
             self.server.set_succeeded(self.result.result)
         else:
+            rospy.logwarn("ARBOTEE")
             self.server.set_aborted(self.result.result)
         return succeeded
 
