@@ -51,7 +51,6 @@ class Server(object):
         :return: an object of type GetNextActionResponse
         """
         resp = GetNextActionResponse()
-        action = MDPAction()
         valid_action = True
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
         pred_list = get_next_action_req.scene_state.predicates
@@ -59,147 +58,129 @@ class Server(object):
 
         if len(in_hws_list) == 0:
             if not self.check_busy_pred(pred_list, "left"):
-                action = MDPAction()
-                action.parameters = ['/toolbox/handle']
+                resp.action.parameters = ['/toolbox/handle']
                 if not self.check_picked_pred(pred_list, '/toolbox/handle'):
-                    action.type = 'start_pick'
+                    resp.action.type = 'start_pick'
                 else:
-                    action.type = 'start_give'
-                resp.actions.append(action)
+                    resp.action.type = 'start_give'
+                return resp
+
             if not self.check_busy_pred(pred_list, "right"):
                 if not self.check_at_home_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_go_home_right'
-                    resp.actions.append(action)
+                    resp.action.type = 'start_go_home_right'
+                    return resp
 
         elif len(in_hws_list) == 1:
             if not self.check_busy_pred(pred_list, "left"):
-                action = MDPAction()
-                action.parameters = ['/toolbox/side_right']
+                resp.action.parameters = ['/toolbox/side_right']
                 if not self.check_picked_pred(pred_list, '/toolbox/side_right'):
-                    action.type = 'start_pick'
+                    resp.action.type = 'start_pick'
                 else:
-                    action.type = 'start_give'
-                resp.actions.append(action)
+                    resp.action.type = 'start_give'
+                return resp
+
             if not self.check_busy_pred(pred_list, "right"):
                 if not self.check_at_home_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_go_home_right'
-                    resp.actions.append(action)
+                    resp.action.type = 'start_go_home_right'
+                    return resp
 
         elif len(in_hws_list) == 2:
             if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_right'):
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
                 if not self.check_busy_pred(pred_list, "left"):
-                    action = MDPAction()
-                    action.parameters = ['/toolbox/side_left']
+                    resp.action.parameters = ['/toolbox/side_left']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_left'):
-                        action.type = 'start_pick'
+                        resp.action.type = 'start_pick'
                     else:
-                        action.type = 'start_give'
-                    resp.actions.append(action)
+                        resp.action.type = 'start_give'
+                    return resp
 
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 0):
                 if not self.check_busy_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '0']
-                    resp.actions.append(action)
+                    resp.action.type = 'start_hold'
+                    resp.action.parameters = ['/toolbox/handle', '0']
+                    return resp
 
                 if not self.check_picked_pred(pred_list, '/toolbox/side_left'):
                     if not self.check_busy_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_left']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_pick'
+                        resp.action.parameters = ['/toolbox/side_left']
+                        return resp
 
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 1):
                 if not self.check_busy_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '1']
-                    resp.actions.append(action)
+                    resp.action.type = 'start_hold'
+                    resp.action.parameters = ['/toolbox/handle', '1']
+                    return resp
 
                 if not self.check_picked_pred(pred_list, '/toolbox/side_left'):
                     if not self.check_busy_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_left']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_pick'
+                        resp.action.parameters = ['/toolbox/side_left']
+                        return resp
             else:
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
         elif len(in_hws_list) == 3:
             if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_left'):
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
                 if not self.check_busy_pred(pred_list, "left"):
-                    action = MDPAction()
-                    action.parameters = ['/toolbox/side_front']
+                    resp.action.parameters = ['/toolbox/side_front']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                        action.type = 'start_pick'
+                        resp.action.type = 'start_pick'
                     else:
-                        action.type = 'start_give'
-                    resp.actions.append(action)
+                        resp.action.type = 'start_give'
+                    return resp
 
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 0):
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                        action = MDPAction()
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_front']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_pick'
+                        resp.action.parameters = ['/toolbox/side_front']
+                        return resp
 
                 if not self.check_busy_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '0']
-                    resp.actions.append(action)
+                    resp.action.type = 'start_hold'
+                    resp.action.parameters = ['/toolbox/handle', '0']
+                    return resp
 
 
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 1):
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                        action = MDPAction()
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_front']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_pick'
+                        resp.action.parameters = ['/toolbox/side_front']
+                        return resp
 
                 if not self.check_busy_pred(pred_list, "right"):
-                    action = MDPAction()
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '1']
-                    resp.actions.append(action)
+                    resp.action.type = 'start_hold'
+                    resp.action.parameters = ['/toolbox/handle', '1']
+                    return resp
 
             else:
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
         elif len(in_hws_list) == 4:
             if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front') and
@@ -207,18 +188,16 @@ class Server(object):
 
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
                 if not self.check_busy_pred(pred_list, "left"):
-                    action = MDPAction()
-                    action.parameters = ['/toolbox/side_back']
+                    resp.action.parameters = ['/toolbox/side_back']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_back'):
-                        action.type = 'start_pick'
+                        resp.action.type = 'start_pick'
                     else:
-                        action.type = 'start_give'
-                    resp.actions.append(action)
+                        resp.action.type = 'start_give'
+                    return resp
 
    
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0) and
@@ -228,28 +207,24 @@ class Server(object):
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0):
                     if not self.check_busy_pred(pred_list, "left"):
                         if not self.check_at_home_pred(pred_list, "left"):
-                            action = MDPAction()
-                            action.type = 'start_go_home_left'
-                            resp.actions.append(action)
+                            resp.action.type = 'start_go_home_left'
+                            return resp
 
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '0']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_left', '0']
+                        return resp
                 else:
                     if not self.check_busy_pred(pred_list, "left"):
                         if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                            action = MDPAction()
-                            action.type = 'start_pick'
-                            action.parameters = ['/toolbox/side_back']
-                            resp.actions.append(action)
+                            resp.action.type = 'start_pick'
+                            resp.action.parameters = ['/toolbox/side_back']
+                            return resp
 
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '1']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_right', '1']
+                        return resp
 
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front', 0)):
@@ -257,40 +232,34 @@ class Server(object):
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1):
                     if not self.check_busy_pred(pred_list, "left"):
                         if not self.check_at_home_pred(pred_list, "left"):
-                            action = MDPAction()
-                            action.type = 'start_go_home_left'
-                            resp.actions.append(action)
+                            resp.action.type = 'start_go_home_left'
+                            return resp
 
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '1']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_left', '1']
+                        return resp
                 else:
                     if not self.check_busy_pred(pred_list, "left"):
                         if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                            action = MDPAction()
-                            action.type = 'start_pick'
-                            action.parameters = ['/toolbox/side_back']
-                            resp.actions.append(action)
+                            resp.action.type = 'start_pick'
+                            resp.action.parameters = ['/toolbox/side_back']
+                            return resp
 
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '0']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_right', '0']
+                        return resp
 
             else:
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
 
         elif len(in_hws_list) == 5:
             if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back') and
@@ -298,14 +267,12 @@ class Server(object):
 
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
    
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 1)):
@@ -313,57 +280,53 @@ class Server(object):
 
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0):
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '0']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_left', '0']
+                        return resp
                 else:
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '1']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_right', '1']
+                        return resp
 
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 0)):
 
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1):
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '1']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_left', '1']
+                        return resp
                 else:
                     if not self.check_busy_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '0']
-                        resp.actions.append(action)
+                        resp.action.type = 'start_hold'
+                        resp.action.parameters = ['/toolbox/side_right', '0']
+                        return resp
 
             else:
                 if not self.check_busy_pred(pred_list, "left"):
                     if not self.check_at_home_pred(pred_list, "left"):
                         action = MDPAction()
-                        action.type = 'start_go_home_left'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_left'
+                        return resp
                 if not self.check_busy_pred(pred_list, "right"):
                     if not self.check_at_home_pred(pred_list, "right"):
-                        action = MDPAction()
-                        action.type = 'start_go_home_right'
-                        resp.actions.append(action)
+                        resp.action.type = 'start_go_home_right'
+                        return resp
+
+        resp.action.type = 'wait'
         return resp
+
 
     def learner_handler(self, new_training_ex):
         """
