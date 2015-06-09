@@ -184,7 +184,7 @@ class RobotActionServer:
         self.low_level_execute_workaround(self.side, reapproach_traj)
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
-        return
+        return self.server.set_succeeded()
 
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)
