@@ -17,7 +17,7 @@ class InteractionController(object):
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
-        self.user_cmd_service = '/thr/usercommands'
+        self.user_cmd_service = '/thr/user_mdp_actions'
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
@@ -52,12 +52,14 @@ class InteractionController(object):
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
     def update_user_inputs(self):
-        request = GetSceneStateRequest()
+        request = GetUserMDPActionRequest()
         try:
-            get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserCommands)
-            self.current_scene = get_ui(request).state
+            get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserMDPAction)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot update user inputs {}:".format(e.message))
+            return MDPAction(type='wait')
+        else:
+            return get_ui(request).action
 
     def predict(self):
         request = GetNextActionRequest()
@@ -75,8 +77,9 @@ class InteractionController(object):
         print 'Interaction starting!'
         while self.running and not rospy.is_shutdown():
             self.update_scene()
-            self.update_user_inputs()
-            action = self.predict()
+            action = self.update_user_inputs()
+            if action.type=='wait':
+                action = self.predict()
             self.run_action(action)
             self.action_postprocessing()
             self.user_commands = []
