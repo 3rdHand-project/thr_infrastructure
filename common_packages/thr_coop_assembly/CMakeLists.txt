@@ -61,7 +61,7 @@ find_package(catkin REQUIRED
    FILES
    GetNextAction.srv
    GetSceneState.srv
-   GetUserCommands.srv
+   GetUserMDPAction.srv
    SetNewTrainingExample.srv
  )
 

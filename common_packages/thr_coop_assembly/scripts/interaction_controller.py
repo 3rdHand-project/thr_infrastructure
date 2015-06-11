@@ -27,7 +27,7 @@ class InteractionController(object):
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
         rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
         self.run_action_client.wait_for_server()
-        for service in [self.reward_service, self.predictor_service, self.scene_state_service]:#, self.user_cmd_service]:
+        for service in [self.reward_service, self.predictor_service, self.scene_state_service, self.user_cmd_service]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
@@ -51,6 +51,14 @@ class InteractionController(object):
         except rospy.ServiceException, e:
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
+    def update_user_inputs(self):
+        request = GetSceneStateRequest()
+        try:
+            get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserCommands)
+            self.current_scene = get_ui(request).state
+        except rospy.ServiceException, e:
+            rospy.logerr("Cannot update user inputs {}:".format(e.message))
+
     def predict(self):
         request = GetNextActionRequest()
         request.scene_state = self.current_scene
@@ -67,6 +75,7 @@ class InteractionController(object):
         print 'Interaction starting!'
         while self.running and not rospy.is_shutdown():
             self.update_scene()
+            self.update_user_inputs()
             action = self.predict()
             self.run_action(action)
             self.action_postprocessing()
