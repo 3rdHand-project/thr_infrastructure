@@ -78,7 +78,9 @@ class InteractionController(object):
         raise Exception("This is the mother class of Interaction controller, you must inherit from it")
 
     def run_action(self, action):
-        if not self.current_action:
+        if not self.current_action or self.current_action.type=='wait':
+            if self.current_action=='wait':
+                self.run_action_client.cancel_all_goals()
             if action.type!='wait':
                 os.system('beep')
             self.scene_before_action = deepcopy(self.current_scene)
