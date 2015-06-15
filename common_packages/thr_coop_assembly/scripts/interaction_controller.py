@@ -1,9 +1,10 @@
+#!/usr/bin/env python
 import os, rospy
 import actionlib
 
 from thr_coop_assembly.msg import *
 from thr_coop_assembly.srv import *
-from actionlib_msgs.msg import GoalStatus
+from actionlib_msgs.msg import *
 from copy import deepcopy
 
 class InteractionController(object):
@@ -73,7 +74,16 @@ class InteractionController(object):
     ###################################################################################################################
 
     def run(self):
-        raise Exception("This is the mother class of Interaction controller, you must inherit from it")
+        print 'Interaction starting!'
+        while self.running and not rospy.is_shutdown():
+            self.update_scene()
+            action = self.update_user_inputs()
+            if action.type=='wait':
+                action = self.predict()
+            self.run_action(action)
+            self.action_postprocessing()
+            self.user_commands = []
+            self.interaction_loop_rate.sleep()
 
     def run_action(self, action):
         if not self.current_action:
@@ -99,3 +109,8 @@ class InteractionController(object):
                     #    self.send_reward(False, self.scene_before_action)
                     #    self.run_action(self.command_mapper(self.user_commands[0]))
                     self.current_action = None
+
+
+if __name__=='__main__':
+    rospy.init_node("interaction_controller")
+    InteractionController().run()
