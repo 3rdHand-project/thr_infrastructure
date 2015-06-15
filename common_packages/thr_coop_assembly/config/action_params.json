@@ -14,7 +14,7 @@
         "inter_goal_sleep": 0.4
     },
     "hold": {
-        "sphere_radius": 0.7,
+        "sphere_radius": 0.55,
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
     },

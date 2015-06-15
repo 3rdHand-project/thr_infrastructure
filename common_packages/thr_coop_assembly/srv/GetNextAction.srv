@@ -4,4 +4,4 @@
 SceneState scene_state
 ---
 # Predictor returns the command to execute and its parameters
-Action action
+MDPAction action

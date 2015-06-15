@@ -2,7 +2,7 @@
 
 # The state of the scene and command (un)validated
 SceneState scene_state
-Action action
+MDPAction action
 bool good
 ---
 # No return parameter

@@ -1,0 +1,9 @@
+<launch>
+    <include file="$(find baxter_moveit_config)/launch/demo_baxter.launch">
+      <arg name="grippers" value="True"/>
+      <arg name="verbose" value="False"/>
+    </include>
+    <node pkg="thr_coop_assembly" name="mdp_action_server" type="mdp_action_server.py" output="screen"/>
+    <node pkg="thr_coop_assembly" name="robot_action_server_right" type="robot_action_server.py" output="screen" args="right"/>
+    <node pkg="thr_coop_assembly" name="robot_action_server_left" type="robot_action_server.py" output="screen" args="left"/>
+</launch>

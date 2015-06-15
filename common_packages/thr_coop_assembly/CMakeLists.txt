@@ -19,7 +19,7 @@ find_package(catkin REQUIRED
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -48,7 +48,8 @@ find_package(catkin REQUIRED
 # Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   Action.msg
+   MDPAction.msg
+   RobotAction.msg
    Predicate.msg
    SceneState.msg
    UserCommand.msg
@@ -60,14 +61,15 @@ find_package(catkin REQUIRED
    FILES
    GetNextAction.srv
    GetSceneState.srv
-   GetUserCommands.srv
+   GetUserMDPAction.srv
    SetNewTrainingExample.srv
  )
 
 ## Generate actions in the 'action' folder
  add_action_files(
    FILES
-   RunAction.action
+   RunMDPAction.action
+   RunRobotAction.action
  )
 
 ## Generate added messages and services with any dependencies listed here

@@ -3,7 +3,6 @@ import rospy
 import rospkg
 import json
 import tf
-import time
 import actionlib
 import moveit_commander
 import move_group_extras
@@ -12,9 +11,9 @@ from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAct
 import numpy
 import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
-from thr_coop_assembly.msg import RunActionAction, Action, RunActionActionResult
+from thr_coop_assembly.msg import RunMDPActionAction, RunMDPActionActionResult
 
-class ActionServer:
+class SequentialActionServer:
     """
     This is the action server that executes actions the robot is capable of.
     It requires two config files:
@@ -70,8 +69,8 @@ class ActionServer:
 
         # Action server attributes
         rospy.loginfo("Starting server...")
-        self.server = actionlib.SimpleActionServer('/thr/run_action', RunActionAction, self.execute, False)
-        self.result = RunActionActionResult()
+        self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
+        self.result = RunMDPActionActionResult()
         self.server.start()
         rospy.loginfo('Server ready')
 
@@ -80,12 +79,16 @@ class ActionServer:
         Dispatches a new goal on the method executing each type of action
         :param goal:
         """
-        if goal.action.type==Action.GIVE:
-            self.execute_give(goal.action.parameters)
-        elif goal.action.type==Action.HOLD:
-            self.execute_hold(goal.action.parameters)
-        else:
-            self.execute_wait()
+        try:
+            if goal.action.type=='give':
+                self.execute_give(goal.action.parameters)
+            elif goal.action.type=='hold':
+                self.execute_hold(goal.action.parameters)
+            else:
+                self.execute_wait()
+        except:
+            self.set_motion_ended(False)
+            raise
 
     def execute_wait(self):
         """
@@ -116,10 +119,10 @@ class ActionServer:
 
     def set_motion_ended(self, succeeded):
         self.result.header.stamp = rospy.Time.now()
-        self.result.result.succeeded = succeeded
         if succeeded:
             self.server.set_succeeded(self.result.result)
         else:
+            rospy.logwarn("ARBOTEE")
             self.server.set_aborted(self.result.result)
         return succeeded
 
@@ -397,6 +400,6 @@ class ActionServer:
         return self.set_motion_ended(not self.should_interrupt())
 
 if __name__ == '__main__':
-    rospy.init_node('action_server')
-    server = ActionServer(planning=False, orientation_matters=True, allow_replanning=True)
+    rospy.init_node('sequential_action_server')
+    server = SequentialActionServer(planning=False, orientation_matters=True, allow_replanning=True)
     rospy.spin()
