@@ -7,9 +7,10 @@ from actionlib_msgs.msg import GoalStatus
 from copy import deepcopy
 
 class InteractionController(object):
-    def __init__(self, predictor, scene_state, user_cmd, reward):
+    def __init__(self):
         self.running = True
         self.current_scene = None
+        self.user_commands = []
         self.current_action = None
         self.scene_before_action = None
 
@@ -25,12 +26,9 @@ class InteractionController(object):
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
         rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
         self.run_action_client.wait_for_server()
-        self.services = {self.reward_service: reward, self.predictor_service: predictor,
-                          self.scene_state_service: scene_state, self.user_cmd_service: user_cmd}
-        for service, needed in self.services.iteritems():
-            if needed:
-                rospy.loginfo("Waiting service {}...".format(service))
-                rospy.wait_for_service(service)
+        for service in [self.reward_service, self.predictor_service, self.scene_state_service, self.user_cmd_service]:
+            rospy.loginfo("Waiting service {}...".format(service))
+            rospy.wait_for_service(service)
 
     ################################################# SERVICE CALLERS #################################################
     def send_reward(self, good, scene_before_action):
