@@ -35,119 +35,143 @@ class Server(object):
         else: # Normal predictor should be called here
             raise Exception('Policy type "{}" unknown'.format(self.policy))
 
-    def predictor_handler_wait(self, get_next_action_req):
-        """
-        This handler is called when a request of prediction is received. it sends always WAIT (= I don't know)
-        :param get_next_action_req: an object of type GetNextActionRequest (scene state)
-        :return: an object of type GetNextActionResponse
-        """
-        resp = GetNextActionResponse()
-        resp.action.type = 'wait'
-        return resp
-
     def predictor_handler_hardcoded(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
         :param get_next_action_req: an object of type GetNextActionRequest (scene state)
         :return: an object of type GetNextActionResponse
         """
-        resp = GetNextActionResponse()
+
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
         pred_list = get_next_action_req.scene_state.predicates
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
+        action = MDPAction()
+
         if len(in_hws_list) == 0:
-            resp.action.type = 'give'
-            resp.action.parameters = ['/toolbox/handle']
+            action.type = 'give'
+            action.parameters = ['/toolbox/handle']
 
         elif len(in_hws_list) == 1:
-            resp.action.type = 'give'
-            resp.action.parameters = ['/toolbox/side_right']
+            action.type = 'give'
+            action.parameters = ['/toolbox/side_right']
 
         elif len(in_hws_list) == 2:
             if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_right'):
-                resp.action.type = 'give'
-                resp.action.parameters = ['/toolbox/side_left']
+                action.type = 'give'
+                action.parameters = ['/toolbox/side_left']
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 0):
-                resp.action.type = 'hold'
-                resp.action.parameters = ['/toolbox/handle', '0']
+                action.type = 'hold'
+                action.parameters = ['/toolbox/handle', '0']
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 1):
-                resp.action.type = 'hold'
-                resp.action.parameters = ['/toolbox/handle', '1']
+                action.type = 'hold'
+                action.parameters = ['/toolbox/handle', '1']
             else:
-                resp.action.type = 'wait'
+                action.type = 'wait'
 
         elif len(in_hws_list) == 3:
             if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_left'):
-                resp.action.type = 'give'
-                resp.action.parameters = ['/toolbox/side_front']
+                action.type = 'give'
+                action.parameters = ['/toolbox/side_front']
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 0):
-                resp.action.type = 'hold'
-                resp.action.parameters = ['/toolbox/handle', '0']
+                action.type = 'hold'
+                action.parameters = ['/toolbox/handle', '0']
             elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 1):
-                resp.action.type = 'hold'
-                resp.action.parameters = ['/toolbox/handle', '1']
+                action.type = 'hold'
+                action.parameters = ['/toolbox/handle', '1']
             else:
-                resp.action.type = 'wait'
+                action.type = 'wait'
 
         elif len(in_hws_list) == 4:
             if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front') and
                 self.check_attached_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front')):
 
-                resp.action.type = 'give'
-                resp.action.parameters = ['/toolbox/side_back']
+                action.type = 'give'
+                action.parameters = ['/toolbox/side_back']
    
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front', 1)):
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0):
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_left', '0']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_left', '0']
                 else:
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_right', '1']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_right', '1']
 
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front', 0)):
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1):
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_left', '1']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_left', '1']
                 else:
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_right', '0']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_right', '0']
 
             else:
-                resp.action.type = 'wait'
+                action.type = 'wait'
 
         elif len(in_hws_list) == 5:
             if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back') and
                 self.check_attached_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back')):
 
-                resp.action.type = 'wait'
+                action.type = 'wait'
    
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 1)):
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0):
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_left', '0']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_left', '0']
                 else:
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_right', '1']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_right', '1']
 
             elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1) and
                 self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 0)):
 
                 if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1):
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_left', '1']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_left', '1']
                 else:
-                    resp.action.type = 'hold'
-                    resp.action.parameters = ['/toolbox/side_right', '0']
+                    action.type = 'hold'
+                    action.parameters = ['/toolbox/side_right', '0']
 
             else:
-                resp.action.type = 'wait'
+                action.type = 'wait'
+
+
+
+        resp = GetNextActionResponse()
+        resp.confidence = resp.SURE
+
+        obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
+
+        actions_index = {}
+
+        resp.probas = []
+
+        resp.actions.append(MDPAction(type="wait", parameters=[]))
+        if action.type == resp.actions[-1].type and action.parameters== resp.actions[-1].parameters:
+            resp.probas.append(1.)
+        else:
+            resp.probas.append(0.)
+
+        for obj in obj_list:
+            resp.actions.append(MDPAction(type="give", parameters=[obj]))
+            if action.type == resp.actions[-1].type and action.parameters== resp.actions[-1].parameters:
+                resp.probas.append(1.)
+            else:
+                resp.probas.append(0.)
+
+        for obj in obj_list:
+            for pose in ["0", "1"]:
+                resp.actions.append(MDPAction(type="hold", parameters=[obj, pose]))
+                if action.type == resp.actions[-1].type and action.parameters== resp.actions[-1].parameters:
+                    resp.probas.append(1.)
+                else:
+                    resp.probas.append(0.)
 
         return resp
 

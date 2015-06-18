@@ -126,6 +126,3 @@ catkin_package(
 # target_link_libraries(thr_coop_assembly_node
 #   ${catkin_LIBRARIES}
 # )
-
-
-

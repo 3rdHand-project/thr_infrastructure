@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os, rospy
 import actionlib
+import numpy as np
 
 from thr_coop_assembly.msg import *
 from thr_coop_assembly.srv import *
@@ -66,23 +67,39 @@ class InteractionController(object):
         request.scene_state = self.current_scene
         try:
             predict = rospy.ServiceProxy(self.predictor_service, GetNextAction)
-            predicted_cmd = predict(request)
+            return predict(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
             return MDPAction(type='wait')
-        return predicted_cmd.action
     ###################################################################################################################
 
     def run(self):
+        # print 'Interaction starting!'
+        # while self.running and not rospy.is_shutdown():
+        #     self.update_scene()
+        #     action = self.update_user_inputs()
+        #     if action.type=='wait':
+        #         action = self.predict()
+        #     self.run_action(action)
+        #     self.action_postprocessing()
+        #     self.user_commands = []
+        #     self.interaction_loop_rate.sleep()
         print 'Interaction starting!'
         while self.running and not rospy.is_shutdown():
             self.update_scene()
-            action = self.update_user_inputs()
-            if action.type=='wait':
-                action = self.predict()
-            self.run_action(action)
-            self.action_postprocessing()
-            self.user_commands = []
+            prediction = self.predict()
+            if prediction.confidence == prediction.SURE:
+                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+                self.action_postprocessing()
+
+            elif prediction.confidence == prediction.CONFIRM:
+                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+                self.action_postprocessing()
+
+            elif prediction.confidence == prediction.NO_IDEA:
+                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+                self.action_postprocessing()
+
             self.interaction_loop_rate.sleep()
 
     def run_action(self, action):
