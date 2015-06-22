@@ -12,13 +12,11 @@ class InteractionController(object):
     def __init__(self):
         self.running = True
         self.current_scene = None
-        self.user_commands = []
         self.current_action = None
         self.scene_before_action = None
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
-        self.user_cmd_service = '/thr/user_mdp_actions'
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
@@ -28,7 +26,7 @@ class InteractionController(object):
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
         rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
         self.run_action_client.wait_for_server()
-        for service in [self.reward_service, self.predictor_service, self.scene_state_service, self.user_cmd_service]:
+        for service in [self.reward_service, self.predictor_service, self.scene_state_service]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
@@ -52,15 +50,15 @@ class InteractionController(object):
         except rospy.ServiceException, e:
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
-    def update_user_inputs(self):
-        request = GetUserMDPActionRequest()
-        try:
-            get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserMDPAction)
-        except rospy.ServiceException, e:
-            rospy.logerr("Cannot update user inputs {}:".format(e.message))
-            return MDPAction(type='wait')
-        else:
-            return get_ui(request).action
+    # def update_user_inputs(self):
+    #     request = GetUserMDPActionRequest()
+    #     try:
+    #         get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserMDPAction)
+    #     except rospy.ServiceException, e:
+    #         rospy.logerr("Cannot update user inputs {}:".format(e.message))
+    #         return MDPAction(type='wait')
+    #     else:
+    #         return get_ui(request).action
 
     def predict(self):
         request = GetNextActionRequest()
