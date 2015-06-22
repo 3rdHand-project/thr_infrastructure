@@ -65,9 +65,8 @@ class Server(object):
                 else:
                     action.type = 'start_give'
                 
-            elif not self.check_busy_pred(pred_list, "right"):
-                if not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
+            elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
+                action.type = 'start_go_home_right'
 
             else:
                 action.type = 'wait'
@@ -80,18 +79,16 @@ class Server(object):
                 else:
                     action.type = 'start_give'
                 
-            elif not self.check_busy_pred(pred_list, "right"):
-                if not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
+            elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
+                action.type = 'start_go_home_right'
 
             else:
                 action.type = 'wait'
 
         elif len(in_hws_list) == 2:
             if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_right'):
-                if not self.check_busy_pred(pred_list, "right"):
-                    if not self.check_at_home_pred(pred_list, "right"):
-                        action.type = 'start_go_home_right'
+                if not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
+                    action.type = 'start_go_home_right'
 
                 elif not self.check_busy_pred(pred_list, "left"):
                     action.parameters = ['/toolbox/side_left']
@@ -133,7 +130,7 @@ class Server(object):
                 if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
                     action.type = 'start_go_home_left'
                     
-                elif not self.check_busy_pred(pred_list, "right") not self.check_at_home_pred(pred_list, "right"):
+                elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
                     action.type = 'start_go_home_right'
                     
                 else:
