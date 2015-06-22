@@ -11,7 +11,6 @@ class Server(object):
     def __init__(self):
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
-        self.policy = rospy.get_param('/thr/policy')
 
     def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
         return len([p for p in predictate_list if
@@ -28,14 +27,6 @@ class Server(object):
             p.type == 'in_human_ws' and obj in p.parameters]) == 1
 
     def predictor_handler(self, get_next_action_req):
-        if self.policy=='none':
-            return self.predictor_handler_wait(get_next_action_req)
-        elif self.policy=='hardcoded':
-            return self.predictor_handler_hardcoded(get_next_action_req)
-        else: # Normal predictor should be called here
-            raise Exception('Policy type "{}" unknown'.format(self.policy))
-
-    def predictor_handler_hardcoded(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
         :param get_next_action_req: an object of type GetNextActionRequest (scene state)
