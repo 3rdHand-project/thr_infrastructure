@@ -1,18 +1,20 @@
 #!/usr/bin/env python
-import os, rospy
+import os, rospy, rospkg
 import actionlib
 import numpy as np
+from copy import deepcopy
+import json
+
+import web_asker
 
 from thr_coop_assembly.msg import *
 from thr_coop_assembly.srv import *
 from actionlib_msgs.msg import *
-from copy import deepcopy
 
 class InteractionController(object):
     def __init__(self):
         self.running = True
         self.current_scene = None
-        self.current_action = None
         self.scene_before_action = None
 
         # Parameters to be tweaked
@@ -30,11 +32,33 @@ class InteractionController(object):
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
+        self.web_asker = None
+
+        self.rospack = rospkg.RosPack()
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
+            adress_list = json.load(adress_file)
+
+        for adress in adress_list:
+            try:
+                self.web_asker = web_asker.WebAsker(adress)
+            except Exception, e:
+                rospy.loginfo(e)
+                rospy.loginfo("Cannot reach {}.".format(adress))
+                rospy.loginfo("Trying next adress...")
+            else:
+                break
+
+        if self.web_asker is None:
+            rospy.logerr("Cannot reach any adress.")
+        else:
+            self.web_asker.clear_all()
+
+
     ################################################# SERVICE CALLERS #################################################
-    def send_reward(self, good, scene_before_action):
+    def set_new_training_example(self, scene, action, good):
         request = SetNewTrainingExampleRequest()
-        request.action = self.current_action
-        request.scene_state = scene_before_action
+        request.action = action
+        request.scene_state = scene
         request.good = good
         try:
             reward = rospy.ServiceProxy(self.reward_service, SetNewTrainingExample)
@@ -69,61 +93,75 @@ class InteractionController(object):
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
             return MDPAction(type='wait')
+
+    def MDPAction_to_str(self, action):
+        return action.type + "(" + ", ".join(action.parameters) + ")"
+
+    def str_to_MDPAction(self, string):
+        action = MDPAction()
+        action.type = string.split("(")[0]
+        action.parameters = string.split("(")[1][:-1].split(", ")
+        return action
+
     ###################################################################################################################
 
+    def run_action(self, action):
+        if action.type!='wait':
+            os.system('beep')
+        self.scene_before_action = deepcopy(self.current_scene)
+        goal = RunMDPActionGoal()
+        goal.action = action
+        self.run_action_client.send_goal(goal)
+        while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
+            self.interaction_loop_rate.sleep()
+        self.current_action = action
+
     def run(self):
-        # print 'Interaction starting!'
-        # while self.running and not rospy.is_shutdown():
-        #     self.update_scene()
-        #     action = self.update_user_inputs()
-        #     if action.type=='wait':
-        #         action = self.predict()
-        #     self.run_action(action)
-        #     self.action_postprocessing()
-        #     self.user_commands = []
-        #     self.interaction_loop_rate.sleep()
         print 'Interaction starting!'
         while self.running and not rospy.is_shutdown():
             self.update_scene()
             prediction = self.predict()
+            str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
+
             if prediction.confidence == prediction.SURE:
+                predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+                question = self.web_asker.ask(
+                    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
+                    ["Don't do that"])
                 self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
-                self.action_postprocessing()
+                if question.answered():
+                    question.remove()
+                    correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                        "What should have been done ?", str_action_list).get_answer())
+                    self.set_new_training_example(self.scene_before_action, correct_action, True)
+                    self.set_new_training_example(self.scene_before_action, predicted_action, False)
+                else:
+                    question.remove()
+                    self.set_new_training_example(self.scene_before_action, predicted_action, True)
 
             elif prediction.confidence == prediction.CONFIRM:
-                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
-                self.action_postprocessing()
+                predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+
+                question = self.web_asker.ask(
+                    "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
+                    ["Ok", "Don't do that"])
+                if question.get_answer() == "Ok":
+                    correct_action = predicted_action
+                else:
+                    self.set_new_training_example(self.current_scene, predicted_action, False)
+                    correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                        "Pick an action :", str_action_list).get_answer())
+                
+                self.run_action(correct_action)
+                self.set_new_training_example(self.scene_before_action, correct_action, True)
 
             elif prediction.confidence == prediction.NO_IDEA:
-                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
-                self.action_postprocessing()
+                correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                    "Pick an action :", str_action_list).get_answer())
+                self.run_action(correct_action)
+                self.set_new_training_example(self.scene_before_action, correct_action, True)
 
             self.interaction_loop_rate.sleep()
-
-    def run_action(self, action):
-        if not self.current_action:
-            if action.type!='wait':
-                os.system('beep')
-            self.scene_before_action = deepcopy(self.current_scene)
-            goal = RunMDPActionGoal()
-            goal.action = action
-            self.run_action_client.send_goal(goal)
-            self.current_action = action
-
-    def action_postprocessing(self):
-            if self.current_action: # If an action is running for this arm...
-                if self.run_action_client.get_state() not in [GoalStatus.PENDING, GoalStatus.ACTIVE]: # ... and the action server reports it's ended...
-                    # ... then we have a good or bad reward to send
-                    state = self.run_action_client.get_state()
-                    if state == GoalStatus.SUCCEEDED:
-                        rospy.loginfo("Action {} succeeded!".format(self.current_action.type))
-                        self.send_reward(True, self.scene_before_action)
-                    #elif set(self.get_user_commands_types()).intersection(set(self.bad_user_commands)):
-                    #    rospy.logwarn("Cancelling action {}".format(self.current_action.type))
-                    #    self.run_action_client.cancel_goal()
-                    #    self.send_reward(False, self.scene_before_action)
-                    #    self.run_action(self.command_mapper(self.user_commands[0]))
-                    self.current_action = None
 
 
 if __name__=='__main__':
