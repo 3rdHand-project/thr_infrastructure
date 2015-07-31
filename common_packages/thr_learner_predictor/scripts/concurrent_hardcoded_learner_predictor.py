@@ -11,7 +11,6 @@ class Server(object):
     def __init__(self):
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
-        self.policy = rospy.get_param('/thr/policy')
 
     def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
         return len([p for p in predictate_list if

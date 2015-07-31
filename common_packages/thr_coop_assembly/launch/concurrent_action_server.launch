@@ -1,6 +1,5 @@
 <launch>
     <include file="$(find baxter_moveit_config)/launch/demo_baxter.launch">
-      <arg name="grippers" value="True"/>
       <arg name="verbose" value="False"/>
     </include>
     <node pkg="thr_coop_assembly" name="mdp_action_server" type="mdp_action_server.py" output="screen"/>
