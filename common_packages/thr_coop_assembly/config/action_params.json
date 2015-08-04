@@ -1,9 +1,8 @@
 {
     "sleep_step": 0.1,
     "short_sleep_step": 0.01,
-    "kv_max": 0.9,
+    "kv_max": 1.5,
     "ka_max": 0.6,
-    "action_num_points": 150,
     "wait": {
         "duration": 1.0
     },
@@ -17,9 +16,5 @@
         "sphere_radius": 0.55,
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
-    },
-    "planning": {
-        "planner_id": "RRTkConfigDefault",
-        "time": 0.5
     }
 }

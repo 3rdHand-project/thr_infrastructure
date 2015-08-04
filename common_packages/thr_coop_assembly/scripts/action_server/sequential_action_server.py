@@ -4,12 +4,9 @@ import rospkg
 import json
 import tf
 import actionlib
-import moveit_commander
-import move_group_extras
+import baxter_commander
 import transformations
-from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAction
 import numpy
-import baxter_interface  # TODO Use a generic stuff instead for gripper closure (Moveit?)
 
 from thr_coop_assembly.msg import RunMDPActionAction, RunMDPActionActionResult
 
@@ -20,16 +17,12 @@ class SequentialActionServer:
     * poses.json: poses relative to actions and objects
     * action_params.json: generic parameters for action execution and scenario
     """
-    def __init__(self, planning, orientation_matters, allow_replanning):
+    def __init__(self):
         """
         :param planning: True if motion should be planned with collision avoidance (where possible), False means joints interpolation
         """
-        rospy.sleep(3) # Moveit should have started first
         # General attributes
         self.rospack = rospkg.RosPack()
-        self.planning = planning
-        self.orientation_matters = orientation_matters
-        self.replan = allow_replanning
 
         # Transform/Geometric attributes
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
@@ -40,32 +33,10 @@ class SequentialActionServer:
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
 
-        # Workaround before fully using MoveGroup [to be cleaned and replaced by MoveGroup.execute()]
-        rospy.loginfo("Connecting to direct Limb control [TODO to be cleaned]...")
-        self.clients = {}
-        self.clients['left'] = actionlib.SimpleActionClient("/robot/limb/left/follow_joint_trajectory", FollowJointTrajectoryAction)
-        self.clients['right'] = actionlib.SimpleActionClient("/robot/limb/right/follow_joint_trajectory", FollowJointTrajectoryAction)
-        self.clients['left'].wait_for_server()
-        self.clients['right'].wait_for_server()
-
         # Motion/MoveGroup/Grasping attributes
         rospy.loginfo("Connecting to MoveIt...")
-        self.arms = {}
-        self.arms['left'] = moveit_commander.MoveGroupCommander("left_arm")
-        self.arms['right'] = moveit_commander.MoveGroupCommander("right_arm")
-        self.extras = {}
-        self.extras['left'] = move_group_extras.MoveGroupExtras(self.arms['left'])
-        self.extras['right'] = move_group_extras.MoveGroupExtras(self.arms['right'])
-        self.grippers = {}
-        self.grippers['left'] = baxter_interface.gripper.Gripper('left')
-        self.grippers['right'] = baxter_interface.gripper.Gripper('right')
-        self.arms['left'].set_planner_id(str(self.action_params['planning']['planner_id']))
-        self.arms['left'].set_planning_time(self.action_params['planning']['time'])
-        self.arms['right'].set_planner_id(str(self.action_params['planning']['planner_id']))
-        self.arms['right'].set_planning_time(self.action_params['planning']['time'])
-        self.arms['left'].allow_replanning(self.replan)
-        self.arms['right'].allow_replanning(self.replan)
-        self.scene = moveit_commander.PlanningSceneInterface()
+        self.arms = {'l': baxter_commander.ArmCommander('left', kinematics='robot', default_kv_max=self.action_params['kv_max'], default_ka_max=self.action_params['ka_max']),
+                     'r': baxter_commander.ArmCommander('right', kinematics='robot', default_kv_max=self.action_params['kv_max'], default_ka_max=self.action_params['ka_max'])}
 
         # Action server attributes
         rospy.loginfo("Starting server...")
@@ -122,54 +93,16 @@ class SequentialActionServer:
         if succeeded:
             self.server.set_succeeded(self.result.result)
         else:
-            rospy.logwarn("ARBOTEE")
             self.server.set_aborted(self.result.result)
         return succeeded
-
-    def low_level_execute_workaround(self, side, rt, callback_stop=None):
-        """
-        Since moveit_commander.execute() either blocks threads or does not give feedback on trajectory, this is an
-        ugly workaround to send a RobotTrajectory() to a FollowJointTrajectory action client. It comes with the
-        :param side: 'right' or 'left'
-        :param rt: The RobotTrajectory to execute
-        :param callback_stop: the function to call at each step returning True if motion stop has been requested
-        :return: True if the full motion has been executed, False if it has been stopped
-        """
-        ftg = FollowJointTrajectoryGoal()
-        ftg.trajectory = rt.joint_trajectory
-        self.clients[side].send_goal(ftg)
-        stop = False
-        while not stop and self.clients[side].simple_state != actionlib.SimpleGoalState.DONE:
-            if callback_stop!=None and callback_stop():
-                stop = True
-            else:
-                rospy.sleep(self.action_params['sleep_step'])
-        if stop and self.clients[side].simple_state != actionlib.SimpleGoalState.DONE:
-            self.clients[side].cancel_goal()
-        return not stop
-
-    def extract_perturbation(self, side):
-        """
-        Sleeps a sleep step and extracts the difference between command state and current state
-        CAUTION: Baxter-only method, /reference/* TFs don't exist elsewhere and will trigger LookupExceptions
-        :param side: left or right
-        :return: The cartesian distance in meters between command and current
-        """
-        diffs = []
-        window = 50
-        for i in range(window):
-            diffs.append(transformations.distance(self.tfl.lookupTransform(self.world, side+'_gripper', rospy.Time(0)),
-                                                  self.tfl.lookupTransform('/reference/'+self.world, '/reference/'+side+'_gripper', rospy.Time(0))))
-            rospy.sleep(self.action_params['sleep_step']/window)
-        return numpy.max(diffs)
 
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)
 
         rospy.loginfo("[ActionServer] Executing give{}".format(str(parameters)))
         object = parameters[0]
-        starting_state = self.extras['left'].get_current_state()
-        starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "left_gripper", rospy.Time(0)))
+        starting_state = self.arms['l'].get_current_state()
+        #starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "left_gripper", rospy.Time(0)))
 
         # 0. Trajectories generation
         try:
@@ -177,40 +110,36 @@ class SequentialActionServer:
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.set_motion_ended(False)
-        goal_approach = self.extras['left'].get_ik(world_approach_pose)
+        goal_approach = self.arms['l'].get_ik(world_approach_pose)
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.set_motion_ended(False)
-        approach_traj = self.extras['left'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
 
         # 1. Go to approach pose
-        if self.should_interrupt():
-            return self.set_motion_ended(False)
-        rospy.loginfo("Approaching {}".format(object))
-        self.low_level_execute_workaround('left', approach_traj)
+        self.arms['l'].move_to_controlled(goal_approach)
 
         # 2. Go to "give" pose
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.extras['left'].generate_descent(self.poses[object]["give"][0]['descent'], object, 1.5)
-        self.low_level_execute_workaround('left', action_traj)
+        action_traj = self.arms['l'].generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.5)
+        self.arms['l'].execute(action_traj[0])
 
         # 3. Close gripper to grasp object
         if not self.should_interrupt():
             rospy.loginfo("Activating suction for {}".format(object))
-            self.grippers['left'].close(True)
-            self.scene.attach_box('left_gripper', object)
+            self.arms['l'].close()
+            #self.scene.attach_box('left_gripper', object)
 
         # 4. Go to approach pose again with object in-hand (to avoid touching the table)
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Reapproaching {}".format(object))
-        reapproach_traj = self.extras['left'].reverse_trajectory(action_traj)
-        self.low_level_execute_workaround('left', reapproach_traj)
+        reapproach_traj = self.arms['l'].generate_reverse_trajectory(action_traj[0])
+        self.arms['l'].execute(reapproach_traj)
 
 
-        # 4. Wait for human wrist and approach object until we are close enough to release object
+        # 5. Wait for human wrist and approach object until we are close enough to release object
         rospy.loginfo("Bringing {} to human wrist".format(object))
         while not self.should_interrupt():
             can_release = False
@@ -223,44 +152,32 @@ class SequentialActionServer:
             rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
                 world_give_pose = self.object_grasp_pose_to_world(self.action_params['give']['give_pose'], "/human/wrist")
-                if self.planning:
-                    if self.orientation_matters:
-                        self.arms['left'].set_pose_target(world_give_pose.pose)
-                    else:
-                        self.arms['left'].set_position_target([world_give_pose.pose.position.x, world_give_pose.pose.position.y, world_give_pose.pose.position.z])
-                    give_traj = self.arms['left'].plan()
-                    self.arms['left'].clear_pose_targets()
-                    if len(give_traj.joint_trajectory.points)<2:
-                        rospy.logwarn("Unable to plan to that pose, please move a little bit...")
-                        rospy.sleep(self.action_params['sleep_step']) # TODO Moveit bug, tfl is not updated during planning
-                        continue
-                else:
-                    goal_give = self.extras['left'].get_ik(world_give_pose)
-                    if not goal_give:
-                        rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
-                        rospy.sleep(self.action_params['sleep_step'])
-                        continue
-                    give_traj = self.extras['left'].interpolate_joint_space(goal_give, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
+                goal_give = self.arms['l'].get_ik(world_give_pose)
+                if not goal_give:
+                    rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
+                    rospy.sleep(self.action_params['sleep_step'])
+                    continue
 
                 # The function below returns True if human as moved enough so that we need to replan the trajectory
                 def needs_update():
                     p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
                     return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
-                if not self.low_level_execute_workaround('left', give_traj, needs_update):
-                    rospy.logwarn("Human has moved, changing the goal...")
-                    rospy.sleep(self.action_params['give']['inter_goal_sleep'])
-                    continue
+                self.arms['l'].move_to_controlled(goal_give, test=needs_update)
+                #if not self.arms['l'].move_to_controlled(goal_give, test=needs_update):
+                #    rospy.logwarn("Human has moved, changing the goal...")
+                #    rospy.sleep(self.action_params['give']['inter_goal_sleep'])
+                #    continue
             else:
                 can_release = True
 
             # 5. Wait for position disturbance of the gripper and open it to release object
             if can_release:
-                perturbation = self.extract_perturbation('left')
+                perturbation = self.arms['l'].extract_perturbation()
                 rospy.loginfo("Perurbation: {}m, threshold: {}m".format(perturbation, self.action_params['give']['releasing_disturbance']))
                 if perturbation>self.action_params['give']['releasing_disturbance']:
                     rospy.loginfo("Releasing suction for {}".format(object))
-                    self.grippers['left'].open(True)
-                    self.scene.remove_attached_object('left_gripper')
+                    self.arms['l'].open()
+                    #self.scene.remove_attached_object('left_gripper')
                     break
             else:
                 rospy.sleep(self.action_params['short_sleep_step'])
@@ -269,25 +186,10 @@ class SequentialActionServer:
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Returning in idle mode")
-        if self.planning:
-            while True:
-                leaving_traj = self.arms['left'].plan(starting_pose.pose)
-                if len(leaving_traj.joint_trajectory.points)>1: break
-        else:
-            leaving_traj = self.extras['left'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
-        self.low_level_execute_workaround('left', leaving_traj)
+        self.arms['l'].move_to_controlled(starting_state)
 
         rospy.loginfo("[ActionServer] Executed give{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.set_motion_ended(not self.should_interrupt())
-
-    def gripper(self, side, close):
-        # Performs blocking calls closing or opening grippers
-        success = False
-        while not success:
-            if close:
-                success = self.grippers[side].close(True)
-            else:
-                success = self.grippers[side].open(True)
 
     def execute_hold(self, parameters):
         # Parameters could be "/thr/handle 0", it asks the robot to hold the handle using its first hold pose
@@ -295,7 +197,7 @@ class SequentialActionServer:
         object = parameters[0]
         pose = int(parameters[1])
 
-        starting_state = self.extras['right'].get_current_state()
+        starting_state = self.arms['r'].get_current_state()
         starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "right_gripper", rospy.Time(0)))
 
         # 0. Trajectories generation
@@ -309,24 +211,16 @@ class SequentialActionServer:
                 return self.set_motion_ended(False)
 
             # Comment: goal approach is needed in both interpolate and planning mode (planning = for reapproach)
-            goal_approach = self.extras['right'].get_ik(world_approach_pose)
+            goal_approach = self.arms['r'].get_ik(world_approach_pose)
             if not goal_approach:
                 rospy.logerr("Unable to reach approach pose")
                 return self.set_motion_ended(False)
-
-            if self.planning:
-                approach_traj = self.arms['right'].plan(world_approach_pose.pose)
-                if len(approach_traj.joint_trajectory.points)<2:
-                    rospy.logerr("Sorry, object {} is too far away for me".format(object))
-                    return self.set_motion_ended(False)
-            else:
-                approach_traj = self.extras['right'].interpolate_joint_space(goal_approach, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'])
 
             # 1. Go to approach pose
             if self.should_interrupt():
                 return self.set_motion_ended(False)
             rospy.loginfo("Approaching {}".format(object))
-            self.low_level_execute_workaround('right', approach_traj)
+            self.arms['r'].move_to_controlled(goal_approach)
             try:
                 new_world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)
             except:
@@ -338,24 +232,24 @@ class SequentialActionServer:
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['descent'], object, 3)
-        self.low_level_execute_workaround('right', action_traj)
+        action_traj = self.arms['r'].generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 3)
+        self.arms['r'].execute(action_traj[0])
 
         # 3. Close gripper to grasp object
         if not self.should_interrupt():
             rospy.loginfo("Closing gripper around {}".format(object))
-            self.grippers['right'].close(True)
+            self.arms['r'].close()
 
         # 4. Force down
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Forcing down on {}".format(object))
         try:
-            force_traj = self.extras['right'].generate_descent(self.poses[object]["hold"][pose]['force'], object, 1)
+            force_traj = self.arms['r'].generate_cartesian_path(self.poses[object]["hold"][pose]['force'], object, 1)
         except:
             rospy.logwarn('Cannot compute descent forcing down, but continuing instead')
         else:
-            self.low_level_execute_workaround('right', force_traj)
+            self.arms['r'].execute(force_traj[0])
 
         # 5. Wait for interruption
         while not self.should_interrupt():
@@ -374,32 +268,25 @@ class SequentialActionServer:
         rospy.loginfo("Human has stopped working with {}, now releasing".format(object))
         if not self.should_interrupt():
             rospy.loginfo("Releasing {}".format(object))
-            self.gripper('right', False)
+            self.arms['r'].open()
 
         # 7. Go to approach pose again (to avoid touching the fingers)
         if self.should_interrupt():
             return self.set_motion_ended(False)
-        reapproach_traj = self.extras['right'].reverse_trajectory(action_traj)
+        reapproach_traj = self.arms['r'].generate_reverse_trajectory(action_traj[0])
         rospy.loginfo("Reapproaching {}".format(object))
         #self.arms['right'].execute(approach_traj, False)
-        self.low_level_execute_workaround('right', reapproach_traj)
+        self.arms['r'].execute(reapproach_traj)
 
         # 8. Return home
         if self.should_interrupt():
             return self.set_motion_ended(False)
         rospy.loginfo("Returning in idle mode")
-        if self.planning:
-            while True:
-                leaving_traj = self.arms['right'].plan(starting_pose.pose)
-                if len(leaving_traj.joint_trajectory.points)>1: break
-        else:
-            leaving_traj = self.extras['right'].interpolate_joint_space(starting_state, self.action_params['action_num_points'], kv_max=self.action_params['kv_max'], ka_max=self.action_params['ka_max'], start=goal_approach)
-        self.low_level_execute_workaround('right', leaving_traj)
-
+        self.arms['r'].move_to_controlled(starting_state)
         rospy.loginfo("[ActionServer] Executed hold{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.set_motion_ended(not self.should_interrupt())
 
 if __name__ == '__main__':
     rospy.init_node('sequential_action_server')
-    server = SequentialActionServer(planning=False, orientation_matters=True, allow_replanning=True)
+    server = SequentialActionServer()
     rospy.spin()
