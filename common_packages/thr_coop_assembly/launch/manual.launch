@@ -1,0 +1,19 @@
+<launch>
+    <arg name="type" /> <!-- concurrent or sequential -->
+    <arg name="scene" default="toolbox"/>
+    <arg name="ip" /> <!-- IP of the VRPN server -->
+    <arg name="port" default="3883" /> <!-- Port of the VRPN server (default 3883) -->
+    <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
+
+    <include file="$(find thr_coop_assembly)/launch/perception.launch" >
+      <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
+      <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
+      <arg name="scene" value="$(arg scene)"/>
+	  <arg name="type" value="$(arg type)"/>
+    </include>
+       
+    <include file="$(find thr_coop_assembly)/launch/action_server_$(arg type).launch" />
+
+    <!--<node pkg="google_tts_ros" name="text_to_speech" type="say.py" output="log"/>-->
+    <node pkg="thr_coop_assembly" name="keyboard_interaction_controller_$(arg type)" type="keyboard_interaction_controller_$(arg type).py" output="screen"/>
+</launch>
