@@ -1,0 +1,16 @@
+<launch>
+    <arg name="ip" /> <!-- IP of the VRPN server (default 3883) -->
+    <arg name="port" default="3883" /> <!-- Port of the VRPN server (default 3883) -->
+    <arg name="scene"/>
+    <arg name="type" />
+
+    <param name="/thr/scene" value="$(arg scene)"/> 
+    <rosparam command="load" file="$(find thr_coop_assembly)/config/tracked_objects.yaml" param="optitrack/objects"/>
+       
+    <include file="$(find thr_coop_assembly)/launch/scene_state_manager.launch" >
+      <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
+      <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
+      <arg name="scene" value="$(arg scene)"/>
+	  <arg name="type" value="$(arg type)"/>
+    </include>
+</launch>

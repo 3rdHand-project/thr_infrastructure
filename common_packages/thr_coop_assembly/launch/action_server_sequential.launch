@@ -1,0 +1,6 @@
+<launch>
+    <include file="$(find baxter_commander)/launch/commander.launch">
+      <arg name="verbose" value="False"/>
+    </include>
+    <node pkg="thr_coop_assembly" name="sequential_action_server" type="sequential_action_server.py" output="screen"/>
+</launch>
