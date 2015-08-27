@@ -103,7 +103,8 @@ class RobotActionServer:
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Approaching {}".format(object))
-        self.commander.move_to_controlled(goal_approach)
+        if not self.commander.move_to_controlled(goal_approach):
+            return self.abort(str(parameters))
 
         # 2. Go to "give" pose
         if self.should_interrupt():
@@ -112,7 +113,8 @@ class RobotActionServer:
         action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.5)
         if action_traj[1]<0.9:
             raise RuntimeError("Unable to generate descent")
-        self.commander.execute(action_traj[0])
+        if not self.commander.execute(action_traj[0]):
+            return self.abort(str(parameters))
 
         # 3. Close gripper to grasp object
         if not self.should_interrupt():
@@ -125,7 +127,8 @@ class RobotActionServer:
             return self.server.set_aborted()
         rospy.loginfo("Reapproaching {}".format(object))
         reapproach_traj = self.commander.generate_reverse_trajectory(action_traj[0])
-        self.commander.execute(reapproach_traj)
+        if not self.commander.execute(reapproach_traj):
+            return self.abort(str(parameters))
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.server.set_succeeded()
@@ -155,12 +158,14 @@ class RobotActionServer:
                     return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
 
                 try:
-                    self.commander.move_to_controlled(world_give_pose, test=needs_update)
+                    success = self.commander.move_to_controlled(world_give_pose, test=needs_update)
                 except ValueError:
                     rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
                     rospy.sleep(self.action_params['sleep_step'])
                     continue
-
+                else:
+                    if not success:
+                        return self.abort(str(parameters))
 
                 #if not self.low_level_execute_workaround(self.side, give_traj, needs_update):
                 #    rospy.logwarn("Human has moved, changing the goal...")
@@ -189,7 +194,8 @@ class RobotActionServer:
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Returning in idle mode")
-        self.commander.move_to_controlled(self.starting_state)
+        if not self.commander.move_to_controlled(self.starting_state):
+            return self.abort(str(parameters))
         rospy.loginfo("[ActionServer] Executed go_home{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
         return self.server.set_succeeded()
 
@@ -219,7 +225,8 @@ class RobotActionServer:
             if self.should_interrupt():
                 return self.server.set_aborted()
             rospy.loginfo("Approaching {}".format(object))
-            self.commander.move_to_controlled(goal_approach)
+            if not self.commander.move_to_controlled(goal_approach):
+                return self.abort(str(parameters))
             #rospy.sleep(4)
             #self.commander.move_to_controlled(goal_approach)  # Double motion to improve precision
             try:
@@ -236,7 +243,8 @@ class RobotActionServer:
         action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 2.5)
         if action_traj[1]<0.9:
             raise RuntimeError("Unable to generate hold descent")
-        self.commander.execute(action_traj[0])
+        if not self.commander.execute(action_traj[0]):
+            return self.abort(str(parameters))
 
         # 3. Close gripper to grasp object
         if not self.should_interrupt():
@@ -248,7 +256,8 @@ class RobotActionServer:
             return self.server.set_aborted()
         rospy.loginfo("Forcing down on {}".format(object))
         force = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['force'], object, 1)
-        self.commander.execute(force[0])
+        if not self.commander.execute(force[0]):
+            return self.abort(str(parameters))
 
         # 5. Wait for interruption
         while not self.should_interrupt():
@@ -274,10 +283,15 @@ class RobotActionServer:
             return self.server.set_aborted()
         reapproach_traj = self.commander.generate_reverse_trajectory(action_traj[0])
         rospy.loginfo("Reapproaching {}".format(object))
-        self.commander.execute(reapproach_traj)
+        if not self.commander.execute(reapproach_traj):
+            return self.abort(str(parameters))
 
-        rospy.loginfo("[ActionServer] Executed hold{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
+        rospy.loginfo("[ActionServer] Executed hold{} with success".format(str(parameters)))
         return self.server.set_succeeded()
+
+    def abort(self, action_name):
+        rospy.logwarn("[ActionServer] Executed hold{} with failure".format(action_name))
+        return self.server.set_aborted()
 
 if __name__ == '__main__':
     rospy.init_node('robot_action_server')
