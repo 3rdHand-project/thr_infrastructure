@@ -1,8 +1,6 @@
 {
     "sleep_step": 0.1,
     "short_sleep_step": 0.01,
-    "kv_max": 1.5,
-    "ka_max": 0.6,
     "wait": {
         "duration": 1.0
     },
@@ -16,5 +14,7 @@
         "sphere_radius": 0.55,
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
-    }
+    },
+    "limits": { "kv": {"right_s0":1.0, "right_s1":1.0, "right_e0":1.0, "right_e1":1.0, "right_w0":1.0, "right_w1":1.0, "right_w2":3.0},
+                "ka": {"right_s0":0.5, "right_s1":0.5, "right_e0":0.5, "right_e1":0.5, "right_w0":0.5, "right_w1":0.5, "right_w2":1}}
 }

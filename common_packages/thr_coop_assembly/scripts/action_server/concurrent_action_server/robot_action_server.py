@@ -35,7 +35,7 @@ class RobotActionServer:
             self.action_params = json.load(f)
 
         # Motion/Grasping attributes
-        self.commander = ArmCommander(side, default_kv_max=self.action_params['kv_max'], default_ka_max=self.action_params['ka_max'], kinematics='robot')
+        self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], kinematics='robot')
 
         # Home poses are taken when the server starts:
         self.starting_state = self.commander.get_current_state()
@@ -220,6 +220,8 @@ class RobotActionServer:
                 return self.server.set_aborted()
             rospy.loginfo("Approaching {}".format(object))
             self.commander.move_to_controlled(goal_approach)
+            #rospy.sleep(4)
+            #self.commander.move_to_controlled(goal_approach)  # Double motion to improve precision
             try:
                 new_world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)
             except:
