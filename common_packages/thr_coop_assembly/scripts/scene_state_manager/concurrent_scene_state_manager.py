@@ -140,19 +140,22 @@ class ConcurrentSceneStateManager(object):
                 screwdriver = self.tfl.lookupTransform(self.world, self.screwdriver, rospy.Time(0))
                 tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
             except:
-                rospy.logwarn("screwdriver or {} not found, I consider that you're NOT attaching {} and {}".format(master, master, slave))
+                pass
             else:
-                relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
-                cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                if cart_dist<self.config['tool_position_tolerance']:
-                    try:
-                        if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
-                            rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
-                            self.screwed.append(master+slave+str(atp))
-                    except KeyError:
-                        if not self.attaching_stamps.has_key(master):
-                            self.attaching_stamps[master] = {}
-                        self.attaching_stamps[master][slave] = time()
+                if self.screwdriver in self.poses[master]['constraints'][atp]:  # For objects that need to be screwed
+                    relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
+                    cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
+                    if cart_dist<self.config['tool_position_tolerance']:
+                        try:
+                            if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
+                                rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
+                                self.screwed.append(master+slave+str(atp))
+                        except KeyError:
+                            if not self.attaching_stamps.has_key(master):
+                                self.attaching_stamps[master] = {}
+                            self.attaching_stamps[master][slave] = time()
+                else: # For objects that only need to be inserted
+                    self.screwed.append(master+slave+str(atp))
         return False
 
     def pred_in_human_ws(self, obj):
