@@ -279,7 +279,9 @@ class ConcurrentSceneStateManager(object):
                             p.parameters.append(side)
                             self.state.predicates.append(p)
 
-            self.display_image(1024, 600)
+            display = rospy.get_param('/thr/display')
+            if display == "debug":
+                self.display_image(1024, 600)
             self.record_state()
             self.rate.sleep()
 

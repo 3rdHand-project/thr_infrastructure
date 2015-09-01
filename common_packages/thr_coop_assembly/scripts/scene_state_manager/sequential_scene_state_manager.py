@@ -169,7 +169,9 @@ class SequentialSceneStateManager(object):
                             p.type = 'attached'
                             p.parameters = [master, slave, str(atp)]
                             self.state.predicates.append(p)
-            self.display_image(1024, 600)
+            display = rospy.get_param('/thr/display')
+            if display == "debug":
+                self.display_image(1024, 600)
             self.rate.sleep()
 
         logs_name = rospy.get_param('/thr/logs_name')
