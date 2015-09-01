@@ -9,6 +9,8 @@ import json, cv2, cv_bridge
 from numpy import zeros, uint8
 from time import time
 from sensor_msgs.msg import Image
+from copy import deepcopy
+from os import system
 
 class ConcurrentSceneStateManager(object):
     def __init__(self, rate):
@@ -21,6 +23,9 @@ class ConcurrentSceneStateManager(object):
         self.attached = set()
         self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
+
+        self.old_state = None
+        self.logs = []
 
         # Action History
         # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HOLDED, PICKED
@@ -158,6 +163,17 @@ class ConcurrentSceneStateManager(object):
                     self.screwed.append(master+slave+str(atp))
         return False
 
+    def record_state(self):
+        with self.state_lock:
+            if not self.old_state or self.state.predicates != self.old_state.predicates:
+                predicates = []
+                for p in self.state.predicates:
+                    predicates.append({'type': p.type, 'parameters': p.parameters})
+                self.logs.append({'timestamp': rospy.get_time(),
+                                  'scene': predicates })
+                self.old_state = deepcopy(self.state)
+                #system('beep')
+
     def pred_in_human_ws(self, obj):
         try:
             return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
@@ -264,7 +280,13 @@ class ConcurrentSceneStateManager(object):
                             self.state.predicates.append(p)
 
             self.display_image(1024, 600)
+            self.record_state()
             self.rate.sleep()
+
+        logs_name = rospy.get_param('/thr/logs_name')
+        if logs_name != "none":
+            with open('scenes_'+logs_name+'.json', 'w') as f:
+                json.dump(self.logs, f)
 
     def start(self):
         rospy.Service('/thr/scene_state', GetSceneState, self.handle_request)

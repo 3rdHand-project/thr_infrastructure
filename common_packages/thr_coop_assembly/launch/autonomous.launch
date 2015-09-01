@@ -4,7 +4,10 @@
     <arg name="ip" /> <!-- IP of the VRPN server -->
     <arg name="port" default="3883" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
+    <arg name="name" default="none" /> <!-- Name of log files -->
 
+    <rosparam param="/thr/logs_name" value="$(arg name)" />
+    
     <include file="$(find thr_coop_assembly)/launch/perception.launch" >
       <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
       <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
