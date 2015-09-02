@@ -290,7 +290,7 @@ class RobotActionServer:
         return self.server.set_succeeded()
 
     def abort(self, action_name):
-        rospy.logwarn("[ActionServer] Executed hold{} with failure".format(action_name))
+        rospy.logwarn("[ActionServer] Executed {} with failure".format(action_name))
         return self.server.set_aborted()
 
 if __name__ == '__main__':
