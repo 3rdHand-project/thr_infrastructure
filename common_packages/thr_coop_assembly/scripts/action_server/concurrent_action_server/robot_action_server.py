@@ -236,11 +236,15 @@ class RobotActionServer:
             cart_dist = transformations.distance(world_approach_pose, new_world_approach_pose)
             angular_dist = transformations.distance_quat(world_approach_pose, new_world_approach_pose)
 
+
+        # 1.5 Sleep
+        rospy.sleep(2)
+
         # 2. Go to "hold" pose
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 2.5)
+        action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 2)
         if action_traj[1]<0.9:
             raise RuntimeError("Unable to generate hold descent")
         if not self.commander.execute(action_traj[0]):
