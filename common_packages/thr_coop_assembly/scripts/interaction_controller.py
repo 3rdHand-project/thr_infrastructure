@@ -17,6 +17,8 @@ class InteractionController(object):
         self.current_scene = None
         self.scene_before_action = None
 
+        self.logs = []
+
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
         self.reward_service = '/thr/learner'
@@ -112,7 +114,7 @@ class InteractionController(object):
         goal = RunMDPActionGoal()
         goal.action = action
         self.run_action_client.send_goal(goal)
-        while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE]:
+        while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
             self.interaction_loop_rate.sleep()
         self.current_action = action
 
@@ -129,6 +131,11 @@ class InteractionController(object):
                     "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
                     ["Don't do that"])
                 self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+
+                self.logs.append({'timestamp': rospy.get_time(),
+                      'type': predicted_action.type,
+                      'parameters': predicted_action.parameters})
+
                 if question.answered():
                     question.remove()
                     correct_action = self.str_to_MDPAction(self.web_asker.ask(
@@ -153,16 +160,33 @@ class InteractionController(object):
                         "Pick an action :", str_action_list).get_answer())
                 
                 self.run_action(correct_action)
+
+                self.logs.append({'timestamp': rospy.get_time(),
+                      'type': correct_action.type,
+                      'parameters': correct_action.parameters})
+
                 self.set_new_training_example(self.scene_before_action, correct_action, True)
 
             elif prediction.confidence == prediction.NO_IDEA:
                 correct_action = self.str_to_MDPAction(self.web_asker.ask(
                     "Pick an action :", str_action_list).get_answer())
                 self.run_action(correct_action)
+
+                self.logs.append({'timestamp': rospy.get_time(),
+                      'type': correct_action.type,
+                      'parameters': correct_action.parameters})
+
                 self.set_new_training_example(self.scene_before_action, correct_action, True)
+
+            else:
+                assert False
 
             self.interaction_loop_rate.sleep()
 
+        logs_name = rospy.get_param('/thr/logs_name')
+        if logs_name != "none":
+            with open('action_decisions_'+logs_name+'.json', 'w') as f:
+                json.dump(self.logs, f)
 
 if __name__=='__main__':
     rospy.init_node("interaction_controller")
