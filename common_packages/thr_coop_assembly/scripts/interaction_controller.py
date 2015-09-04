@@ -121,75 +121,78 @@ class InteractionController(object):
         self.current_action = action
 
     def run(self):
-        print 'Interaction starting!'
-        while self.running and not rospy.is_shutdown():
-            self.update_scene()
-            prediction = self.predict()
-            str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
+        try:
+            print 'Interaction starting!'
+            while self.running and not rospy.is_shutdown():
+                self.update_scene()
+                prediction = self.predict()
+                str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
 
-            if prediction.confidence == prediction.SURE:
-                predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-                #question = self.web_asker.ask(
-                #    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
-                #    ["Don't do that"])
-                self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+                if prediction.confidence == prediction.SURE:
+                    predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+                    question = self.web_asker.ask(
+                        "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
+                        ["Don't do that"])
 
-                self.logs.append({'timestamp': rospy.get_time(),
-                      'type': predicted_action.type,
-                      'parameters': predicted_action.parameters})
+                    self.logs.append({'timestamp': rospy.get_time(),
+                          'type': predicted_action.type,
+                          'parameters': predicted_action.parameters})
 
-                #if question.answered():
-                #    question.remove()
-                #    correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                #        "What should have been done ?", str_action_list).get_answer())
-                #    self.set_new_training_example(self.scene_before_action, correct_action, True)
-                #    self.set_new_training_example(self.scene_before_action, predicted_action, False)
-                #else:
-                #    question.remove()
-                #    self.set_new_training_example(self.scene_before_action, predicted_action, True)
-                self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                    self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
 
-            elif prediction.confidence == prediction.CONFIRM:
-                predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
 
-                question = self.web_asker.ask(
-                    "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
-                    ["Ok", "Don't do that"])
-                if question.get_answer() == "Ok":
-                    correct_action = predicted_action
-                else:
-                    self.set_new_training_example(self.current_scene, predicted_action, False)
+                    # if question.answered():
+                    #     question.remove()
+                    #     correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                    #         "What should have been done ?", str_action_list).get_answer())
+                    #     self.set_new_training_example(self.scene_before_action, correct_action, True)
+                    #     self.set_new_training_example(self.scene_before_action, predicted_action, False)
+                    # else:
+                    #     question.remove()
+                    #     self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                    self.set_new_training_example(self.scene_before_action, predicted_action, True)
+
+                elif prediction.confidence == prediction.CONFIRM:
+                    predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+
+                    question = self.web_asker.ask(
+                        "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
+                        ["Ok", "Don't do that"])
+                    if question.get_answer() == "Ok":
+                        correct_action = predicted_action
+                    else:
+                        self.set_new_training_example(self.current_scene, predicted_action, False)
+                        correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                            "Pick an action :", str_action_list).get_answer())
+                    
+
+                    self.logs.append({'timestamp': rospy.get_time(),
+                          'type': correct_action.type,
+                          'parameters': correct_action.parameters})
+                    self.run_action(correct_action)
+
+                    self.set_new_training_example(self.scene_before_action, correct_action, True)
+
+                elif prediction.confidence == prediction.NO_IDEA:
                     correct_action = self.str_to_MDPAction(self.web_asker.ask(
                         "Pick an action :", str_action_list).get_answer())
-                
-                self.run_action(correct_action)
+                    self.logs.append({'timestamp': rospy.get_time(),
+                          'type': correct_action.type,
+                          'parameters': correct_action.parameters})
+                    self.run_action(correct_action)
 
-                self.logs.append({'timestamp': rospy.get_time(),
-                      'type': correct_action.type,
-                      'parameters': correct_action.parameters})
 
-                self.set_new_training_example(self.scene_before_action, correct_action, True)
+                    self.set_new_training_example(self.scene_before_action, correct_action, True)
 
-            elif prediction.confidence == prediction.NO_IDEA:
-                correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                    "Pick an action :", str_action_list).get_answer())
-                self.run_action(correct_action)
+                else:
+                    assert False
 
-                self.logs.append({'timestamp': rospy.get_time(),
-                      'type': correct_action.type,
-                      'parameters': correct_action.parameters})
-
-                self.set_new_training_example(self.scene_before_action, correct_action, True)
-
-            else:
-                assert False
-
-            self.interaction_loop_rate.sleep()
-
-        logs_name = rospy.get_param('/thr/logs_name')
-        if logs_name != "none":
-            with open('action_decisions_'+logs_name+'.json', 'w') as f:
-                json.dump(self.logs, f)
+                self.interaction_loop_rate.sleep()
+        finally:
+            logs_name = rospy.get_param('/thr/logs_name')
+            if logs_name != "none":
+                with open('action_decisions_'+logs_name+'.json', 'w') as f:
+                    json.dump(self.logs, f)
 
 if __name__=='__main__':
     rospy.init_node("interaction_controller")
