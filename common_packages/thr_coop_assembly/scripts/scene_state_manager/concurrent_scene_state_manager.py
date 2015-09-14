@@ -25,6 +25,8 @@ class ConcurrentSceneStateManager(object):
         self.action_history_name = '/thr/action_history'
 
         self.old_state = None
+        self.old_display_state = None
+
         self.logs = []
 
         # Action History
@@ -190,40 +192,44 @@ class ConcurrentSceneStateManager(object):
         return resp
 
     def display_image(self, width, height):
-        img = zeros((height,width, 3), uint8)
-        preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "holded": [], "at_home": []}
-        self.state_lock.acquire()
-        try:
-            for p in self.state.predicates:
-                if p.type=='in_human_ws':
-                    preds["in_hws"].append(p)
-                elif p.type=='positioned':
-                    preds["positioned"].append(p)
-                elif p.type=='attached':
-                    preds["attached"].append(p)
-                elif p.type=='picked':
-                    preds["picked"].append(p)
-                elif p.type=='holded':
-                    preds["holded"].append(p)
-                elif p.type=='busy':
-                    preds["busy"].append(p)
-                elif p.type=='at_home':
-                    preds["at_home"].append(p)
-        finally:
-            self.state_lock.release()
+        with self.state_lock:
+            refresh = not self.old_display_state or self.state.predicates != self.old_display_state.predicates
+        if refresh:
+            img = zeros((height,width, 3), uint8)
+            preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "holded": [], "at_home": []}
+            self.state_lock.acquire()
+            try:
+                for p in self.state.predicates:
+                    if p.type=='in_human_ws':
+                        preds["in_hws"].append(p)
+                    elif p.type=='positioned':
+                        preds["positioned"].append(p)
+                    elif p.type=='attached':
+                        preds["attached"].append(p)
+                    elif p.type=='picked':
+                        preds["picked"].append(p)
+                    elif p.type=='holded':
+                        preds["holded"].append(p)
+                    elif p.type=='busy':
+                        preds["busy"].append(p)
+                    elif p.type=='at_home':
+                        preds["at_home"].append(p)
+            finally:
+                self.state_lock.release()
 
-        # Now draw the image with opencv
-        line = 1
-        for i_pred, pred in preds.iteritems():
-            cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
-            line+=1
-            for i, p in enumerate(pred):
-                cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
-                line += 1
-        #cv2.imshow("Predicates", img)
-        #cv2.waitKey(1)
-        msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
-        self.image_pub.publish(msg)
+            # Now draw the image with opencv
+            line = 1
+            for i_pred, pred in preds.iteritems():
+                cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
+                line+=1
+                for i, p in enumerate(pred):
+                    cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
+                    line += 1
+            #cv2.imshow("Predicates", img)
+            #cv2.waitKey(1)
+            msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
+            self.image_pub.publish(msg)
+            self.old_display_state = deepcopy(self.state)
 
     def run(self):
         while not rospy.is_shutdown():

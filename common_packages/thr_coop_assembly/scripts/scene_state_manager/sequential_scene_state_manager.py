@@ -21,6 +21,7 @@ class SequentialSceneStateManager(object):
         self.attached = set()
         self.attaching_stamps = {}
         self.old_state = None
+        self.old_display_state = None
         self.logs = {}
 
         try:
@@ -104,29 +105,33 @@ class SequentialSceneStateManager(object):
         return resp
 
     def display_image(self, width, height):
-        img = zeros((height,width, 3), uint8)
-        preds = {"attached": [], "in_hws": [], "positioned": []}
         with self.state_lock:
-            for p in self.state.predicates:
-                if p.type=='in_human_ws':
-                    preds["in_hws"].append(p)
-                elif p.type=='positioned':
-                    preds["positioned"].append(p)
-                elif p.type=='attached':
-                    preds["attached"].append(p)
+            refresh = not self.old_display_state or self.state.predicates != self.old_display_state.predicates
+        if refresh:
+            img = zeros((height,width, 3), uint8)
+            preds = {"attached": [], "in_hws": [], "positioned": []}
+            with self.state_lock:
+                for p in self.state.predicates:
+                    if p.type=='in_human_ws':
+                        preds["in_hws"].append(p)
+                    elif p.type=='positioned':
+                        preds["positioned"].append(p)
+                    elif p.type=='attached':
+                        preds["attached"].append(p)
 
-        # Now draw the image with opencv
-        line = 1
-        for i_pred, pred in preds.iteritems():
-            cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
-            line+=1
-            for i, p in enumerate(pred):
-                cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
-                line += 1
-        #cv2.imshow("Predicates", img)
-        #cv2.waitKey(1)
-        msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
-        self.image_pub.publish(msg)
+            # Now draw the image with opencv
+            line = 1
+            for i_pred, pred in preds.iteritems():
+                cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
+                line+=1
+                for i, p in enumerate(pred):
+                    cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
+                    line += 1
+            #cv2.imshow("Predicates", img)
+            #cv2.waitKey(1)
+            msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
+            self.image_pub.publish(msg)
+            self.old_display_state = deepcopy(self.state)
 
     def record_state(self):
         with self.state_lock:
