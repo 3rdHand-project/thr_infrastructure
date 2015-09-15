@@ -35,6 +35,7 @@ class ConcurrentSceneStateManager(object):
         self.busy = {'left': False, 'right': False}
         self.holded = []
         self.picked = []
+        self.activity = {'left': None, 'right': None}
 
         try:
             self.objects = rospy.get_param('/thr/objects')[rospy.get_param('/thr/scene')]
@@ -55,26 +56,30 @@ class ConcurrentSceneStateManager(object):
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-    def affected_to(self, type, side):
-        return type in ['go_home_left', 'pick', 'give'] and side=='left' or \
-               type in ['go_home_right', 'hold'] and side=='right'
+    def affected_to(self, type):
+        if type in ['go_home_left', 'pick', 'give']:
+            return  'left'
+        elif type in ['go_home_right', 'hold']:
+            return 'right'
+        else:
+            return ''
 
     def cb_action_event_received(self, msg):
-        #with self.history_lock:
+            #with self.history_lock:
             # Listening action history for predicate AT_HOME
             if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_left':
                 self.at_home['left'] = True
             elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
                 self.at_home['right'] = True
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'right') and msg.action.type!='go_home_right':
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type)=='right' and msg.action.type!='go_home_right':
                 self.at_home['right'] = False
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type, 'left') and msg.action.type!='go_home_left':
+            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type)=='left' and msg.action.type!='go_home_left':
                 self.at_home['left'] = False
 
             # Listening action events for predicate BUSY
-            if self.affected_to(msg.action.type, 'left'):
+            if self.affected_to(msg.action.type)=='left':
                 self.busy['left'] = msg.type==ActionHistoryEvent.STARTING
-            elif self.affected_to(msg.action.type, 'right'):
+            elif self.affected_to(msg.action.type)=='right':
                 self.busy['right'] = msg.type==ActionHistoryEvent.STARTING
             else:
                 rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
@@ -88,6 +93,12 @@ class ConcurrentSceneStateManager(object):
                 self.holded = []
             elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='give':
                 self.picked = []
+
+            # Listening action events for activity predicates
+            if msg.type==ActionHistoryEvent.STARTING:
+                self.activity[self.affected_to(msg.action.type)] = msg.action
+            else:
+                self.activity[self.affected_to(msg.action.type)] = None
 
     def pred_holded(self, obj):
         #with self.history_lock:
@@ -196,9 +207,8 @@ class ConcurrentSceneStateManager(object):
             refresh = not self.old_display_state or self.state.predicates != self.old_display_state.predicates
         if refresh:
             img = zeros((height,width, 3), uint8)
-            preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "holded": [], "at_home": []}
-            self.state_lock.acquire()
-            try:
+            preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "held": [], "at_home": [], "activity": []}
+            with self.state_lock:
                 for p in self.state.predicates:
                     if p.type=='in_human_ws':
                         preds["in_hws"].append(p)
@@ -209,22 +219,32 @@ class ConcurrentSceneStateManager(object):
                     elif p.type=='picked':
                         preds["picked"].append(p)
                     elif p.type=='holded':
-                        preds["holded"].append(p)
+                        preds["held"].append(p)
                     elif p.type=='busy':
                         preds["busy"].append(p)
                     elif p.type=='at_home':
                         preds["at_home"].append(p)
-            finally:
-                self.state_lock.release()
+                    else:
+                        preds["activity"].append(p)
 
             # Now draw the image with opencv
             line = 1
             for i_pred, pred in preds.iteritems():
+                if i_pred=='activity':
+                    continue
                 cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
                 line+=1
                 for i, p in enumerate(pred):
                     cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
                     line += 1
+
+            # Column 2: activities
+            cv2.putText(img, '# ACTIVITIES ['+str(len(preds['activity']))+']', (width/2, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
+            line = 2
+            for i, p in enumerate(preds['activity']):
+                cv2.putText(img, p.type+str(p.parameters), (width/2, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
+                line += 1
+
             #cv2.imshow("Predicates", img)
             #cv2.waitKey(1)
             msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
@@ -284,6 +304,13 @@ class ConcurrentSceneStateManager(object):
                             p.type = 'at_home'
                             p.parameters.append(side)
                             self.state.predicates.append(p)
+                        if self.activity[side] is not None:
+                            p = Predicate()
+                            p.type = self.activity[side].type
+                            p.parameters = deepcopy(self.activity[side].parameters)
+                            p.parameters.append('eq2' if p.type=='hold' else 'eq1')
+                            self.state.predicates.append(p)
+
 
             display = rospy.get_param('/thr/display')
             if display == "debug":
