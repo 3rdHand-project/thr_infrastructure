@@ -130,9 +130,9 @@ class InteractionController(object):
 
                 if prediction.confidence == prediction.SURE:
                     predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-                    question = self.web_asker.ask(
-                        "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
-                        ["Don't do that"])
+                    #question = self.web_asker.ask(
+                    #    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
+                    #    ["Don't do that"])
 
                     self.logs.append({'timestamp': rospy.get_time(),
                           'type': predicted_action.type,
