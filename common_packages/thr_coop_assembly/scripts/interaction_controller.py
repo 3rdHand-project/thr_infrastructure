@@ -34,12 +34,14 @@ class InteractionController(object):
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
-        self.web_asker = None
-
         self.rospack = rospkg.RosPack()
+
+        self.web_asker = None
+        #self.init_webasker()
+
+    def init_webasker(self):
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
             adress_list = json.load(adress_file)
-
         for adress in adress_list:
             try:
                 self.web_asker = web_asker.WebAsker(adress)
@@ -127,24 +129,25 @@ class InteractionController(object):
 
             if prediction.confidence == prediction.SURE:
                 predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-                question = self.web_asker.ask(
-                    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
-                    ["Don't do that"])
+                #question = self.web_asker.ask(
+                #    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
+                #    ["Don't do that"])
                 self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
 
                 self.logs.append({'timestamp': rospy.get_time(),
                       'type': predicted_action.type,
                       'parameters': predicted_action.parameters})
 
-                if question.answered():
-                    question.remove()
-                    correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                        "What should have been done ?", str_action_list).get_answer())
-                    self.set_new_training_example(self.scene_before_action, correct_action, True)
-                    self.set_new_training_example(self.scene_before_action, predicted_action, False)
-                else:
-                    question.remove()
-                    self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                #if question.answered():
+                #    question.remove()
+                #    correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                #        "What should have been done ?", str_action_list).get_answer())
+                #    self.set_new_training_example(self.scene_before_action, correct_action, True)
+                #    self.set_new_training_example(self.scene_before_action, predicted_action, False)
+                #else:
+                #    question.remove()
+                #    self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                self.set_new_training_example(self.scene_before_action, predicted_action, True)
 
             elif prediction.confidence == prediction.CONFIRM:
                 predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
