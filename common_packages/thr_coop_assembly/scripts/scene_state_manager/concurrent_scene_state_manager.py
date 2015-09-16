@@ -143,15 +143,15 @@ class ConcurrentSceneStateManager(object):
     def pred_attached(self, master, slave, atp):
         if master+slave+str(atp) in self.attached:
             return True
-        elif master+slave+str(atp) in self.screwed:
-            try:
-                distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform('right_gripper', "/human/wrist", rospy.Time(0)))
-            except:
-                rospy.logwarn("Human wrist not found")
-                return False
-            if distance_wrist_gripper > self.config['hold']['sphere_radius']:
-                self.attached.append(master+slave+str(atp))
-                return True
+        # elif master+slave+str(atp) in self.screwed:
+            # try:
+            #     distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform('right_gripper', "/human/wrist", rospy.Time(0)))
+            # except:
+            #     rospy.logwarn("Human wrist not found")
+            #     return False
+            # if distance_wrist_gripper > self.config['hold']['sphere_radius']:
+            #     self.attached.append(master+slave+str(atp))
+            #     return True
         elif self.pred_positioned(master, slave, atp):
             try:
                 # WARNING: Do not ask the relative tf directly, it is outdated!
@@ -167,13 +167,15 @@ class ConcurrentSceneStateManager(object):
                         try:
                             if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
                                 rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
-                                self.screwed.append(master+slave+str(atp))
+                                # self.screwed.append(master+slave+str(atp))
+                                self.attached.append(master+slave+str(atp))
                         except KeyError:
                             if not self.attaching_stamps.has_key(master):
                                 self.attaching_stamps[master] = {}
                             self.attaching_stamps[master][slave] = time()
                 else: # For objects that only need to be inserted
-                    self.screwed.append(master+slave+str(atp))
+                    # self.screwed.append(master+slave+str(atp))
+                    self.attached.append(master+slave+str(atp))
         return False
 
     def record_state(self):
