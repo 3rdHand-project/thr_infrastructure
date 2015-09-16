@@ -189,7 +189,8 @@ class ConcurrentSceneStateManager(object):
 
     def pred_in_human_ws(self, obj):
         try:
-            return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
+            return rospy.Time.now() - self.tfl.getLatestCommonTime(obj, "/table") < rospy.Duration(self.config['in_human_ws_time']) \
+                    and transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
         except:
             return False
 
