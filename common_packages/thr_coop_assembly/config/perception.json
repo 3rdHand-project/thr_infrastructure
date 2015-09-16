@@ -3,6 +3,6 @@
     "orientation_tolerance": 0.5,
     "tool_position_tolerance": 0.1,
     "in_human_ws_distance": 0.6,
-    "screwdriver_attaching_time": 7.0,
+    "screwdriver_attaching_time": 4.0,
     "hold": { "sphere_radius": 0.6 }
 }
