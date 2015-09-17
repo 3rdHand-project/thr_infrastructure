@@ -96,6 +96,7 @@ class MDPActionServer:
                     event.type = ActionHistoryEvent.FINISHED_SUCCESS if state == GoalStatus.SUCCEEDED else ActionHistoryEvent.FINISHED_FAILURE
                     event.action = action
                     self.action_history.publish(event)
+                    self.current_actions[side] = None
 
             # Update the MDP action state of the corresponding goal here
             #                     if robot_state == GoalStatus.ABORTED:
