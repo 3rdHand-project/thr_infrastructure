@@ -131,7 +131,7 @@ class RobotActionServer:
             return self.abort(str(parameters))
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "failure" if self.should_interrupt() else "success"))
-        return self.server.set_succeeded()
+        return self.server.set_succeeded() if self.commander.gripping() else self.abort(str(parameters))
 
     def execute_give(self, parameters):
         # Parameters could be "/thr/handle", it asks the robot to give the handle using the "give" pose (only 1 per object atm)

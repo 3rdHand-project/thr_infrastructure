@@ -131,6 +131,9 @@ class SequentialActionServer:
         if not self.arms['l'].execute(reapproach_traj):
             return self.abort(str(parameters))
 
+        if not self.arms['l'].gripping():
+            return self.abort(str(parameters))
+
         # 5. Wait for human wrist and approach object until we are close enough to release object
         rospy.loginfo("Bringing {} to human wrist".format(object))
         while not self.should_interrupt():
