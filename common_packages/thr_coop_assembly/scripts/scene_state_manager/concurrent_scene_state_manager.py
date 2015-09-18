@@ -5,16 +5,15 @@ from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
 from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, RobotAction
 from itertools import combinations
 from threading import Lock
-import json, cv2, cv_bridge
-from numpy import zeros, uint8
+import json
 from time import time
 from sensor_msgs.msg import Image
 from copy import deepcopy
-from os import system
 
 class ConcurrentSceneStateManager(object):
     def __init__(self, rate):
         self.state = SceneState()
+        self.old_state = None
         self.rate = rospy.Rate(rate)
         self.world = "base"
         self.screwdriver = '/tools/screwdriver'
@@ -23,9 +22,6 @@ class ConcurrentSceneStateManager(object):
         self.attached = set()
         self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
-
-        self.old_state = None
-        self.old_display_state = None
 
         self.logs = []
 
@@ -187,7 +183,6 @@ class ConcurrentSceneStateManager(object):
                 self.logs.append({'timestamp': rospy.get_time(),
                                   'scene': predicates })
                 self.old_state = deepcopy(self.state)
-                #system('beep')
 
     def pred_in_human_ws(self, obj):
         try:
@@ -204,55 +199,6 @@ class ConcurrentSceneStateManager(object):
         finally:
             self.state_lock.release()
         return resp
-
-    def display_image(self, width, height):
-        with self.state_lock:
-            refresh = not self.old_display_state or self.state.predicates != self.old_display_state.predicates
-        if refresh:
-            img = zeros((height,width, 3), uint8)
-            preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "held": [], "at_home": [], "activity": []}
-            with self.state_lock:
-                for p in self.state.predicates:
-                    if p.type=='in_human_ws':
-                        preds["in_hws"].append(p)
-                    elif p.type=='positioned':
-                        preds["positioned"].append(p)
-                    elif p.type=='attached':
-                        preds["attached"].append(p)
-                    elif p.type=='picked':
-                        preds["picked"].append(p)
-                    elif p.type=='holded':
-                        preds["held"].append(p)
-                    elif p.type=='busy':
-                        preds["busy"].append(p)
-                    elif p.type=='at_home':
-                        preds["at_home"].append(p)
-                    else:
-                        preds["activity"].append(p)
-
-            # Now draw the image with opencv
-            line = 1
-            for i_pred, pred in preds.iteritems():
-                if i_pred=='activity':
-                    continue
-                cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
-                line+=1
-                for i, p in enumerate(pred):
-                    cv2.putText(img, str(p.parameters), (50, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
-                    line += 1
-
-            # Column 2: activities
-            cv2.putText(img, '# ACTIVITIES ['+str(len(preds['activity']))+']', (width/2, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, [255]*3)
-            line = 2
-            for i, p in enumerate(preds['activity']):
-                cv2.putText(img, p.type+str(p.parameters), (width/2, 20*line), cv2.FONT_HERSHEY_SIMPLEX, 0.5, [180]*3)
-                line += 1
-
-            #cv2.imshow("Predicates", img)
-            #cv2.waitKey(1)
-            msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
-            self.image_pub.publish(msg)
-            self.old_display_state = deepcopy(self.state)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -314,10 +260,6 @@ class ConcurrentSceneStateManager(object):
                             p.parameters.append('eq2' if p.type=='hold' else 'eq1')
                             self.state.predicates.append(p)
 
-
-            display = rospy.get_param('/thr/display')
-            if display == "debug":
-                self.display_image(1024, 600)
             self.record_state()
             self.rate.sleep()
 

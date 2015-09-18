@@ -8,7 +8,7 @@ from numpy import zeros, uint8
 from sensor_msgs.msg import Image
 from collections import deque
 
-class ConcurrentSceneStateManager(object):
+class ConcurrentActionDisplay(object):
     def __init__(self, width, height, face=cv2.FONT_HERSHEY_SIMPLEX, scale=1, thickness=1, color=[255]*3, interline=1.1):
         self.rospack = rospkg.RosPack()
         self.history_lock = Lock()
@@ -66,5 +66,5 @@ class ConcurrentSceneStateManager(object):
 
 if __name__ == "__main__":
     rospy.init_node('concurrent_action_display')
-    ConcurrentSceneStateManager(1024, 600, face=cv2.FONT_HERSHEY_SIMPLEX, scale=3, thickness=2, interline=2)
+    ConcurrentActionDisplay(1024, 600, face=cv2.FONT_HERSHEY_SIMPLEX, scale=3, thickness=2, interline=2)
     rospy.spin()

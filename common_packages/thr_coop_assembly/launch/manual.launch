@@ -20,5 +20,6 @@
     <include file="$(find thr_coop_assembly)/launch/action_server_$(arg type).launch" />
 
     <!--<node pkg="google_tts_ros" name="text_to_speech" type="say.py" output="log"/>-->
+    <node pkg="thr_coop_assembly" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
     <node pkg="thr_coop_assembly" name="keyboard_interaction_controller_$(arg type)" type="keyboard_interaction_controller_$(arg type).py" output="screen"/>
 </launch>
