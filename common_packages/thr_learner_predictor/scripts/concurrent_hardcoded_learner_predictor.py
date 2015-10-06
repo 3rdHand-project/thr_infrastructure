@@ -407,9 +407,9 @@ class Server(object):
         :param snter: an object of type SetNewTrainingExampleRequest
         :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
         """
-        rospy.loginfo("I'm learning that action {}{} was {}".format(new_training_ex.action.type,
-                                                                    str(new_training_ex.action.parameters),
-                                                                    "good" if new_training_ex.good else "bad"))
+        #rospy.loginfo("I'm learning that action {}{} was {}".format(new_training_ex.action.type,
+        #                                                            str(new_training_ex.action.parameters),
+        #                                                            "good" if new_training_ex.good else "bad"))
         return SetNewTrainingExampleResponse()
 
     def run(self):
