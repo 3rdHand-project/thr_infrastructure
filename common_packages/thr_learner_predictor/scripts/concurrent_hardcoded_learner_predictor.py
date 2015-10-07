@@ -261,7 +261,7 @@ class Server(object):
                         action.type = 'wait'
                         
                 else:
-                    if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_front'):
+                    if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_back'):
                         action.type = 'start_pick'
                         action.parameters = ['/toolbox/side_back']
                         
