@@ -8,7 +8,7 @@ import actionlib
 import transformations
 from control_msgs.msg import FollowJointTrajectoryGoal, FollowJointTrajectoryAction
 import numpy
-from baxter_commander import ArmCommander
+from baxter_commander import ArmCommander, dicttostate
 from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionActionResult
 
 class RobotActionServer:
@@ -33,6 +33,8 @@ class RobotActionServer:
             self.poses = json.load(f)
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/seeds.json") as f:
+            self.seeds = json.load(f)
 
         # Motion/Grasping attributes
         self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], kinematics='robot')
@@ -94,7 +96,7 @@ class RobotActionServer:
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.server.set_aborted()
-        goal_approach = self.commander.get_ik(world_approach_pose)
+        goal_approach = self.commander.get_ik(world_approach_pose, dicttostate(self.seeds['pick']))
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return self.server.set_aborted()
@@ -215,8 +217,7 @@ class RobotActionServer:
                 rospy.logerr("Object {} not found".format(object))
                 return self.server.set_aborted()
 
-            # Comment: goal approach is needed in both interpolate and planning mode (planning = for reapproach)
-            goal_approach = self.commander.get_ik(world_approach_pose)
+            goal_approach = self.commander.get_ik(world_approach_pose, dicttostate(self.seeds['hold']))
             if not goal_approach:
                 rospy.logerr("Unable to reach approach pose")
                 return self.server.set_aborted()
