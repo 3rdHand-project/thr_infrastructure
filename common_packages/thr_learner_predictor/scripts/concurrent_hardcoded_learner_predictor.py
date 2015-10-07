@@ -42,6 +42,8 @@ class Server(object):
         return len([p for p in predictate_list if
             p.type == 'busy' and arm in p.parameters]) == 1
 
+    def check_is_holding(self, predicate_list):
+        return len([p for p in predicate_list if p.type=="hold"])==1
 
     def predictor_handler(self, get_next_action_req):
         """
@@ -58,11 +60,14 @@ class Server(object):
 
         if len(in_hws_list) == 0:
             if not self.check_busy_pred(pred_list, "left"):
-                action.parameters = ['/toolbox/handle']
                 if not self.check_picked_pred(pred_list, '/toolbox/handle'):
+                    action.parameters = ['/toolbox/handle']
                     action.type = 'start_pick'
-                else:
+                elif not self.check_is_holding(pred_list):
+                    action.parameters = ['/toolbox/handle']
                     action.type = 'start_give'
+                else:
+                    action.type = 'wait'
                 
             elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
                 action.type = 'start_go_home_right'
@@ -72,12 +77,15 @@ class Server(object):
 
         elif len(in_hws_list) == 1:
             if not self.check_busy_pred(pred_list, "left"):
-                action.parameters = ['/toolbox/side_right']
                 if not self.check_picked_pred(pred_list, '/toolbox/side_right'):
                     action.type = 'start_pick'
-                else:
+                    action.parameters = ['/toolbox/side_right']
+                elif not self.check_is_holding(pred_list):
                     action.type = 'start_give'
-                
+                    action.parameters = ['/toolbox/side_right']
+                else:
+                    action.type = 'wait'
+
             elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
                 action.type = 'start_go_home_right'
 
@@ -90,12 +98,14 @@ class Server(object):
                     action.type = 'start_go_home_right'
 
                 elif not self.check_busy_pred(pred_list, "left"):
-                    action.parameters = ['/toolbox/side_left']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_left'):
                         action.type = 'start_pick'
-                    else:
+                        action.parameters = ['/toolbox/side_left']
+                    elif not self.check_is_holding(pred_list):
                         action.type = 'start_give'
-
+                        action.parameters = ['/toolbox/side_left']
+                    else:
+                        action.type = 'wait'
                 else:
                     action.type = 'wait'
 
@@ -143,12 +153,14 @@ class Server(object):
                     
 
                 elif not self.check_busy_pred(pred_list, "left"):
-                    action.parameters = ['/toolbox/side_front']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
                         action.type = 'start_pick'
-                    else:
+                        action.parameters = ['/toolbox/side_front']
+                    elif not self.check_is_holding(pred_list):
                         action.type = 'start_give'
-                    
+                        action.parameters = ['/toolbox/side_front']
+                    else:
+                        action.type = 'wait'
                 else:
                     action.type = 'wait'
                     
@@ -202,12 +214,14 @@ class Server(object):
                     
 
                 elif not self.check_busy_pred(pred_list, "left"):
-                    action.parameters = ['/toolbox/side_back']
                     if not self.check_picked_pred(pred_list, '/toolbox/side_back'):
                         action.type = 'start_pick'
-                    else:
+                        action.parameters = ['/toolbox/side_back']
+                    elif not self.check_is_holding(pred_list):
                         action.type = 'start_give'
-                    
+                        action.parameters = ['/toolbox/side_back']
+                    else:
+                        action.type = 'wait'
                 else:
                     action.type = 'wait'
                     
