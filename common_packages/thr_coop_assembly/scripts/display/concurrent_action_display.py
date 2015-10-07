@@ -27,6 +27,8 @@ class ConcurrentActionDisplay(object):
 
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/display.json") as f:
             self.text = json.load(f)
+
+        self.display_text(self.text['start'], [], self.font, self.scale, self.thickness, self.color, self.interline)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
     def react_to_event(self, event):
@@ -46,7 +48,6 @@ class ConcurrentActionDisplay(object):
         except KeyError:
             return False
         else:
-            rospy.logerr("displaying event {}".format(str(action['text'])))
             self.display_text(action['text'], event.action.parameters,
                               self.font, self.scale, self.thickness, self.color, self.interline)
             if isinstance(action['look_at'], int):
