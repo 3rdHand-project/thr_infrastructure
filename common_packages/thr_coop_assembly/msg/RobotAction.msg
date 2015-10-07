@@ -1,5 +1,5 @@
 # Action describes a command executable on the robot and its parameters
 
-# Constants defining the type of command
+int32 id
 string type
 string[] parameters

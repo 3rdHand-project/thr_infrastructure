@@ -20,7 +20,8 @@ class InteractionController(object):
         self.logs = []
 
         # Parameters to be tweaked
-        self.interaction_loop_rate = rospy.Rate(20)  # Rate of the interaction loop in Hertz
+        self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
+                                                    # Shouldn't go too fast, it will trigger actions at that speed!
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'

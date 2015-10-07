@@ -13,7 +13,6 @@ class ConcurrentActionDisplay(object):
     def __init__(self, width, height, font=cv2.FONT_HERSHEY_SIMPLEX, scale=1, thickness=1, color=[255]*3, interline=1.1):
         self.face = FaceCommander()
         self.rospack = rospkg.RosPack()
-        self.history_lock = Lock()
         self.action_history_name = '/thr/action_history'
         self.font = font
         self.scale = scale
@@ -22,6 +21,7 @@ class ConcurrentActionDisplay(object):
         self.interline = interline
         self.queue = deque()
         self.width, self.height = width, height
+        self.events = []  # Current events are stored in this stack
 
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
 
@@ -29,26 +29,51 @@ class ConcurrentActionDisplay(object):
             self.text = json.load(f)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-    def cb_action_event_received(self, msg):
+    def react_to_event(self, event):
+        """
+        React to the specified event
+        :param event:
+        :return: False in case no reaction is needed, True otherwise
+        """
         def map_const(index):
             #STARTING = 0
             #FINISHED_SUCCESS = 1
             #FINISHED_FAILURE = 2
             return ['starting', 'finished_success', 'finished_failure'][index]
 
-        with self.history_lock:
-            try:
-                action = self.text[msg.action.type][map_const(msg.type)]
-            except KeyError:
-                pass
-            else:
-                self.display_text(action['text'], msg.action.parameters,
-                                  self.font, self.scale, self.thickness, self.color, self.interline)
-                if isinstance(action['look_at'], int):
-                    if action['look_at'] >= 0:
-                        self.face.look_at(msg.action.parameters[action['look_at']])
-                    else:
-                        self.face.look_at(None)  # Reset gaze at neutral position
+        try:
+            action = self.text[event.action.type][map_const(event.type)]
+        except KeyError:
+            return False
+        else:
+            rospy.logerr("displaying event {}".format(str(action['text'])))
+            self.display_text(action['text'], event.action.parameters,
+                              self.font, self.scale, self.thickness, self.color, self.interline)
+            if isinstance(action['look_at'], int):
+                if action['look_at'] >= 0:
+                    self.face.look_at(event.action.parameters[action['look_at']])
+                else:
+                    self.face.look_at(None)  # Reset gaze at neutral position
+            return True
+
+    def cb_action_event_received(self, msg):
+        def del_event():
+            # Deletes the last event and its associated STARTING event, if any
+            if self.events[-1].type != ActionHistoryEvent.STARTING:
+                # Remove the STARTING action corresponding to the last event
+                for event in range(len(self.events)-1, -1, -1):
+                    if self.events[event].action.id == self.events[-1].action.id and self.events[event].type == ActionHistoryEvent.STARTING:
+                        del self.events[event]
+                        break
+                # Remove the FINISHED action
+                self.events.pop()
+
+        self.events.append(msg)
+        need_reaction = self.react_to_event(msg)
+        if msg.type != ActionHistoryEvent.STARTING:
+            del_event()
+        if not need_reaction and len(self.events)>0:
+            self.react_to_event(self.events[-1])
 
 
     def display_text(self, lines, parameters=[], font=cv2.FONT_HERSHEY_SIMPLEX, scale=1, thickness=1, color=[255]*3, interline=1.1):

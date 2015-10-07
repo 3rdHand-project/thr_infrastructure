@@ -9,6 +9,7 @@ from thr_coop_assembly.msg import MDPAction, Predicate
 
 class Server(object):
     def __init__(self):
+        self.sequence = 1  # ID of output actions
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
 
@@ -57,6 +58,7 @@ class Server(object):
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
         action = MDPAction()
+        action.id = self.sequence
 
         if len(in_hws_list) == 0:
             if not self.check_busy_pred(pred_list, "left"):
@@ -412,6 +414,7 @@ class Server(object):
             else:
                 resp.probas.append(0.)
 
+        self.sequence += 1
         return resp
 
 

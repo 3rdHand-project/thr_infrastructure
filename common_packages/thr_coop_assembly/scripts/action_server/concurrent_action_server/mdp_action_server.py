@@ -15,6 +15,7 @@ class MDPActionServer:
     """
     def __init__(self):
         # Action server attributes
+        self.sequence = 1
         self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
         self.rospack = rospkg.RosPack()
         self.current_actions = {'right': None, 'left': None}
@@ -52,6 +53,8 @@ class MDPActionServer:
                 rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
                 self.server.set_aborted()
             else:
+                robot_goal.action.id = self.sequence
+                self.sequence += 1
                 robot_goal.action.parameters = mdp_goal.action.parameters
                 self.clients[client].send_goal(robot_goal)
                 self.current_actions[client] = robot_goal.action
