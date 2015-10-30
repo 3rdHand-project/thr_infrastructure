@@ -1,6 +1,6 @@
 <launch>
     <arg name="ip" /> <!-- IP of the VRPN server (default 3883) -->
-    <arg name="port" default="3883" /> <!-- Port of the VRPN server (default 3883) -->
+    <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="scene"/>
     <arg name="type" />
 

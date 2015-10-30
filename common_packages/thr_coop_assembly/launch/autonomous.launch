@@ -2,7 +2,7 @@
     <arg name="type" /> <!-- concurrent or sequential -->
     <arg name="scene" default="toolbox"/>
     <arg name="ip" /> <!-- IP of the VRPN server -->
-    <arg name="port" default="3883" /> <!-- Port of the VRPN server (default 3883) -->
+    <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
     <arg name="name" default="none" /> <!-- Name of log files -->
     <arg name="display" default="debug" /> <!-- debug or face display -->
