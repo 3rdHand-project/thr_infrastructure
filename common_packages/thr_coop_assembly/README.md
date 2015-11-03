@@ -23,6 +23,7 @@ In both branches the robot is only capable of giving an object to the user, and 
 - *Either* a hardcoded policy, only for debug purposes
 - *Or* via interactive learning
 - *Or* using Marc Toussaint's planner
+- ([A video illustrating Marc's planner as well as the learner has been sumbmitted to ICRA 2016](https://vimeo.com/139342248])
 
 
 ## March-May: The non-concurrent branch
@@ -53,6 +54,7 @@ The experimental setup is fully built on ROS, and composed by the following node
   - *Hardcoded predictor* (learner unused)
   - *Marc's planner* (learner unused)
   - *Learner from demonstrations* (the demonstrations need to be recorded first using the keyboard interaction controller)
+  - ([A video illustrating Marc's planner as well as the learner has been sumbmitted to ICRA 2016](https://vimeo.com/139342248))
  -  **Interaction controller** [Simple node]: Controller mastering the whole interaction process, requesting the scene state, the actions to perform from the predictor, sending goals to the arms through their action server, and warning the learner than the action succeeded or has been interrupted. We have implemented two kinds of interaction controllers:
   - *Autonomous interaction controller* (automatically looping)
   - *Keyboard interaction controller* (waits for user commands in a Command-Line Interface).
