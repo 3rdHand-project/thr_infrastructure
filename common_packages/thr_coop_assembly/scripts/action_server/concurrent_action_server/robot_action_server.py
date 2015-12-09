@@ -34,6 +34,8 @@ class RobotActionServer:
             self.action_params = json.load(f)
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/seeds.json") as f:
             self.seeds = json.load(f)
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/abilities.json") as f:
+            self.abilities = json.load(f)
 
         # Motion/Grasping attributes
         self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], kinematics='robot')
@@ -49,10 +51,12 @@ class RobotActionServer:
         self.result = RunRobotActionActionResult()
 
         # Actual actions
-        self.give = Give(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested)
-        self.go_home = GoHome(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested)
-        self.hold = Hold(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested)
-        self.pick = Pick(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested)
+        self.actions = {
+            'give': Give(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'go_home_'+self.side: GoHome(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'hold': Hold(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'pick': Pick(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            }
 
         # On starting blocks...
         self.server.start()
@@ -63,22 +67,19 @@ class RobotActionServer:
         Dispatches a new goal on the method executing each type of action
         :param goal:
         """
-        if goal.action.type=='give' and self.side=='left':
-            result = self.give.run(goal.action.parameters)
-        elif goal.action.type=='hold' and self.side=='right':
-            result = self.hold.run(goal.action.parameters)
-        elif goal.action.type=='pick' and self.side=='left':
-            result = self.pick.run(goal.action.parameters)
-        elif goal.action.type == 'go_home_'+self.side :
-            result = self.go_home.run(goal.action.parameters)
-        else:
+        try:
+            assert self.abilities[goal.action.type] == self.side
+            action = self.actions[goal.action.type]
+        except KeyError, AssertionError:
             rospy.logwarn('{} arm is not capable of action {}'.format(self.side, goal.action.type))
             self.server.set_aborted()
-        if result:
-            self.server.set_succeeded()
         else:
-            self.server.set_aborted()
-        # Note: do not try/catch: an Exception ends up in an aborted state, ... perfect!
+            # Note: do not try/catch: an Exception ends up in an aborted state, ... perfect!
+            if action.run(goal.action.parameters):
+                self.server.set_succeeded()
+            else:
+                self.server.set_aborted()
+
 
 if __name__ == '__main__':
     rospy.init_node('robot_action_server')

@@ -1,0 +1,7 @@
+{
+    "give": "left",
+    "hold": "right",
+    "pick": "left",
+    "go_home_left": "left",
+    "go_home_right": "right"
+}

@@ -46,19 +46,15 @@ class ConcurrentSceneStateManager(object):
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/perception.json") as f:
             self.config = json.load(f)
 
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/abilities.json") as f:
+            self.abilities = json.load(f)
+
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
         self.screwed = [] # Pairs of screwed objects (screwdriver 7 seconds => screwed ; screw + wrist > 0.6 m => attached)
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-    def affected_to(self, type):
-        if type in ['go_home_left', 'pick', 'give']:
-            return  'left'
-        elif type in ['go_home_right', 'hold']:
-            return 'right'
-        else:
-            return ''
 
     def cb_action_event_received(self, msg):
             #with self.history_lock:
@@ -67,15 +63,15 @@ class ConcurrentSceneStateManager(object):
                 self.at_home['left'] = True
             elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
                 self.at_home['right'] = True
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type)=='right' and msg.action.type!='go_home_right':
+            elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
                 self.at_home['right'] = False
-            elif msg.type==ActionHistoryEvent.STARTING and self.affected_to(msg.action.type)=='left' and msg.action.type!='go_home_left':
+            elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
                 self.at_home['left'] = False
 
             # Listening action events for predicate BUSY
-            if self.affected_to(msg.action.type)=='left':
+            if self.abilities[msg.action.type]=='left':
                 self.busy['left'] = msg.type==ActionHistoryEvent.STARTING
-            elif self.affected_to(msg.action.type)=='right':
+            elif self.abilities[msg.action.type]=='right':
                 self.busy['right'] = msg.type==ActionHistoryEvent.STARTING
             else:
                 rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
@@ -92,9 +88,9 @@ class ConcurrentSceneStateManager(object):
 
             # Listening action events for activity predicates
             if msg.type==ActionHistoryEvent.STARTING:
-                self.activity[self.affected_to(msg.action.type)] = msg.action
+                self.activity[self.abilities[msg.action.type]] = msg.action
             else:
-                self.activity[self.affected_to(msg.action.type)] = None
+                self.activity[self.abilities[msg.action.type]] = None
 
     def pred_holded(self, obj):
         #with self.history_lock:
