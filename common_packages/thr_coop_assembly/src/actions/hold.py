@@ -6,6 +6,7 @@ import transformations
 class Hold(Action):
     def __init__(self, commander, tf_listener, action_params, poses, seeds, should_interrupt=None):
         super(Hold, self).__init__(commander, tf_listener, action_params, poses, seeds, should_interrupt)
+        self.gripper = commander.name+'_gripper'
 
     def run(self, parameters=None):
         # Parameters could be "/thr/handle 0", it asks the robot to hold the handle using its first hold pose
@@ -82,12 +83,12 @@ class Hold(Action):
         # 5. Wait for interruption
         while not self._should_interrupt():
             try:
-                distance_wrist_obj = transformations.norm(self.tfl.lookupTransform(object, "/human/wrist", rospy.Time(0)))
+                distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform(self.gripper, "/human/wrist", rospy.Time(0)))
             except:
                 rospy.logwarn("Human wrist not found")
-                distance_wrist_obj = 0
-            if distance_wrist_obj < self.action_params['hold']['sphere_radius']:
-                rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_obj, self.action_params['hold']['sphere_radius']))
+                distance_wrist_gripper = 0
+            if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
+                rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
             else:
                 break
             rospy.sleep(self.action_params['sleep_step'])
