@@ -5,7 +5,7 @@ This poses.json stores all poses associated to objects composing the scene:
 * poses["individual"] contains all poses related to objects individually
 * poses["pairs"] contains poses related to pairs of objects
 
-
+Grasp poses are poses of the gripper with respect to the object.
 
 # action_params.json description
 

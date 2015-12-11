@@ -10,6 +10,9 @@
         "releasing_disturbance": 0.025,
         "inter_goal_sleep": 0.4
     },
+    "pick": {
+        "approach_cartesian_dist": 0.01
+    },
     "hold": {
         "sphere_radius": 0.55,
         "approach_cartesian_dist": 0.01,

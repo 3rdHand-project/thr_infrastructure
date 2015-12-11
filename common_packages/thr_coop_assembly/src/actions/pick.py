@@ -1,32 +1,41 @@
 from . action import Action
 from baxter_commander.persistence import dicttostate
+from tf import LookupException
+from transformations import distance
 import rospy
 
 class Pick(Action):
     def __init__(self, commander, tf_listener, action_params, poses, seeds, should_interrupt=None):
         super(Pick, self).__init__(commander, tf_listener, action_params, poses, seeds, should_interrupt)
+        self.gripper = commander.name + '_gripper'
 
     def run(self, parameters=None):
         rospy.loginfo("[ActionServer] Executing pick{}".format(str(parameters)))
         object = parameters[0]
 
-        # 0. Trajectories generation
+        # 1. Go to approach pose
         try:
-            world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["give"][0]['approach'], object)  # Pose of the approach
-        except:
+            world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["give"][0]['approach'], object)
+        except LookupException:
             rospy.logerr("Object {} not found".format(object))
             return False
+
         goal_approach = self.commander.get_ik(world_approach_pose, dicttostate(self.seeds['pick']))
         if not goal_approach:
             rospy.logerr("Unable to reach approach pose")
             return False
 
-        # 1. Go to approach pose
-        if self._should_interrupt():
-            return False
-        rospy.loginfo("Approaching {}".format(object))
-        if not self.commander.move_to_controlled(goal_approach):
-            return False
+        while True:
+            if self._should_interrupt():
+                return False
+            rospy.loginfo("Approaching {}".format(object))
+            if not self.commander.move_to_controlled(goal_approach):
+                return False
+
+            # We just check that motion was precise enough, no target recomputation if object moves (needs another IK)
+            actual_world_approach_pose = self.tfl.lookupTransform(self.world, self.gripper, rospy.Time(0))  # Cannot fail
+            if distance(actual_world_approach_pose, world_approach_pose) < self.action_params['pick']['approach_cartesian_dist']:
+                break
 
         # 2. Go to "give" pose
         if self._should_interrupt():
