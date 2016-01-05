@@ -41,7 +41,7 @@ class Pick(Action):
         if self._should_interrupt():
             return False
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.5)
+        action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.)
         if action_traj[1]<0.9:
             rospy.logerr("Unable to generate picking descent")
             return False

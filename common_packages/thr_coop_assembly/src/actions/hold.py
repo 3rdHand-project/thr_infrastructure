@@ -56,7 +56,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 2)
+        action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 1.)
 
         if action_traj[1]<0.9:
             rospy.logerr("Unable to generate hold descent")
