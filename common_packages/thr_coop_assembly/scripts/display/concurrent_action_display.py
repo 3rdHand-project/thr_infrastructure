@@ -2,7 +2,7 @@
 
 import rospy, rospkg
 from thr_coop_assembly.msg import ActionHistoryEvent
-from threading import Lock
+from tf import LookupException
 import json, cv2, cv_bridge
 from numpy import zeros, uint8
 from sensor_msgs.msg import Image
@@ -51,10 +51,14 @@ class ConcurrentActionDisplay(object):
             self.display_text(action['text'], event.action.parameters,
                               self.font, self.scale, self.thickness, self.color, self.interline)
             if isinstance(action['look_at'], int):
-                if action['look_at'] >= 0:
-                    self.face.look_at(event.action.parameters[action['look_at']])
-                else:
-                    self.face.look_at(None)  # Reset gaze at neutral position
+                try:
+                    if action['look_at'] >= 0:
+                        self.face.look_at(event.action.parameters[action['look_at']])
+                    else:
+                        self.face.look_at(None)  # Reset gaze at neutral position
+                except LookupException:
+                    # Given object not found, ignore
+                    pass
             return True
 
     def cb_action_event_received(self, msg):
