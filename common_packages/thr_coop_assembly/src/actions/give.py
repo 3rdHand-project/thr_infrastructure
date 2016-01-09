@@ -57,6 +57,8 @@ class Give(Action):
                     rospy.loginfo("Releasing suction for {}".format(object))
                     self.commander.open()
                     break
+            elif not self.commander.gripping():
+                break
             else:
                 rospy.sleep(self.action_params['short_sleep_step'])
 
