@@ -88,7 +88,7 @@ class Server(object):
 
 
         w = FolWorld(module_path + "/config/toolbox.g", "tmp_file_planner")
-        best_action_string = w.get_best_action(100, 75)
+        best_action_string = w.get_best_action(200, 100)
         planner_action = self.string_to_action(best_action_string)
 
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
