@@ -1,4 +1,4 @@
-# Inria march 2015: Cooperative assemblies with Baxter
+# Cooperative assemblies with Baxter
 
 From march 2015 Inria implemented a demonstrator with its Baxter robot illustrating human-robot collaboration in the toolbox assembly task. The global architecture is described here, and the messages can be  [viewed online](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/msg).
 
@@ -26,18 +26,18 @@ In both branches the robot is only capable of giving an object to the user, and 
 - ([A video illustrating Marc's planner as well as the learner has been sumbmitted to ICRA 2016](https://vimeo.com/139342248])
 
 
-## March-May: The non-concurrent branch
+## The non-concurrent setup
 The non-concurrent setup was the first coded in time, and allows only one Baxter arm moving at a time. It means that even when an arm has finished its master action (e.g. holding some piece) and is currently returning at its home position, the whole robot is immobilized performing this secondary action, which does not look so natural.
 
-### illustration of the non-concurrent setup
+### Video of the non-concurrent setup
 ----------------------------------------------------
 
 [Click here to open the Dropbox video player][2]
 
-## May: The concurrent branch
+## The concurrent setup
 Marc Toussaint from Stuttgart uni is working on a concurrent action planner which Thibaut could reuse in the relational domain (see his weekly for precise scientific infos). Thus this setup based on Baxter can be used, providing that it's able to perform concurrent actions, hence this branch. The concurrent branch also leads to a faster, more reactive cooperative assembly where no time is lost in systematic GO_HOME actions while new actions are pending.
  
-### illustration of the concurrent setup
+### Video of the concurrent setup
 ----------------------------------------------------
 
 [Click here to open the Dropbox video player][3]
@@ -61,8 +61,8 @@ The experimental setup is fully built on ROS, and composed by the following node
 
 
 ### Action servers
-#### Non-concurrent branch
-In the non-concurrent branch the robot is a single agent capable of several actions that take parameters:
+#### Non-concurrent server
+In the non-concurrent version; the robot is a single agent capable of several actions that take parameters:
 
 - `GIVE(Object obj)`: The robot locates object `obj`, picks it up, locates the human wrist and brings it close to his wrist if it's reachable. When the object is detected to be pulled from the gripper, it is released and the arm returns to the home position. This action is affected to the vacuum gripper.
 
@@ -72,8 +72,8 @@ In the non-concurrent branch the robot is a single agent capable of several acti
 
 We consider that an arm always performs one action, at least `WAIT()` if it does nothing, hence the policy source must always return an action.
 
-#### Concurrent branch
-The concurrent branch considers both arms as two different agents capable of several actions that take parameters:
+#### Concurrent setup
+The concurrent version considers both arms as two different agents capable of several actions that take parameters:
 
 - Left arm (vacuum gripper):
  - `PICK(Object obj)`: The robot locates object `obj`, picks it up and keeps it in hand a until further `GIVE` action.
@@ -105,3 +105,49 @@ The perception ability of the robot is ensured by the Optitrack publisher and th
 [1]: https://www.youtube.com/watch?v=9XwqW_V0bDw
 [2]: https://www.dropbox.com/s/6klnlafpoki0cs2/coop_assembly.mp4?dl=0
 [3]: https://www.dropbox.com/s/a6eqy0ziptmniw5/concurrent_coop_assembly.mp4?dl=0
+
+## How to launch the process?
+
+```
+git checkout master
+roslaunch thr_coop_assembly autonomous.launch policy:=hardcoded display:=debug type:=concurrent ip:=<VRPN IP>
+```
+
+ *  The policy can be `hardcoded` (default and fastest), `planner` `random` or `policy_player`
+ *  The display can be `debug` (default), `action` (displays the actions)
+ *  Type can be `concurrent` (default) or `sequential`
+ *  IP is the IP address of the Windows machine running the Optitrack VRPN server (Arena or Motive), the port can also be set (`port:=`).
+
+To start the interactive mode using gestures and the gesture_learner_predictor:
+```
+git checkout gestures
+roslaunch thr_coop_assembly interactive.launch type:=concurrent display:=debug ip:=<VRPN IP>
+```
+
+To start the manual mode (robot receives individual commands from command line):
+```
+roslaunch thr_coop_assembly manual.launch policy:=hardcoded display:=action type:=concurrent ip:=<VRPN IP>
+```
+Commands are, for instance: `hh0` (Hold the handle, on its left), `hr1` (Hold the piece 'side_right' on its right), `l`, (Send the left arm in home pose), `r` (Send the right arm in home pose), `pb` (Pick the back piece), `gl` (Handover the side_left to the human).
+
+## How to implement new...
+## New actions?
+### For the concurrent setup
+The concurrent setup works with 2 types of actions: **Non-blocking** [`MDPAction`](common_packages/thr_coop_assembly/msg/MDPAction.msg)s like `start_xxxxx` causing the MDP action server to trigger a **blocking** [`RobotAction`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/msg/RobotAction.msg) executed by the Robot Action server. The actions themselves are implemented within a [`src/actions/`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/src/actions) subfolder. A new action must then be implemented as:
+ *  A new file in this [`src/actions/`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/src/actions) subfoler
+ *  A new correspondance `MDP to Robot` in [`config/mdp_robot_mapping.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/mdp_robot_mapping.json)
+ *  A new attribution to the left or right arm in [`config/abilities.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/abilities.json) (To be merged with mdp_robot_mapping.json?)
+ *  Its specific command-line command within the Concurrent Keyboard Interaction Controllers
+ *  Its specific tweakable parameters  in [`config/action_params.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/action_params.json)
+ *  Some IK seeds showing some typical arm configuration for this task, in [`config/seeds.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/seeds.json), if needed
+ *  Some text to display to the user on Baxter's screen when the action starts or stops/fails, in [`config/display.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/display.json), if needed
+
+### For the sequential setup
+The sequential setup owns a single action server and the whole process handles only **blocking** [`RobotAction`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/msg/RobotAction.msg)s. All its actions are implemented within the file [`sequential_action_server.py`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/scripts/action_server/sequential_action_server.py) (to be split within an `src/actions/sequential/` subfolder just like the concurrent setup. 
+
+## New objects/scene?
+There are some tracks of scene switching `scene:=toolbox` in the code but this is not yet fully implemented.
+In a general way adding new objects will require to change:
+ *  The file [`config/scenes.yaml`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/scenes.yaml) describes the available scenes and must be filled in
+ *  [`config/tracked_objects.yaml`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/tracked_objects.yaml) describes which objects must be tracked by optitrack, if needed
+ *  The file [`config/poses.json`](https://github.com/3rdHand-project/Inria/tree/master/common_packages/thr_coop_assembly/config/poses.json) describes, for its objects, somes hardcoded poses relative to that object 
