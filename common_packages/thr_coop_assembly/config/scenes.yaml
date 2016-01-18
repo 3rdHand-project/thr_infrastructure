@@ -10,3 +10,5 @@ bench:
   - /bench/leg2
   - /bench/leg3
   - /bench/leg4
+romeo:
+  - /romeo/pan
