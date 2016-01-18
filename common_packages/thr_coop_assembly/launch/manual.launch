@@ -1,6 +1,6 @@
 <launch>
     <arg name="type" /> <!-- concurrent or sequential -->
-    <arg name="scene" default="toolbox"/>
+    <arg name="scene" default="romeo"/>
     <arg name="ip" /> <!-- IP of the VRPN server -->
     <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
@@ -21,5 +21,5 @@
 
     <!--<node pkg="google_tts_ros" name="text_to_speech" type="say.py" output="log"/>-->
     <node pkg="thr_coop_assembly" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
-    <node pkg="thr_coop_assembly" name="keyboard_interaction_controller_$(arg type)" type="keyboard_interaction_controller_$(arg type).py" output="screen"/>
+    <node pkg="thr_coop_assembly" name="keyboard_interaction_controller_$(arg type)_$(arg scene)" type="keyboard_interaction_controller_$(arg type)_$(arg scene).py" output="screen"/>
 </launch>
