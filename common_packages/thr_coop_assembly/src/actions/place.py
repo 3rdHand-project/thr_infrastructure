@@ -21,6 +21,9 @@ class Place(Action):
                 distance_object_location = transformations.distance(self.tfl.lookupTransform(location, object, rospy.Time(0)), self.poses[location]['place'][object])
                 object_T_gripper = self.tfl.lookupTransform(object, self.gripper_name, rospy.Time(0))
                 world_T_location = self.tfl.lookupTransform(self.world, location, rospy.Time(0))
+            except KeyError:
+                rospy.logerr("No declared pose to place {} at {}".format(object, location))
+                return False
             except:
                 rospy.logwarn("{} or {} not found".format(object, location))
                 rospy.sleep(self.action_params['sleep_step'])
