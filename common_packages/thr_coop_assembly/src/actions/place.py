@@ -16,6 +16,10 @@ class Place(Action):
 
         rospy.loginfo("Placing {} at location {}".format(object, location))
         while not self._should_interrupt():
+            if not self.commander.gripping():
+                rospy.logerr('Object {} is no longer gripped'.format(object))
+                return False
+
             can_release = False
             try:
                 distance_object_location = transformations.distance(self.tfl.lookupTransform(location, object, rospy.Time(0)), self.poses[location]['place'][object])

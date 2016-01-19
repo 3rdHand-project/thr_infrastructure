@@ -88,7 +88,8 @@ class Grasp(Action):
         if not self.commander.execute(action_traj[0]):
             return False
 
-        if self._should_interrupt():
+        if not self.commander.gripping():
+            rospy.logerr('Object {} is not gripped'.format(object))
             return False
 
         rospy.loginfo("[ActionServer] Executed grasp{} with success".format(str(parameters)))

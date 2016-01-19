@@ -13,12 +13,19 @@ class Bring(Action):
         object = parameters[0]
         wrist = '/human/wrist'
 
+        if not self.commander.gripping():
+            rospy.logerr('Object {} is no longer gripped'.format(object))
+            return False
+
         rospy.loginfo("Bringing {} to the human".format(object))
         while not self._should_interrupt():
             try:
                 distance_object_location = transformations.distance(self.tfl.lookupTransform(wrist, object, rospy.Time(0)), self.poses[object]['bring'][wrist])
                 object_T_gripper = self.tfl.lookupTransform(object, self.gripper_name, rospy.Time(0))
                 world_T_location = self.tfl.lookupTransform(self.world, wrist, rospy.Time(0))
+            except KeyError:
+                rospy.logerr("No declared pose to bring {}".format(object))
+                return False
             except:
                 rospy.logwarn("{} or {} not found".format(object, wrist))
                 rospy.sleep(self.action_params['sleep_step'])
