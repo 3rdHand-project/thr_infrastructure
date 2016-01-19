@@ -12,3 +12,5 @@ bench:
   - /bench/leg4
 romeo:
   - /romeo/pan
+  - /romeo/hot_plate
+  - /romeo/bowl
