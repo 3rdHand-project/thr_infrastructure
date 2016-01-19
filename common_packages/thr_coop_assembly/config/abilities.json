@@ -4,5 +4,8 @@
     "pick": "left",
     "go_home_left": "left",
     "go_home_right": "right",
-    "grasp": "right"
+    "grasp": "right",
+    "bring": "right",
+    "place_left" : "left",
+    "place_right" : "right"
 }

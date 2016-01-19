@@ -10,6 +10,14 @@
         "releasing_disturbance": 0.025,
         "inter_goal_sleep": 0.4
     },
+    "bring": {
+        "sphere_radius": 0.3,
+        "inter_goal_sleep": 0.4
+    },
+    "place": {
+        "sphere_radius": 0.015,
+        "inter_goal_sleep": 0.4
+    },
     "pick": {
         "approach_cartesian_dist": 0.0125
     },
@@ -23,7 +31,7 @@
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
     },
-    "limits": { "kv": {"right_s0":1.35, "right_s1":1.35, "right_e0":1.35, "right_e1":1.35, "right_w0":1.35, "right_w1":1.35, "right_w2":5.0,
+    "limits": { "kv": {"right_s0":1.0, "right_s1":1.0, "right_e0":1.0, "right_e1":1.0, "right_w0":1.0, "right_w1":1.0, "right_w2":3.0,
                        "left_s0":1.0, "left_s1":1.0, "left_e0":1.0, "left_e1":1.0, "left_w0":1.0, "left_w1":1.0, "left_w2":3.0},
                 "ka": {"right_s0":1.8, "right_s1":1.8, "right_e0":1.8, "right_e1":1.8, "right_w0":1.8, "right_w1":1.8, "right_w2":2.0,
                        "left_s0":1.8, "left_s1":1.8, "left_e0":1.8, "left_e1":1.8, "left_w0":1.8, "left_w1":1.8, "left_w2":2.0}}

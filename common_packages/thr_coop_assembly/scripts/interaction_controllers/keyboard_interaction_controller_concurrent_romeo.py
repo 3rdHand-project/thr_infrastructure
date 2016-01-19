@@ -44,26 +44,42 @@ class InteractionController(object):
             type = "wait"
 
             if len(command)<1 or len(command)>3:
-                rospy.logerr("Invalid command {}".format(command))
+                rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'w':
                 type = 'wait'
             elif command[0] == 'g':
                 type = 'start_grasp'
+            elif command[0] == 'b':
+                type = 'start_bring'
+            elif command[0] == 'p':
+                type = 'start_place_right'
             else:
-                rospy.logerr("Invalid command {}".format(command))
+                rospy.logerr("Invalid command {} (1b)".format(command))
                 continue
 
-            if type in ['start_grasp']:
+            if type in ['start_grasp', 'start_bring', 'start_place_right']:
                 if len(command)<2:
-                    rospy.logerr("Invalid command {}".format(command))
+                    rospy.logerr("Invalid command {} (2a)".format(command))
                     continue
                 elif command[1] == 'p':
                     parameters.append('/romeo/pan')
+                elif command[1] == 'b':
+                    parameters.append('/romeo/bowl')
                 else:
-                    rospy.logerr("Invalid command {}".format(command))
+                    rospy.logerr("Invalid command {} (2b)".format(command))
                     continue
 
+            if type in ['start_place', 'start_place_right']:
+                if len(command)<3:
+                    rospy.logerr("Invalid command {} (3a)".format(command))
+                    continue
+                elif command[2] == 'h':
+                    parameters.append('/romeo/hot_plate')
+                else:
+                    rospy.logerr("Invalid command {} (3b)".format(command))
+                    continue
+            print parameters
             return type, parameters
 
     ###################################################################################################################

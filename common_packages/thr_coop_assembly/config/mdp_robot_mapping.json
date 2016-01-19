@@ -5,6 +5,8 @@
     "start_pick": {"client": "left", "type":"pick"},
     "start_go_home_left": {"client": "left", "type":"go_home_left"},
     "start_go_home_right": {"client": "right", "type":"go_home_right"},
-    "start_wait": {"client": "left", "type":"wait"}
-
+    "start_place_left": {"client": "left", "type":"place_left"},
+    "start_place_right": {"client": "right", "type":"place_right"},
+    "start_wait": {"client": "left", "type":"wait"},
+    "start_bring": {"client": "right", "type":"bring"}
 }

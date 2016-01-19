@@ -6,7 +6,7 @@ import tf
 import sys
 import actionlib
 import transformations
-from actions import Give, GoHome, Hold, Pick, Grasp
+from actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place
 from baxter_commander import ArmCommander
 from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionActionResult
 
@@ -57,6 +57,8 @@ class RobotActionServer:
             'hold': Hold(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'pick': Pick(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'grasp': Grasp(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'bring': Bring(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'place_'+self.side: Place(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             }
 
         # On starting blocks...
