@@ -85,7 +85,6 @@ class InteractionController(object):
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
-            print parameters
             return type, parameters
 
     ###################################################################################################################
