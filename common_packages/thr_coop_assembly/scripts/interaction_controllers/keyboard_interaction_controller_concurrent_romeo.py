@@ -66,6 +66,8 @@ class InteractionController(object):
                     parameters.append('/romeo/pan')
                 elif command[1] == 'b':
                     parameters.append('/romeo/bowl')
+                elif command[1] == 'c':
+                    parameters.append('/romeo/cover')
                 else:
                     rospy.logerr("Invalid command {} (2b)".format(command))
                     continue
@@ -76,6 +78,10 @@ class InteractionController(object):
                     continue
                 elif command[2] == 'h':
                     parameters.append('/romeo/hot_plate')
+                elif command[2] == 'p':
+                    parameters.append('/romeo/pan')
+                elif command[2] == 'b':
+                    parameters.append('/romeo/bowl')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
