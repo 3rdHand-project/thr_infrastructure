@@ -14,20 +14,6 @@ class Place(Action):
         object = parameters[0]
         location = parameters[1]  # TODO: Can we take coordinates in input as well?
 
-        rospy.loginfo("Rising {}".format(object))
-        if self._should_interrupt():
-            return False
-
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]['place']['rise'], self.world, 1.5)
-        if action_traj[1]<0.9:
-            rospy.logerr("Unable to generate rising for {} (successrate {}%)".format(object, action_traj[1]*100))
-            return False
-        if not self.commander.execute(action_traj[0]):
-            return False
-
-        if self._should_interrupt():
-            return False
-
         rospy.loginfo("Placing {} at location {}".format(object, location))
         while not self._should_interrupt():
             can_release = False

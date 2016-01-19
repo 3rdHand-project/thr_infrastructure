@@ -77,5 +77,19 @@ class Grasp(Action):
             rospy.loginfo("Closing gripper around {}".format(object))
             self.commander.close()
 
+        rospy.loginfo("Rising {}".format(object))
+        if self._should_interrupt():
+            return False
+
+        action_traj = self.commander.generate_cartesian_path(self.poses[object]['grasp'][0]['rise'], self.world, 1.5)
+        if action_traj[1]<0.9:
+            rospy.logerr("Unable to generate rising for {} (successrate {}%)".format(object, action_traj[1]*100))
+            return False
+        if not self.commander.execute(action_traj[0]):
+            return False
+
+        if self._should_interrupt():
+            return False
+
         rospy.loginfo("[ActionServer] Executed grasp{} with success".format(str(parameters)))
         return True
