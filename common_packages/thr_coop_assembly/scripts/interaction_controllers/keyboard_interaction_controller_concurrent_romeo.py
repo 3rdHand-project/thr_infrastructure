@@ -53,16 +53,29 @@ class InteractionController(object):
             elif command[0] == 'b':
                 type = 'start_bring'
             elif command[0] == 'l':
-                type = 'start_place_right'
+                type = 'start_place'
             elif command[0] == 'p':
                 type = 'start_pick'
             else:
                 rospy.logerr("Invalid command {} (1b)".format(command))
                 continue
 
-            if type in ['start_grasp', 'start_bring', 'start_place_right', 'start_pick']:
+            # Place and Bring also require Left or Right
+            if type in ['start_place', 'start_bring']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {} (2a)".format(command))
+                    continue
+                elif command[1] == 'l':
+                    type += '_left'
+                elif command[1] == 'r':
+                    type += '_right'
+                else:
+                    rospy.logerr("Invalid command {} (2b: missing l or r)".format(command))
+                    continue
+
+            if type in ['start_grasp', 'start_pick']:
+                if len(command)<2:
+                    rospy.logerr("Invalid command {} (2c)".format(command))
                     continue
                 elif command[1] == 'p':
                     parameters.append('/romeo/pan')
@@ -75,21 +88,35 @@ class InteractionController(object):
                 elif command[1] == 'j':
                     parameters.append('/romeo/juice')
                 else:
-                    rospy.logerr("Invalid command {} (2b)".format(command))
+                    rospy.logerr("Invalid command {} (2d)".format(command))
                     continue
 
-            if type in ['start_place_left', 'start_place_right']:
+            if type in ['start_place_left', 'start_place_right', 'start_bring_left', 'start_bring_right']:
                 if len(command)<3:
                     rospy.logerr("Invalid command {} (3a)".format(command))
                     continue
-                elif command[2] == 'h':
-                    parameters.append('/romeo/hot_plate')
-                elif command[2] == 'p':
-                    parameters.append('/romeo/pan')
                 elif command[2] == 'b':
                     parameters.append('/romeo/bowl')
+                elif command[2] == 'd':
+                    parameters.append('/romeo/drugs')
+                elif command[2] == 'j':
+                    parameters.append('/romeo/juice')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
+                    continue
+
+            if type in ['start_place_left', 'start_place_right']:
+                if len(command)<4:
+                    rospy.logerr("Invalid command {} (4a)".format(command))
+                    continue
+                elif command[3] == 'h':
+                    parameters.append('/romeo/hot_plate')
+                elif command[3] == 'p':
+                    parameters.append('/romeo/pan')
+                elif command[3] == 'b':
+                    parameters.append('/romeo/bowl')
+                else:
+                    rospy.logerr("Invalid command {} (4b)".format(command))
                     continue
             return type, parameters
 

@@ -57,7 +57,7 @@ class RobotActionServer:
             'hold': Hold(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'pick': Pick(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'grasp': Grasp(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
-            'bring': Bring(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'bring_'+self.side: Bring(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'place_'+self.side: Place(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             }
 
