@@ -43,7 +43,7 @@ class InteractionController(object):
             parameters = []
             type = "wait"
 
-            if len(command)<1 or len(command)>3:
+            if len(command)<1 or len(command)>4:
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'w':
@@ -89,6 +89,8 @@ class InteractionController(object):
                     parameters.append('/romeo/drugs')
                 elif command[1] == 'j':
                     parameters.append('/romeo/juice')
+                elif command[1] == 'g':
+                    parameters.append('/romeo/glass')
                 else:
                     rospy.logerr("Invalid command {} (2d)".format(command))
                     continue
@@ -104,6 +106,8 @@ class InteractionController(object):
                     parameters.append('/romeo/drugs')
                 elif command[2] == 'j':
                     parameters.append('/romeo/juice')
+                elif command[2] == 'g':
+                    parameters.append('/romeo/glass')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
@@ -119,6 +123,8 @@ class InteractionController(object):
                     parameters.append('/romeo/pan')
                 elif command[3] == 'b':
                     parameters.append('/romeo/bowl')
+                elif command[3] == 't':
+                    parameters.append('/romeo/tray')
                 else:
                     rospy.logerr("Invalid command {} (4b)".format(command))
                     continue
