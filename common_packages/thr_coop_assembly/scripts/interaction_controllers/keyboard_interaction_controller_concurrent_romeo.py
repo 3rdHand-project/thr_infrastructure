@@ -52,13 +52,15 @@ class InteractionController(object):
                 type = 'start_grasp'
             elif command[0] == 'b':
                 type = 'start_bring'
-            elif command[0] == 'p':
+            elif command[0] == 'l':
                 type = 'start_place_right'
+            elif command[0] == 'p':
+                type = 'start_pick'
             else:
                 rospy.logerr("Invalid command {} (1b)".format(command))
                 continue
 
-            if type in ['start_grasp', 'start_bring', 'start_place_right']:
+            if type in ['start_grasp', 'start_bring', 'start_place_right', 'start_pick']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {} (2a)".format(command))
                     continue
@@ -68,11 +70,15 @@ class InteractionController(object):
                     parameters.append('/romeo/bowl')
                 elif command[1] == 'c':
                     parameters.append('/romeo/cover')
+                elif command[1] == 'd':
+                    parameters.append('/romeo/drugs')
+                elif command[1] == 'j':
+                    parameters.append('/romeo/juice')
                 else:
                     rospy.logerr("Invalid command {} (2b)".format(command))
                     continue
 
-            if type in ['start_place', 'start_place_right']:
+            if type in ['start_place_left', 'start_place_right']:
                 if len(command)<3:
                     rospy.logerr("Invalid command {} (3a)".format(command))
                     continue
