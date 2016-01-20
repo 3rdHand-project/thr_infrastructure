@@ -57,9 +57,12 @@ class Pick(Action):
         # 4. Go to approach pose again with object in-hand (to avoid touching the table)
         if self._should_interrupt():
             return False
-        rospy.loginfo("Reapproaching {}".format(object))
-        reapproach_traj = self.commander.generate_reverse_trajectory(action_traj[0])
-        if not self.commander.execute(reapproach_traj):
+        rospy.loginfo("Rising {} with respect to the world".format(object))
+        reapproach_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['rise'], self.world, 1.)
+        if reapproach_traj[1]<0.9:
+            rospy.logerr("Unable to generate picking rising")
+            return False
+        if not self.commander.execute(reapproach_traj[0]):
             return False
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "success" if self.commander.gripping() else "failure"))
