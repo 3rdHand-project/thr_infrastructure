@@ -218,10 +218,10 @@ class ConcurrentSceneStateManager(object):
                         p.parameters = [o]
                         self.state.predicates.append(p)
                 for o1, o2 in combinations(self.objects, 2):
-                    if self.poses[o1].has_key('constraints') and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
+                    if o1 in self.poses and 'constraints' in self.poses[o1] and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
                         master = o1
                         slave = o2
-                    elif self.poses[o2].has_key('constraints') and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
+                    elif o2 in self.poses and 'constraints' in self.poses[o2] and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
                         slave = o1
                         master = o2
                     else:

@@ -86,6 +86,9 @@ class ConcurrentActionDisplay(object):
             (width, height), _ = cv2.getTextSize(sentence, font, scale, thickness)
             return (self.width-width)/2, height
 
+        if len(parameters) == 0:
+            # Nothing to display
+            return None
 
         y0 = (self.height - len(lines)*cv2.getTextSize('_', font, scale, thickness)[0][1]*interline)/2
         img = zeros((self.height, self.width, 3), uint8)
