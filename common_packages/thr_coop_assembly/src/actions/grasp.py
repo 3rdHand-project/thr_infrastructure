@@ -63,7 +63,7 @@ class Grasp(Action):
         approach = np.array(self.poses[object]["grasp"][pose]['approach'][0])
         descent = list(grasp - approach)
         rospy.loginfo("Generated descent vector {}".format(str(descent)))
-        action_traj = self.commander.generate_cartesian_path(descent, object, 1.)
+        action_traj = self.commander.generate_cartesian_path(descent, object, 2.)
 
         if action_traj[1]<0.9:
             rospy.logerr("Unable to generate grasp descent")
@@ -71,6 +71,9 @@ class Grasp(Action):
 
         if not self.commander.execute(action_traj[0]):
             return False
+
+        # 2.bis. Sleep
+        rospy.sleep(2)
 
         # 3. Close gripper to grasp object
         if not self._should_interrupt():
