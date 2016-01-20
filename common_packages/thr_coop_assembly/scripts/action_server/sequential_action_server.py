@@ -96,7 +96,7 @@ class SequentialActionServer:
 
         # 0. Trajectories generation
         try:
-            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["give"][0]['approach'], object)  # Pose of the approach
+            world_approach_pose = self.object_grasp_pose_to_world(self.poses[object]["pick"][0]['approach'], object)  # Pose of the approach
         except:
             rospy.logerr("Object {} not found".format(object))
             return self.server.set_aborted()
@@ -113,7 +113,7 @@ class SequentialActionServer:
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.arms['l'].generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.5)
+        action_traj = self.arms['l'].generate_cartesian_path(self.poses[object]["pick"][0]['descent'], object, 1.5)
         if not self.arms['l'].execute(action_traj[0]):
             return self.abort(str(parameters))
 
@@ -146,7 +146,7 @@ class SequentialActionServer:
                 continue
             rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
-                world_give_pose = self.object_grasp_pose_to_world(self.action_params['give']['give_pose'], "/human/wrist")
+                world_give_pose = self.object_grasp_pose_to_world(self.poses[object]['give']["/human/wrist"], "/human/wrist")
                 goal_give = self.arms['l'].get_ik(world_give_pose)
                 if not goal_give:
                     rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")

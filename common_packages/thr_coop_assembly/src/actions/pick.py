@@ -16,7 +16,7 @@ class Pick(Action):
 
         # 1. Go to approach pose
         try:
-            world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["give"][0]['approach'], object)
+            world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["pick"][0]['approach'], object)
         except LookupException:
             rospy.logerr("Object {} not found".format(object))
             return False
@@ -38,19 +38,18 @@ class Pick(Action):
             if distance(actual_world_approach_pose, world_approach_pose) < self.action_params['pick']['approach_cartesian_dist']:
                 break
 
-        # 2. Go to "give" pose
+        # 2. Go to "pick" pose
         if self._should_interrupt():
             return False
         rospy.loginfo("Grasping {}".format(object))
 
         # Selecting descent vector mode or grasp point mode
-        if 'descent' in self.poses[object]["give"][0]:
-            action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.)
-        elif 'grasp' in self.poses[object]["give"][0]:
-            grasp = np.array(self.poses[object]["give"][0]['grasp'])
-            approach = np.array(self.poses[object]["give"][0]['approach'][0])
+        if 'descent' in self.poses[object]["pick"][0]:
+            action_traj = self.commander.generate_cartesian_path(self.poses[object]["pick"][0]['descent'], object, 1.)
+        elif 'grasp' in self.poses[object]["pick"][0]:
+            grasp = np.array(self.poses[object]["pick"][0]['grasp'])
+            approach = np.array(self.poses[object]["pick"][0]['approach'][0])
             descent = list(grasp - approach)
-            print "DESCENT", descent
             action_traj = self.commander.generate_cartesian_path(descent, object, 1)
         else:
             rospy.logerr("No 'grasp' nor 'descent' attribute defined for picking object {}".format(object))
@@ -72,7 +71,7 @@ class Pick(Action):
         if self._should_interrupt():
             return False
         rospy.loginfo("Rising {} with respect to the world".format(object))
-        reapproach_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['rise'], self.world, 1.)
+        reapproach_traj = self.commander.generate_cartesian_path(self.poses[object]["pick"][0]['rise'], self.world, 1.)
         if reapproach_traj[1]<0.9:
             rospy.logerr("Unable to generate picking rising")
             return False

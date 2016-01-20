@@ -48,8 +48,10 @@ class InteractionController(object):
                 continue
             elif command[0] == 'w':
                 type = 'wait'
-            elif command[0] == 'g':
+            elif command[0] == 'r':
                 type = 'start_grasp'
+            elif command[0] == 'g':
+                type = 'start_give'
             elif command[0] == 'b':
                 type = 'start_bring'
             elif command[0] == 'l':
@@ -73,7 +75,7 @@ class InteractionController(object):
                     rospy.logerr("Invalid command {} (2b: missing l or r)".format(command))
                     continue
 
-            if type in ['start_grasp', 'start_pick']:
+            if type in ['start_grasp', 'start_pick', 'start_give']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {} (2c)".format(command))
                     continue
@@ -91,6 +93,7 @@ class InteractionController(object):
                     rospy.logerr("Invalid command {} (2d)".format(command))
                     continue
 
+            # Case where two objects are involved: SLAVE object
             if type in ['start_place_left', 'start_place_right', 'start_bring_left', 'start_bring_right']:
                 if len(command)<3:
                     rospy.logerr("Invalid command {} (3a)".format(command))
@@ -105,6 +108,7 @@ class InteractionController(object):
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
 
+            # Case where two objects are involved: MASTER object i.e. an object that receives the SLAVE object
             if type in ['start_place_left', 'start_place_right']:
                 if len(command)<4:
                     rospy.logerr("Invalid command {} (4a)".format(command))

@@ -13,6 +13,10 @@ class Give(Action):
         rospy.loginfo("[ActionServer] Executing give{}".format(str(parameters)))
         object = parameters[0]
 
+        if not self.commander.gripping():
+            rospy.logerr('Object {} is no longer gripped'.format(object))
+            return False
+
         # 4. Wait for human wrist and approach object until we are close enough to release object
         rospy.loginfo("Bringing {} to human wrist".format(object))
         while not self._should_interrupt():
@@ -25,7 +29,7 @@ class Give(Action):
                 continue
             rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
-                world_give_pose = self._object_grasp_pose_to_world(self.action_params['give']['give_pose'], "/human/wrist")
+                world_give_pose = self._object_grasp_pose_to_world(self.poses[object]['give']["/human/wrist"], "/human/wrist")
 
                 # The function below returns True if human as moved enough so that we need to replan the trajectory
                 def needs_update():
