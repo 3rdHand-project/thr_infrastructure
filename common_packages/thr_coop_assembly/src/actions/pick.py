@@ -3,6 +3,7 @@ from baxter_commander.persistence import dicttostate
 from tf import LookupException
 from transformations import distance
 import rospy
+import numpy as np
 
 class Pick(Action):
     def __init__(self, commander, tf_listener, action_params, poses, seeds, should_interrupt=None):
@@ -41,7 +42,20 @@ class Pick(Action):
         if self._should_interrupt():
             return False
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.)
+
+        # Selecting descent vector mode or grasp point mode
+        if 'descent' in self.poses[object]["give"][0]:
+            action_traj = self.commander.generate_cartesian_path(self.poses[object]["give"][0]['descent'], object, 1.)
+        elif 'grasp' in self.poses[object]["give"][0]:
+            grasp = np.array(self.poses[object]["give"][0]['grasp'])
+            approach = np.array(self.poses[object]["give"][0]['approach'][0])
+            descent = list(grasp - approach)
+            print "DESCENT", descent
+            action_traj = self.commander.generate_cartesian_path(descent, object, 1)
+        else:
+            rospy.logerr("No 'grasp' nor 'descent' attribute defined for picking object {}".format(object))
+            return False
+
         if action_traj[1]<0.9:
             rospy.logerr("Unable to generate picking descent")
             return False
@@ -54,7 +68,7 @@ class Pick(Action):
             self.commander.close()
             #self.scene.attach_box(self.gripper_name, object)
 
-        # 4. Go to approach pose again with object in-hand (to avoid touching the table)
+        # 4. Rise the object to avoid touching the table
         if self._should_interrupt():
             return False
         rospy.loginfo("Rising {} with respect to the world".format(object))
