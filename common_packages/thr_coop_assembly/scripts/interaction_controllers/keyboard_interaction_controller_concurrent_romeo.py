@@ -48,14 +48,18 @@ class InteractionController(object):
                 continue
             elif command[0] == 'w':
                 type = 'wait'
-            elif command[0] == 'r':
+            elif command[0] == 'a':
                 type = 'start_grasp'
             elif command[0] == 'g':
                 type = 'start_give'
             elif command[0] == 'b':
                 type = 'start_bring'
-            elif command[0] == 'l':
+            elif command[0] == 'c':
                 type = 'start_place'
+            elif command[0] == 'l':
+                type = 'start_go_home_left'
+            elif command[0] == 'r':
+                type = 'start_go_home_right'
             elif command[0] == 'p':
                 type = 'start_pick'
             else:
@@ -108,6 +112,8 @@ class InteractionController(object):
                     parameters.append('/romeo/juice')
                 elif command[2] == 'g':
                     parameters.append('/romeo/glass')
+                elif command[2] == 'c':
+                    parameters.append('/romeo/cover')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
