@@ -22,11 +22,12 @@ class ConcurrentActionDisplay(object):
         self.queue = deque()
         self.width, self.height = width, height
         self.events = []  # Current events are stored in this stack
-
+        self.scene = rospy.get_param('/thr/scene')
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
 
+
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/display.json") as f:
-            self.text = json.load(f)
+            self.text = json.load(f)[self.scene]
 
         self.display_text(self.text['start'], [], self.font, self.scale, self.thickness, self.color, self.interline)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
@@ -85,10 +86,6 @@ class ConcurrentActionDisplay(object):
         def center(sentence):
             (width, height), _ = cv2.getTextSize(sentence, font, scale, thickness)
             return (self.width-width)/2, height
-
-        if len(parameters) == 0:
-            # Nothing to display
-            return None
 
         y0 = (self.height - len(lines)*cv2.getTextSize('_', font, scale, thickness)[0][1]*interline)/2
         img = zeros((self.height, self.width, 3), uint8)
