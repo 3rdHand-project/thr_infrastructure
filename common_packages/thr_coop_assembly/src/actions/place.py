@@ -52,6 +52,9 @@ class Place(Action):
                 except ValueError:
                     rospy.logwarn("Viapoint of location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
+            else:
+                # No viapoint
+                break
 
         # 2. Placing the object
         rospy.loginfo("Placing {} at location {}".format(object, location))
