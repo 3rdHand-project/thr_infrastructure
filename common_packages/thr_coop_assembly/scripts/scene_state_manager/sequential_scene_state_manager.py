@@ -31,8 +31,8 @@ class SequentialSceneStateManager(object):
         self.scene = rospy.get_param('/thr/scene')
 
         self.rospack = rospkg.RosPack()
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/poses.json") as f:
-            self.poses = json.load(f) # TODO separate with scene name [self.scene]
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
+            self.poses = json.load(f)
 
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/perception.json") as f:
             self.config = json.load(f)

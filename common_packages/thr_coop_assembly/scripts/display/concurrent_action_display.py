@@ -25,9 +25,8 @@ class ConcurrentActionDisplay(object):
         self.scene = rospy.get_param('/thr/scene')
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
 
-
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/display.json") as f:
-            self.text = json.load(f)[self.scene]
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/display.json") as f:
+            self.text = json.load(f)
 
         self.display_text(self.text['start'], [], self.font, self.scale, self.thickness, self.color, self.interline)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)

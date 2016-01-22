@@ -4,12 +4,6 @@ toolbox:
   - /toolbox/side_back
   - /toolbox/side_left
   - /toolbox/side_right
-bench:
-  - /bench/seating
-  - /bench/leg1
-  - /bench/leg2
-  - /bench/leg3
-  - /bench/leg4
 romeo:
   - /romeo/pan
   - /romeo/hot_plate

@@ -27,8 +27,8 @@ class RobotActionServer:
         # Transform/Geometric attributes
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.world = "base"
-        rospy.loginfo("Loading config...")
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/poses.json") as f:
+        self.scene = rospy.get_param("/thr/scene")
+        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
             self.poses = json.load(f)
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
