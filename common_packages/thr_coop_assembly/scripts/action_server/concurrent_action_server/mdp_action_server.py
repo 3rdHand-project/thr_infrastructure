@@ -64,6 +64,7 @@ class MDPActionServer:
                 event.header.stamp = rospy.Time.now()
                 event.type = ActionHistoryEvent.STARTING
                 event.action = robot_goal.action
+                event.side = client
                 self.action_history.publish(event)
                 self.server.set_succeeded()
 
@@ -98,6 +99,7 @@ class MDPActionServer:
                     event.header.stamp = rospy.Time.now()
                     event.type = ActionHistoryEvent.FINISHED_SUCCESS if state == GoalStatus.SUCCEEDED else ActionHistoryEvent.FINISHED_FAILURE
                     event.action = action
+                    event.side = side
                     self.action_history.publish(event)
                     self.current_actions[side] = None
 
