@@ -159,7 +159,7 @@ class SequentialActionServer:
                 def needs_update():
                     p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
                     return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
-                if not self.arms['l'].move_to_controlled(goal_give, test=needs_update):
+                if not self.arms['l'].move_to_controlled(goal_give, stop_test=needs_update):
                     return self.abort(str(parameters))
                 #if not self.arms['l'].move_to_controlled(goal_give, test=needs_update):
                 #    rospy.logwarn("Human has moved, changing the goal...")

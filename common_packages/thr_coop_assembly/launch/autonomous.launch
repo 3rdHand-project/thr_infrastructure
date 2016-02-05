@@ -9,6 +9,7 @@
 
     <rosparam param="/thr/logs_name" subst_value="True">$(arg name)</rosparam>
     <rosparam param="/thr/display" subst_value="True">$(arg display)</rosparam>
+    <rosparam param="/thr/paused">False</rosparam>
     
     <include file="$(find thr_coop_assembly)/launch/perception.launch" >
       <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->

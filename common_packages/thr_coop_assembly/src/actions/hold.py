@@ -1,5 +1,6 @@
 from . action import Action
 from baxter_commander.persistence import dicttostate
+from numpy import array
 import rospy
 import transformations
 
@@ -33,12 +34,12 @@ class Hold(Action):
                 return False
 
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
                 return False
 
             # 1.bis. Double motion to improve precision
             #rospy.sleep(4)
-            #self.commander.move_to_controlled(goal_approach)
+            #self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test)
 
             try:
                 new_world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)
@@ -56,13 +57,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 1.)
-
-        if action_traj[1]<0.9:
-            rospy.logerr("Unable to generate hold descent")
-            return False
-
-        if not self.commander.execute(action_traj[0]):
+        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['descent'], object, 1., pause_test=self.pause_test):
             return False
 
         # 3. Close gripper to grasp object
@@ -75,9 +70,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Forcing down on {}".format(object))
-        force = self.commander.generate_cartesian_path(self.poses[object]["hold"][pose]['force'], object, 1)
-
-        if not self.commander.execute(force[0]):
+        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['force'], object, 1, pause_test=self.pause_test):
             return False
 
         # 5. Wait for interruption
@@ -103,9 +96,9 @@ class Hold(Action):
         if self._should_interrupt():
             return False
 
-        reapproach_traj = self.commander.generate_reverse_trajectory(action_traj[0])
-        rospy.loginfo("Reapproaching {}".format(object))
-        if not self.commander.execute(reapproach_traj):
+        rospy.loginfo("Leaving {}".format(object))
+        rising = list(-array(self.poses[object]["hold"][pose]['descent']))
+        if not self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test):
             return False
 
         rospy.loginfo("[ActionServer] Executed hold{} with success".format(str(parameters)))

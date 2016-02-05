@@ -8,4 +8,4 @@ class GoHome(Action):
 
     def run(self, parameters=None):
         rospy.loginfo("Returning in idle mode")
-        return self.commander.move_to_controlled(self.starting_state)
+        return self.commander.move_to_controlled(self.starting_state, pause_test=self.pause_test)

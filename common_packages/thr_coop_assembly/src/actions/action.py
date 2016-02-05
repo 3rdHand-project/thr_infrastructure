@@ -1,5 +1,5 @@
 import transformations
-from rospy import is_shutdown
+from rospy import is_shutdown, get_param
 
 class Action(object):
     """
@@ -13,6 +13,9 @@ class Action(object):
         self.action_params = action_params
         self.poses = poses
         self.seeds = seeds
+
+    def pause_test(self):
+        return get_param('/thr/paused')
 
     def _object_grasp_pose_to_world(self, poselist, object):
         """

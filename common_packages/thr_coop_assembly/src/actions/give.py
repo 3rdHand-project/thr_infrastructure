@@ -37,7 +37,7 @@ class Give(Action):
                     return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
 
                 try:
-                    success = self.commander.move_to_controlled(world_give_pose, test=needs_update)
+                    success = self.commander.move_to_controlled(world_give_pose, stop_test=needs_update, pause_test=self.pause_test)
                 except ValueError:
                     rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
                     rospy.sleep(self.action_params['sleep_step'])

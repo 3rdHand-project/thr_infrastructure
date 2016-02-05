@@ -30,7 +30,7 @@ class Pick(Action):
             if self._should_interrupt():
                 return False
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
                 return False
 
             # We just check that motion was precise enough, no target recomputation if object moves (needs another IK)
@@ -45,21 +45,20 @@ class Pick(Action):
 
         # Selecting descent vector mode or grasp point mode
         if 'descent' in self.poses[object]["pick"][0]:
-            action_traj = self.commander.generate_cartesian_path(self.poses[object]["pick"][0]['descent'], object, 1.)
+            if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['descent'], object, 1., pause_test=self.pause_test):
+                rospy.logerr("Unable to generate picking descent")
+                return False
         elif 'grasp' in self.poses[object]["pick"][0]:
             grasp = np.array(self.poses[object]["pick"][0]['grasp'])
             approach = np.array(self.poses[object]["pick"][0]['approach'][0])
             descent = list(grasp - approach)
-            action_traj = self.commander.generate_cartesian_path(descent, object, 1)
+            if not self.commander.translate_to_cartesian(descent, object, 1, pause_test=self.pause_test):
+                rospy.logerr("Unable to generate picking descent")
+                return False
         else:
             rospy.logerr("No 'grasp' nor 'descent' attribute defined for picking object {}".format(object))
             return False
 
-        if action_traj[1]<0.9:
-            rospy.logerr("Unable to generate picking descent")
-            return False
-        if not self.commander.execute(action_traj[0]):
-            return False
 
         # 3. Close gripper to grasp object
         if not self._should_interrupt():
@@ -71,11 +70,8 @@ class Pick(Action):
         if self._should_interrupt():
             return False
         rospy.loginfo("Rising {} with respect to the world".format(object))
-        reapproach_traj = self.commander.generate_cartesian_path(self.poses[object]["pick"][0]['rise'], self.world, 1.)
-        if reapproach_traj[1]<0.9:
+        if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['rise'], self.world, 1., pause_test=self.pause_test):
             rospy.logerr("Unable to generate picking rising")
-            return False
-        if not self.commander.execute(reapproach_traj[0]):
             return False
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "success" if self.commander.gripping() else "failure"))
