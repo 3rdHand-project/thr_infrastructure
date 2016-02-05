@@ -36,12 +36,8 @@ class Grasp(Action):
                 return False
 
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
                 return False
-
-            # 1.bis. Double motion to improve precision
-            #rospy.sleep(4)
-            #self.commander.move_to_controlled(goal_approach)
 
             try:
                 new_world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["grasp"][pose]['approach'], object)
@@ -63,13 +59,8 @@ class Grasp(Action):
         approach = np.array(self.poses[object]["grasp"][pose]['approach'][0])
         descent = list(grasp - approach)
         rospy.loginfo("Generated descent vector {}".format(str(descent)))
-        action_traj = self.commander.generate_cartesian_path(descent, object, 2.)
-
-        if action_traj[1]<0.9:
+        if not self.commander.translate_to_cartesian(descent, object, 2., pause_test=self.pause_test):
             rospy.logerr("Unable to generate grasp descent")
-            return False
-
-        if not self.commander.execute(action_traj[0]):
             return False
 
         # 2.bis. Sleep
@@ -84,11 +75,8 @@ class Grasp(Action):
         if self._should_interrupt():
             return False
 
-        action_traj = self.commander.generate_cartesian_path(self.poses[object]['grasp'][0]['rise'], self.world, 1.5)
-        if action_traj[1]<0.9:
-            rospy.logerr("Unable to generate rising for {} (successrate {}%)".format(object, action_traj[1]*100))
-            return False
-        if not self.commander.execute(action_traj[0]):
+        if not self.commander.translate_to_cartesian(self.poses[object]['grasp'][0]['rise'], self.world, 1.5, pause_test=self.pause_test):
+            rospy.logerr("Unable to generate rising for {}".format(object))
             return False
 
         if not self.commander.gripping():

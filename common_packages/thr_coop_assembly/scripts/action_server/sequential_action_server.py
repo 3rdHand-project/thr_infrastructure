@@ -6,6 +6,7 @@ import tf
 import actionlib
 import baxter_commander
 import transformations
+from numpy import array
 
 from thr_coop_assembly.msg import RunMDPActionAction
 
@@ -115,8 +116,7 @@ class SequentialActionServer:
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.arms['l'].generate_cartesian_path(self.poses[object]["pick"][0]['descent'], object, 1.5)
-        if not self.arms['l'].execute(action_traj[0]):
+        if not self.arms['l'].translate_to_cartesian(self.poses[object]["pick"][0]['descent'], object, 1.5):
             return self.abort(str(parameters))
 
         # 3. Close gripper to grasp object
@@ -128,9 +128,8 @@ class SequentialActionServer:
         # 4. Go to approach pose again with object in-hand (to avoid touching the table)
         if self.should_interrupt():
             return self.server.set_aborted()
-        rospy.loginfo("Reapproaching {}".format(object))
-        reapproach_traj = self.arms['l'].generate_reverse_trajectory(action_traj[0])
-        if not self.arms['l'].execute(reapproach_traj):
+        rospy.loginfo("Leaving {}".format(object))
+        if not self.arms['l'].translate_to_cartesian(list(-array(self.poses[object]["pick"][0]['descent'])), object, 1.5):
             return self.abort(str(parameters))
 
         if not self.arms['l'].gripping():
@@ -232,8 +231,7 @@ class SequentialActionServer:
         if self.should_interrupt():
             return self.server.set_aborted()
         rospy.loginfo("Grasping {}".format(object))
-        action_traj = self.arms['r'].generate_cartesian_path(self.poses[object]["hold"][pose]['descent'], object, 3)
-        if not self.arms['r'].execute(action_traj[0]):
+        if not self.arms['r'].translate_to_cartesian(self.poses[object]["hold"][pose]['descent'], object, 3):
             return self.abort(str(parameters))
 
         # 3. Close gripper to grasp object
@@ -246,11 +244,11 @@ class SequentialActionServer:
             return self.server.set_aborted()
         rospy.loginfo("Forcing down on {}".format(object))
         try:
-            force_traj = self.arms['r'].generate_cartesian_path(self.poses[object]["hold"][pose]['force'], object, 1)
+            result = self.arms['r'].translate_to_cartesian(self.poses[object]["hold"][pose]['force'], object, 1)
         except:
             rospy.logwarn('Cannot compute descent forcing down, but continuing instead')
         else:
-            if not self.arms['r'].execute(force_traj[0]):
+            if not result:
                 return self.abort(str(parameters))
 
         # 5. Wait for interruption

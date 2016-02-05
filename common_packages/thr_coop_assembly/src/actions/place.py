@@ -48,7 +48,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0])
+                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test)
                 except ValueError:
                     rospy.logwarn("Viapoint of location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
@@ -79,7 +79,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0])
+                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test)
                 except ValueError:
                     rospy.logwarn("Location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
@@ -100,23 +100,19 @@ class Place(Action):
         pose = 0  # Grasp pose to be gotten from predicates if several ones exist?
 
         if 'descent' in self.poses[object][method][pose]:
-            pull_out = self.commander.generate_cartesian_path(list(-array(self.poses[object][method][0]['descent'])), object, 1.)
+            if not self.commander.translate_to_cartesian(list(-array(self.poses[object][method][0]['descent'])), object, 1., pause_test=self.pause_test):
+                rospy.logerr("Unable to pull the gripper out")
+                return False
         elif 'grasp' in self.poses[object][method][pose]:
             rospy.loginfo("Leaving {} using () attributes".format(object))
             grasp = array(self.poses[object][method][pose]['grasp'])
             approach = array(self.poses[object][method][pose]['approach'][pose])
             pull_out = list(approach - grasp)
+            if not self.commander.translate_to_cartesian(pull_out, object, 1., pause_test=self.pause_test):
+                rospy.logerr("Unable to pull the gripper out")
+                return False
         else:
             rospy.logerr("No 'grasp' nor 'descent' attribute defined for {}ing object {}".format(method, object))
-            return False
-
-        pull_out_traj = self.commander.generate_cartesian_path(pull_out, object, 2.)
-
-        if pull_out_traj[1]<0.9:
-            rospy.logerr("Unable to pull the gripper out")
-            return False
-
-        if not self.commander.execute(pull_out_traj[0]):
             return False
 
         rospy.loginfo("[ActionServer] Executed place{} with {}".format(str(parameters), "failure" if self._should_interrupt() else "success"))

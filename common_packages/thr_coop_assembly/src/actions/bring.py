@@ -38,7 +38,7 @@ class Bring(Action):
                 world_T_gripper = transformations.multiply_transform(world_T_location, location_T_gripper)
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0])
+                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test)
                 except ValueError:
                     rospy.logwarn("Human wrist found but not reachable, please move it a little bit...".format(wrist))
                     rospy.sleep(self.action_params['sleep_step'])
