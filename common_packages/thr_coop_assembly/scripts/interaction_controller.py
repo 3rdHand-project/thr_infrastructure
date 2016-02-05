@@ -37,8 +37,8 @@ class InteractionController(object):
 
         self.rospack = rospkg.RosPack()
 
-        self.web_asker = None
-        #self.init_webasker()
+        # self.web_asker = None
+        self.init_webasker()
 
     def init_webasker(self):
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
@@ -124,69 +124,85 @@ class InteractionController(object):
     def run(self):
         try:
             print 'Interaction starting!'
+
+            pause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, auto_remove=False)
+            unpause_question = None
+            rospy.set_param("/thr/paused", False)
+
             while self.running and not rospy.is_shutdown():
-                self.update_scene()
-                prediction = self.predict()
-                str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
 
-                if prediction.confidence == prediction.SURE:
-                    predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-                    #question = self.web_asker.ask(
-                    #    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
-                    #    ["Don't do that"])
+                if rospy.get_param("/thr/paused"):
+                    if unpause_question.answered():
+                        unpause_question.remove()
+                        pause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, auto_remove=False)
+                        rospy.set_param("/thr/paused", False)
+                elif not rospy.get_param("/thr/paused") and pause_question.answered():
+                    pause_question.remove()
+                    unpause_question = self.web_asker.ask("Unpause ?", ["Unpause !"], priority=20, auto_remove=False)
+                    rospy.set_param("/thr/paused", True)
+                else:
+                    self.update_scene()
+                    prediction = self.predict()
+                    str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
 
-                    self.logs.append({'timestamp': rospy.get_time(),
-                          'type': predicted_action.type,
-                          'parameters': predicted_action.parameters})
+                    if prediction.confidence == prediction.SURE:
+                        predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+                        # question = self.web_asker.ask(
+                        #    "I'm doing {} :".format(self.MDPAction_to_str(predicted_action)),
+                        #    ["Don't do that"])
 
-                    self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
+                        self.logs.append({'timestamp': rospy.get_time(),
+                              'type': predicted_action.type,
+                              'parameters': predicted_action.parameters})
+
+                        self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
 
 
-                    # if question.answered():
-                    #     question.remove()
-                    #     correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                    #         "What should have been done ?", str_action_list).get_answer())
-                    #     self.set_new_training_example(self.scene_before_action, correct_action, True)
-                    #     self.set_new_training_example(self.scene_before_action, predicted_action, False)
-                    # else:
-                    #     question.remove()
-                    #     self.set_new_training_example(self.scene_before_action, predicted_action, True)
-                    self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                        # if question.answered():
+                        #     question.remove()
+                        #     correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                        #         "What should have been done ?", str_action_list).get_answer())
+                        #     self.set_new_training_example(self.scene_before_action, correct_action, True)
+                        #     self.set_new_training_example(self.scene_before_action, predicted_action, False)
+                        # else:
+                        #     question.remove()
+                        #     self.set_new_training_example(self.scene_before_action, predicted_action, True)
+                        self.set_new_training_example(self.scene_before_action, predicted_action, True)
 
-                elif prediction.confidence == prediction.CONFIRM:
-                    predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+                    elif prediction.confidence == prediction.CONFIRM:
+                        predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
 
-                    question = self.web_asker.ask(
-                        "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
-                        ["Ok", "Don't do that"])
-                    if question.get_answer() == "Ok":
-                        correct_action = predicted_action
-                    else:
-                        self.set_new_training_example(self.current_scene, predicted_action, False)
+                        question = self.web_asker.ask(
+                            "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
+                            ["Ok", "Don't do that"])
+                        if question.get_answer() == "Ok":
+                            correct_action = predicted_action
+                        else:
+                            self.set_new_training_example(self.current_scene, predicted_action, False)
+                            correct_action = self.str_to_MDPAction(self.web_asker.ask(
+                                "Pick an action :", str_action_list).get_answer())
+                        
+
+                        self.logs.append({'timestamp': rospy.get_time(),
+                              'type': correct_action.type,
+                              'parameters': correct_action.parameters})
+                        self.run_action(correct_action)
+
+                        self.set_new_training_example(self.scene_before_action, correct_action, True)
+
+                    elif prediction.confidence == prediction.NO_IDEA:
                         correct_action = self.str_to_MDPAction(self.web_asker.ask(
                             "Pick an action :", str_action_list).get_answer())
-                    
-
-                    self.logs.append({'timestamp': rospy.get_time(),
-                          'type': correct_action.type,
-                          'parameters': correct_action.parameters})
-                    self.run_action(correct_action)
-
-                    self.set_new_training_example(self.scene_before_action, correct_action, True)
-
-                elif prediction.confidence == prediction.NO_IDEA:
-                    correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                        "Pick an action :", str_action_list).get_answer())
-                    self.logs.append({'timestamp': rospy.get_time(),
-                          'type': correct_action.type,
-                          'parameters': correct_action.parameters})
-                    self.run_action(correct_action)
+                        self.logs.append({'timestamp': rospy.get_time(),
+                              'type': correct_action.type,
+                              'parameters': correct_action.parameters})
+                        self.run_action(correct_action)
 
 
-                    self.set_new_training_example(self.scene_before_action, correct_action, True)
+                        self.set_new_training_example(self.scene_before_action, correct_action, True)
 
-                else:
-                    assert False
+                    else:
+                        assert False
 
                 self.interaction_loop_rate.sleep()
         finally:
