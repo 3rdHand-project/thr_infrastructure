@@ -6,7 +6,7 @@ import actionlib
 
 from actionlib_msgs.msg import GoalStatus
 from thr_coop_assembly.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionAction, ActionHistoryEvent
+from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionGoal, RunMDPActionAction, ActionHistoryEvent, MDPAction
 
 class MDPActionServer:
     """
@@ -16,7 +16,7 @@ class MDPActionServer:
     def __init__(self):
         # Action server attributes
         self.sequence = 1
-        self.running = None  # None = no home pose exists, False/True = home pose exists and the server is stopped/started
+        self.running = False
         self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
         self.rospack = rospkg.RosPack()
         self.current_actions = {'right': None, 'left': None}
@@ -40,11 +40,15 @@ class MDPActionServer:
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
 
     def cb_start_stop(self, request):
-        if request.command == StartStopEpisodeRequest.START and self.running is None:
-            self.execute(mdp_goal=RunMDPActionAction(type='go_home_left'), force=True)
-            self.execute(mdp_goal=RunMDPActionAction(type='go_home_right'), force=True)
+        if request.command == StartStopEpisodeRequest.START:
             self.running = True
         elif request.command == StartStopEpisodeRequest.STOP:
+            if self.clients['left'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
+                self.clients['left'].cancel_all_goals()
+            if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
+                self.clients['right'].cancel_all_goals()
+            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_left')), force=True)
+            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_right')), force=True)
             self.running = False
         return StartStopEpisodeResponse()
 

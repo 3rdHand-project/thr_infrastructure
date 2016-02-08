@@ -89,6 +89,16 @@ class InteractionController(object):
             rospy.logerr("Cannot call predictor:".format(e.message))
             return MDPAction(type='wait')
 
+    def start_or_stop_episode(self, start=True):
+        for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server']:
+            url = '/thr/{}/start_stop'.format(node)
+            rospy.wait_for_service(url)
+            rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(command=StartStopEpisodeRequest.START if start else
+                                                                                           StartStopEpisodeRequest.STOP))
+
+
+    ###################################################################################################################
+
     def MDPAction_to_str(self, action):
         return action.type + "(" + ", ".join(action.parameters) + ")"
 
@@ -97,8 +107,6 @@ class InteractionController(object):
         action.type = string.split("(")[0]
         action.parameters = string.split("(")[1][:-1].split(", ")
         return action
-
-    ###################################################################################################################
 
     def run_action(self, action):
         if action.type != 'wait':
@@ -111,6 +119,7 @@ class InteractionController(object):
             self.interaction_loop_rate.sleep()
         self.current_action = action
 
+
     def run(self):
         try:
             print 'Interaction starting!'
@@ -121,20 +130,22 @@ class InteractionController(object):
             rospy.set_param("/thr/paused", False)
 
             while self.running and not rospy.is_shutdown():
-
                 if not is_running:
                     if start_stop_question.answered():
                         start_stop_question.remove()
                         is_running = True
+                        self.start_or_stop_episode(True)
                         start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30)
-                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
                         rospy.set_param("/thr/paused", False)
+                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
 
                 elif start_stop_question.answered():
                     start_stop_question.remove()
-                    is_running = False
-                    start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
                     pause_unpause_question.remove()
+                    rospy.set_param("/thr/paused", True)
+                    is_running = False
+                    self.start_or_stop_episode(False)
+                    start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
 
                 elif rospy.get_param("/thr/paused"):
                     if pause_unpause_question.answered():
