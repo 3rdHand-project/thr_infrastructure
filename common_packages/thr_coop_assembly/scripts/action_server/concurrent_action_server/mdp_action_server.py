@@ -5,8 +5,8 @@ import rospkg
 import actionlib
 
 from actionlib_msgs.msg import GoalStatus
-from thr_coop_assembly.msg import ActionHistoryEvent
-from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionAction
+from thr_coop_assembly.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
+from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionAction, ActionHistoryEvent
 
 class MDPActionServer:
     """
@@ -16,6 +16,7 @@ class MDPActionServer:
     def __init__(self):
         # Action server attributes
         self.sequence = 1
+        self.running = None  # None = no home pose exists, False/True = home pose exists and the server is stopped/started
         self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
         self.rospack = rospkg.RosPack()
         self.current_actions = {'right': None, 'left': None}
@@ -35,38 +36,50 @@ class MDPActionServer:
             client.wait_for_server()
 
         self.server.start()
-        rospy.loginfo('MDP action server for concurrent mode ready')
+        self.start_stop_service_name = '/thr/action_server/start_stop'
+        rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
 
-    def execute(self, mdp_goal):
+    def cb_start_stop(self, request):
+        if request.command == StartStopEpisodeRequest.START and self.running is None:
+            self.execute(mdp_goal=RunMDPActionAction(type='go_home_left'), force=True)
+            self.execute(mdp_goal=RunMDPActionAction(type='go_home_right'), force=True)
+            self.running = True
+        elif request.command == StartStopEpisodeRequest.STOP:
+            self.running = False
+        return StartStopEpisodeResponse()
+
+    def execute(self, mdp_goal, force=False):
         """
-        Dispatches a new goal on the method executing each type of action
-        :param goal:
+        Execute a goal if the server is started or if force mode is enabled
+        :param mdp_goal:
+        :param force: True to force execution ignoring that the current state could be STOPPED
         """
-        if mdp_goal.action.type == 'wait':
-            self.execute_wait()
-        else:
-            robot_goal = RunRobotActionGoal()
-            try:
-                robot_goal.action.type = self.mapping[mdp_goal.action.type]['type']
-                client = self.mapping[mdp_goal.action.type]['client']
-            except KeyError, k:
-                rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
-                self.server.set_aborted()
+        if force or self.running:
+            if mdp_goal.action.type == 'wait':
+                self.execute_wait()
             else:
-                robot_goal.action.id = self.sequence
-                self.sequence += 1
-                robot_goal.action.parameters = mdp_goal.action.parameters
-                self.clients[client].send_goal(robot_goal)
-                self.current_actions[client] = robot_goal.action
+                robot_goal = RunRobotActionGoal()
+                try:
+                    robot_goal.action.type = self.mapping[mdp_goal.action.type]['type']
+                    client = self.mapping[mdp_goal.action.type]['client']
+                except KeyError, k:
+                    rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
+                    self.server.set_aborted()
+                else:
+                    robot_goal.action.id = self.sequence
+                    self.sequence += 1
+                    robot_goal.action.parameters = mdp_goal.action.parameters
+                    self.clients[client].send_goal(robot_goal)
+                    self.current_actions[client] = robot_goal.action
 
-                # Publish the event to the action history topic
-                event = ActionHistoryEvent()
-                event.header.stamp = rospy.Time.now()
-                event.type = ActionHistoryEvent.STARTING
-                event.action = robot_goal.action
-                event.side = client
-                self.action_history.publish(event)
-                self.server.set_succeeded()
+                    # Publish the event to the action history topic
+                    event = ActionHistoryEvent()
+                    event.header.stamp = rospy.Time.now()
+                    event.type = ActionHistoryEvent.STARTING
+                    event.action = robot_goal.action
+                    event.side = client
+                    self.action_history.publish(event)
+                    self.server.set_succeeded()
 
     def execute_wait(self):
         """

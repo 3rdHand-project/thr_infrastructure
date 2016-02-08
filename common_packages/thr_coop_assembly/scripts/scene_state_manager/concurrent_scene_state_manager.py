@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations
-from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse, UpdateRelationalState, UpdateRelationalStateResponse, UpdateRelationalStateRequest
-from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, RobotAction
+from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse, UpdateRelationalState, UpdateRelationalStateResponse,\
+    UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
+from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent
 from itertools import combinations
 from threading import Lock
 import json
@@ -23,8 +24,8 @@ class ConcurrentSceneStateManager(object):
         self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
         self.service_update_name = '/thr/update_relational_state'
-
         self.logs = []
+        self.running = False
 
         # Action History
         # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HOLDED, PICKED
@@ -57,7 +58,23 @@ class ConcurrentSceneStateManager(object):
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
         rospy.Service(self.service_update_name, UpdateRelationalState, self.cb_update_relational_state)
 
+        self.start_stop_service_name = '/thr/scene_state_manager/start_stop'
+        rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
+
+    def cb_start_stop(self, request):
+        if request.command == StartStopEpisodeRequest.START:
+            with self.state_lock:
+                self.attaching_stamps = {}
+                self.persistent_predicates = []
+            self.running = True
+
+        elif request.command == StartStopEpisodeRequest.STOP:
+            self.running = False
+        return StartStopEpisodeResponse()
+
     def cb_update_relational_state(self, request):
+        if not self.running:
+            return UpdateRelationalStateResponse(success=False)
         with self.state_lock:
             if request.command == UpdateRelationalStateRequest.ADD:
                 if request.predicate in self.persistent_predicates:
@@ -195,76 +212,72 @@ class ConcurrentSceneStateManager(object):
         except:
             return False
 
-    def handle_request(self, req):
-        resp = GetSceneStateResponse()
-        self.state_lock.acquire()
-        try:
-            resp.state = self.state # TODO deepcopy?
-        finally:
-            self.state_lock.release()
-        return resp
+    def cb_scene_state(self, req):
+        with self.state_lock:
+            return GetSceneStateResponse(self.state)
 
     def run(self):
         while not rospy.is_shutdown():
-            with self.state_lock:
-                self.state.predicates = [] + self.persistent_predicates
-                self.state.header.stamp = rospy.Time.now()
-                for o in self.objects:
-                    if self.pred_in_human_ws(o):
-                        p = Predicate()
-                        p.type = 'in_human_ws'
-                        p.parameters = [o]
-                        self.state.predicates.append(p)
-                    elif self.pred_picked(o):
-                        p = Predicate()
-                        p.type = 'picked'
-                        p.parameters = [o]
-                        self.state.predicates.append(p)
-                    elif self.pred_picked(o):
-                        p = Predicate()
-                        p.type = 'holded'
-                        p.parameters = [o]
-                        self.state.predicates.append(p)
-                for o1, o2 in combinations(self.objects, 2):
-                    if o1 in self.poses and 'constraints' in self.poses[o1] and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
-                        master = o1
-                        slave = o2
-                    elif o2 in self.poses and 'constraints' in self.poses[o2] and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
-                        slave = o1
-                        master = o2
-                    else:
-                        continue
-                    for atp in range(len(self.poses[master]['constraints'])):
-                        if self.pred_positioned(master, slave, atp):
+            if self.running:
+                with self.state_lock:
+                    self.state.predicates = [] + self.persistent_predicates
+                    self.state.header.stamp = rospy.Time.now()
+                    for o in self.objects:
+                        if self.pred_in_human_ws(o):
                             p = Predicate()
-                            p.type = 'positioned'
-                            p.parameters = [master, slave, str(atp)]
+                            p.type = 'in_human_ws'
+                            p.parameters = [o]
                             self.state.predicates.append(p)
-                        if self.pred_attached(master, slave, atp):
+                        elif self.pred_picked(o):
                             p = Predicate()
-                            p.type = 'attached'
-                            p.parameters = [master, slave, str(atp)]
+                            p.type = 'picked'
+                            p.parameters = [o]
                             self.state.predicates.append(p)
-                with self.history_lock:
-                    for side in ['left', 'right']:
-                        if self.pred_busy(side):
+                        elif self.pred_picked(o):
                             p = Predicate()
-                            p.type = 'busy'
-                            p.parameters.append(side)
+                            p.type = 'holded'
+                            p.parameters = [o]
                             self.state.predicates.append(p)
-                        if self.pred_at_home(side):
-                            p = Predicate()
-                            p.type = 'at_home'
-                            p.parameters.append(side)
-                            self.state.predicates.append(p)
-                        if self.activity[side] is not None:
-                            p = Predicate()
-                            p.type = self.activity[side].type
-                            p.parameters = deepcopy(self.activity[side].parameters)
-                            p.parameters.append('eq2' if p.type=='hold' else 'eq1')
-                            self.state.predicates.append(p)
+                    for o1, o2 in combinations(self.objects, 2):
+                        if o1 in self.poses and 'constraints' in self.poses[o1] and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
+                            master = o1
+                            slave = o2
+                        elif o2 in self.poses and 'constraints' in self.poses[o2] and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
+                            slave = o1
+                            master = o2
+                        else:
+                            continue
+                        for atp in range(len(self.poses[master]['constraints'])):
+                            if self.pred_positioned(master, slave, atp):
+                                p = Predicate()
+                                p.type = 'positioned'
+                                p.parameters = [master, slave, str(atp)]
+                                self.state.predicates.append(p)
+                            if self.pred_attached(master, slave, atp):
+                                p = Predicate()
+                                p.type = 'attached'
+                                p.parameters = [master, slave, str(atp)]
+                                self.state.predicates.append(p)
+                    with self.history_lock:
+                        for side in ['left', 'right']:
+                            if self.pred_busy(side):
+                                p = Predicate()
+                                p.type = 'busy'
+                                p.parameters.append(side)
+                                self.state.predicates.append(p)
+                            if self.pred_at_home(side):
+                                p = Predicate()
+                                p.type = 'at_home'
+                                p.parameters.append(side)
+                                self.state.predicates.append(p)
+                            if self.activity[side] is not None:
+                                p = Predicate()
+                                p.type = self.activity[side].type
+                                p.parameters = deepcopy(self.activity[side].parameters)
+                                p.parameters.append('eq2' if p.type=='hold' else 'eq1')
+                                self.state.predicates.append(p)
 
-            self.record_state()
+                self.record_state()
             self.rate.sleep()
 
         logs_name = rospy.get_param('/thr/logs_name')
@@ -273,7 +286,7 @@ class ConcurrentSceneStateManager(object):
                 json.dump(self.logs, f)
 
     def start(self):
-        rospy.Service('/thr/scene_state', GetSceneState, self.handle_request)
+        rospy.Service('/thr/scene_state', GetSceneState, self.cb_scene_state)
         rospy.loginfo('[SceneStateManager] server ready to track {}...'.format(str(self.objects)))
         self.run()
 

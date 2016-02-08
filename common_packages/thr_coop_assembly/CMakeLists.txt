@@ -64,6 +64,7 @@ catkin_python_setup()
    GetUserMDPAction.srv
    SetNewTrainingExample.srv
    UpdateRelationalState.srv
+   StartStopEpisode.srv
  )
 
 ## Generate actions in the 'action' folder

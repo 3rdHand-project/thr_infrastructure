@@ -79,16 +79,6 @@ class InteractionController(object):
         except rospy.ServiceException, e:
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
-    # def update_user_inputs(self):
-    #     request = GetUserMDPActionRequest()
-    #     try:
-    #         get_ui = rospy.ServiceProxy(self.user_cmd_service, GetUserMDPAction)
-    #     except rospy.ServiceException, e:
-    #         rospy.logerr("Cannot update user inputs {}:".format(e.message))
-    #         return MDPAction(type='wait')
-    #     else:
-    #         return get_ui(request).action
-
     def predict(self):
         request = GetNextActionRequest()
         request.scene_state = self.current_scene
