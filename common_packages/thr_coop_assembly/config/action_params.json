@@ -1,9 +1,6 @@
 {
     "sleep_step": 0.1,
     "short_sleep_step": 0.01,
-    "wait": {
-        "duration": 1.0
-    },
     "give": {
         "sphere_radius": 0.33,
         "releasing_disturbance": 0.025,

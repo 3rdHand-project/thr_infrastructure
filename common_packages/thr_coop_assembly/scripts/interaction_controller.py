@@ -14,6 +14,7 @@ from actionlib_msgs.msg import *
 class InteractionController(object):
     def __init__(self):
         self.running = True
+        self.waiting = False
         self.current_scene = None
         self.scene_before_action = None
 
@@ -109,9 +110,11 @@ class InteractionController(object):
         return action
 
     def run_action(self, action):
-        if action.type != 'wait':
-            os.system('beep')
         self.scene_before_action = deepcopy(self.current_scene)
+        os.system('beep')
+        if action.type == 'wait':
+            self.waiting = True
+            return
         goal = RunMDPActionGoal()
         goal.action = action
         self.run_action_client.send_goal(goal)
@@ -159,6 +162,12 @@ class InteractionController(object):
 
                 else:
                     self.update_scene()
+
+                    if self.waiting:
+                        if self.current_scene.predicates == self.scene_before_action.predicates:
+                            self.interaction_loop_rate.sleep()
+                            continue
+
                     prediction = self.predict()
                     str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
 

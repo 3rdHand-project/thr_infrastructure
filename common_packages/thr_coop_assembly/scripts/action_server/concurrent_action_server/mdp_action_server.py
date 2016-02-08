@@ -87,16 +87,6 @@ class MDPActionServer:
                     self.action_history.publish(event)
                     self.server.set_succeeded()
 
-    def execute_wait(self):
-        """
-        Executes a WAIT action (always successful)
-        """
-        rospy.loginfo("[ActionServer] Executing wait()")
-        t0 = rospy.Time.now()
-        while not self.server.is_preempt_requested() and (rospy.Time.now()-t0).to_sec()<self.action_params['wait']['duration'] and not rospy.is_shutdown():
-            rospy.sleep(self.action_params['sleep_step'])
-        self.server.set_succeeded()
-
     def should_interrupt(self):
         """
         :return: True if motion should interrupts at that time for whatever reason
