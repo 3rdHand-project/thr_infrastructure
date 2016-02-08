@@ -64,6 +64,7 @@ class ConcurrentSceneStateManager(object):
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
             with self.state_lock:
+                self.attached = set()
                 self.attaching_stamps = {}
                 self.persistent_predicates = []
             self.running = True
