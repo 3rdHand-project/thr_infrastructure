@@ -20,7 +20,7 @@ class InteractionController(object):
         self.logs = []
 
         # Parameters to be tweaked
-        self.interaction_loop_rate = rospy.Rate(2)  # Rate of the interaction loop in Hertz
+        self.interaction_loop_rate = rospy.Rate(20)  # Rate of the interaction loop in Hertz
                                                     # Shouldn't go too fast, it will trigger actions at that speed!
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
@@ -142,7 +142,6 @@ class InteractionController(object):
                 elif start_stop_question.answered():
                     start_stop_question.remove()
                     pause_unpause_question.remove()
-                    rospy.set_param("/thr/paused", True)
                     is_running = False
                     self.start_or_stop_episode(False)
                     start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)

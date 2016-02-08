@@ -17,6 +17,9 @@ class Action(object):
     def pause_test(self):
         return get_param('/thr/paused')
 
+    def stop_test(self):
+        return get_param('/thr/action_server/stopped')
+
     def _object_grasp_pose_to_world(self, poselist, object):
         """
         Returns the transformation from world to the point defined by "poselist attached to object frame" aka

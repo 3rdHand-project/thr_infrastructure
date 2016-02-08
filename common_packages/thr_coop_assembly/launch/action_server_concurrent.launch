@@ -1,4 +1,5 @@
 <launch>
+    <rosparam param="/thr/action_server/stopped">True</rosparam>
     <include file="$(find baxter_commander)/launch/commander.launch"/>
     <node pkg="thr_coop_assembly" name="mdp_action_server" type="mdp_action_server.py" output="screen"/>
     <node pkg="thr_coop_assembly" name="robot_action_server_right" type="robot_action_server.py" output="screen" args="right"/>

@@ -30,7 +30,7 @@ class Pick(Action):
             if self._should_interrupt():
                 return False
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test, stop_test=self.stop_test):
                 return False
 
             # We just check that motion was precise enough, no target recomputation if object moves (needs another IK)
@@ -45,14 +45,14 @@ class Pick(Action):
 
         # Selecting descent vector mode or grasp point mode
         if 'descent' in self.poses[object]["pick"][0]:
-            if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['descent'], object, 1., pause_test=self.pause_test):
+            if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['descent'], object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to generate picking descent")
                 return False
         elif 'grasp' in self.poses[object]["pick"][0]:
             grasp = np.array(self.poses[object]["pick"][0]['grasp'])
             approach = np.array(self.poses[object]["pick"][0]['approach'][0])
             descent = list(grasp - approach)
-            if not self.commander.translate_to_cartesian(descent, object, 1, pause_test=self.pause_test):
+            if not self.commander.translate_to_cartesian(descent, object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to generate picking descent")
                 return False
         else:
@@ -70,7 +70,7 @@ class Pick(Action):
         if self._should_interrupt():
             return False
         rospy.loginfo("Rising {} with respect to the world".format(object))
-        if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['rise'], self.world, 1., pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['rise'], self.world, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             rospy.logerr("Unable to generate picking rising")
             return False
 

@@ -41,24 +41,26 @@ class MDPActionServer:
 
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
-            self.running = True
+            rospy.set_param('/thr/action_server/stopped', False)
         elif request.command == StartStopEpisodeRequest.STOP:
             if self.clients['left'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
                 self.clients['left'].cancel_all_goals()
             if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
                 self.clients['right'].cancel_all_goals()
-            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_left')), force=True)
-            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_right')), force=True)
-            self.running = False
+            # Execute the go_homes and wait for them before stopping
+            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_left')))
+            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_right')))
+            while not self.clients['right'].get_state() == GoalStatus.ACTIVE and not self.clients['left'].get_state() == GoalStatus.ACTIVE:
+                rospy.sleep(0.1)
+            rospy.set_param('/thr/action_server/stopped', True)
         return StartStopEpisodeResponse()
 
-    def execute(self, mdp_goal, force=False):
+    def execute(self, mdp_goal):
         """
         Execute a goal if the server is started or if force mode is enabled
         :param mdp_goal:
-        :param force: True to force execution ignoring that the current state could be STOPPED
         """
-        if force or self.running:
+        if not rospy.get_param('/thr/action_server/stopped'):
             if mdp_goal.action.type == 'wait':
                 self.execute_wait()
             else:

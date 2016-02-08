@@ -34,7 +34,7 @@ class Hold(Action):
                 return False
 
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test, stop_test=self.stop_test):
                 return False
 
             # 1.bis. Double motion to improve precision
@@ -57,7 +57,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Grasping {}".format(object))
-        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['descent'], object, 1., pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['descent'], object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
         # 3. Close gripper to grasp object
@@ -70,7 +70,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Forcing down on {}".format(object))
-        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['force'], object, 1, pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['force'], object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
         # 5. Wait for interruption
@@ -98,7 +98,7 @@ class Hold(Action):
 
         rospy.loginfo("Leaving {}".format(object))
         rising = list(-array(self.poses[object]["hold"][pose]['descent']))
-        if not self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
         rospy.loginfo("[ActionServer] Executed hold{} with success".format(str(parameters)))

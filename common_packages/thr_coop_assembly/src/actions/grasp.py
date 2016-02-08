@@ -36,7 +36,7 @@ class Grasp(Action):
                 return False
 
             rospy.loginfo("Approaching {}".format(object))
-            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test):
+            if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test, stop_test=self.stop_test):
                 return False
 
             try:
@@ -59,7 +59,7 @@ class Grasp(Action):
         approach = np.array(self.poses[object]["grasp"][pose]['approach'][0])
         descent = list(grasp - approach)
         rospy.loginfo("Generated descent vector {}".format(str(descent)))
-        if not self.commander.translate_to_cartesian(descent, object, 2., pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(descent, object, 2., pause_test=self.pause_test, stop_test=self.stop_test):
             rospy.logerr("Unable to generate grasp descent")
             return False
 
@@ -75,7 +75,7 @@ class Grasp(Action):
         if self._should_interrupt():
             return False
 
-        if not self.commander.translate_to_cartesian(self.poses[object]['grasp'][0]['rise'], self.world, 1.5, pause_test=self.pause_test):
+        if not self.commander.translate_to_cartesian(self.poses[object]['grasp'][0]['rise'], self.world, 1.5, pause_test=self.pause_test, stop_test=self.stop_test):
             rospy.logerr("Unable to generate rising for {}".format(object))
             return False
 

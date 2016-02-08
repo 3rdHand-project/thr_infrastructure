@@ -48,7 +48,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test)
+                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test, stop_test=self.stop_test)
                 except ValueError:
                     rospy.logwarn("Viapoint of location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
@@ -79,7 +79,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test)
+                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test, stop_test=self.stop_test)
                 except ValueError:
                     rospy.logwarn("Location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
@@ -100,7 +100,7 @@ class Place(Action):
         pose = 0  # Grasp pose to be gotten from predicates if several ones exist?
 
         if 'descent' in self.poses[object][method][pose]:
-            if not self.commander.translate_to_cartesian(list(-array(self.poses[object][method][0]['descent'])), object, 1., pause_test=self.pause_test):
+            if not self.commander.translate_to_cartesian(list(-array(self.poses[object][method][0]['descent'])), object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to pull the gripper out")
                 return False
         elif 'grasp' in self.poses[object][method][pose]:
@@ -108,7 +108,7 @@ class Place(Action):
             grasp = array(self.poses[object][method][pose]['grasp'])
             approach = array(self.poses[object][method][pose]['approach'][pose])
             pull_out = list(approach - grasp)
-            if not self.commander.translate_to_cartesian(pull_out, object, 1., pause_test=self.pause_test):
+            if not self.commander.translate_to_cartesian(pull_out, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to pull the gripper out")
                 return False
         else:
