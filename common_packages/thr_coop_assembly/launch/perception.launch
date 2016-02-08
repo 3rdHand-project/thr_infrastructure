@@ -15,4 +15,5 @@
     </include>
     
     <node pkg="thr_coop_assembly" name="$(arg type)_scene_state_manager" type="$(arg type)_scene_state_manager.py" output="screen"/>
+    <node pkg="thr_coop_assembly" name="human_activity_recognizer" type="human_activity_recognizer.py" output="screen"/>
 </launch>

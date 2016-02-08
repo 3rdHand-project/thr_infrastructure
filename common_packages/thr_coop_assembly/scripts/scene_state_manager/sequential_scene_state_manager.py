@@ -63,7 +63,7 @@ class SequentialSceneStateManager(object):
             constraint = self.poses[master]['constraints'][atp][slave]
             cart_dist = transformations.distance(constraint, relative)
             quat_dist = transformations.distance_quat(constraint, relative)
-            return cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']
+            return cart_dist<self.config['positioned']['position_tolerance'] and quat_dist<self.config['positioned']['orientation_tolerance']
         return False
 
     def pred_attached(self, master, slave, atp):
@@ -79,9 +79,9 @@ class SequentialSceneStateManager(object):
             else:
                 relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                if cart_dist<self.config['tool_position_tolerance']:
+                if cart_dist<self.config['attached']['tool_position_tolerance']:
                     try:
-                        if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
+                        if time()-self.attaching_stamps[master][slave]>self.config['attached']['screwdriver_attaching_time']:
                             rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
                             self.attached.append(master+slave+str(atp))
                             return True
@@ -94,7 +94,7 @@ class SequentialSceneStateManager(object):
 
     def pred_in_human_ws(self, obj):
         try:
-            return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
+            return transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws']['in_human_ws_distance']
         except:
             return False
 

@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations
-from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse
+from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse, UpdateRelationalState, UpdateRelationalStateResponse, UpdateRelationalStateRequest
 from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent, RobotAction
 from itertools import combinations
 from threading import Lock
 import json
-from time import time
 from sensor_msgs.msg import Image
 from copy import deepcopy
 
@@ -20,8 +19,10 @@ class ConcurrentSceneStateManager(object):
         self.state_lock = Lock()
         self.history_lock = Lock()
         self.attached = set()
+        self.persistent_predicates = []
         self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
+        self.service_update_name = '/thr/update_relational_state'
 
         self.logs = []
 
@@ -54,7 +55,23 @@ class ConcurrentSceneStateManager(object):
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
+        rospy.Service(self.service_update_name, UpdateRelationalState, self.cb_update_relational_state)
 
+    def cb_update_relational_state(self, request):
+        with self.state_lock:
+            if request.command == UpdateRelationalStateRequest.ADD:
+                if request.predicate in self.persistent_predicates:
+                    return UpdateRelationalStateResponse(success=False)
+                else:
+                    self.persistent_predicates.append(request.predicate)
+                    return UpdateRelationalStateResponse(success=True)
+
+            elif request.command == UpdateRelationalStateRequest.REMOVE:
+                if request.predicate in self.persistent_predicates:
+                    self.persistent_predicates.remove(request.predicate)
+                    return UpdateRelationalStateResponse(success=True)
+                else:
+                    return UpdateRelationalStateResponse(success=False)
 
     def cb_action_event_received(self, msg):
             #with self.history_lock:
@@ -129,21 +146,12 @@ class ConcurrentSceneStateManager(object):
             constraint = self.poses[master]['constraints'][atp][slave]
             cart_dist = transformations.distance(constraint, relative)
             quat_dist = transformations.distance_quat(constraint, relative)
-            return cart_dist<self.config['position_tolerance'] and quat_dist<self.config['orientation_tolerance']
+            return cart_dist<self.config['positioned']['position_tolerance'] and quat_dist<self.config['positioned']['orientation_tolerance']
         return False
 
     def pred_attached(self, master, slave, atp):
         if master+slave+str(atp) in self.attached:
             return True
-        # elif master+slave+str(atp) in self.screwed:
-            # try:
-            #     distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform('right_gripper', "/human/wrist", rospy.Time(0)))
-            # except:
-            #     rospy.logwarn("Human wrist not found")
-            #     return False
-            # if distance_wrist_gripper > self.config['hold']['sphere_radius']:
-            #     self.attached.append(master+slave+str(atp))
-            #     return True
         elif self.pred_positioned(master, slave, atp):
             try:
                 # WARNING: Do not ask the relative tf directly, it is outdated!
@@ -155,16 +163,16 @@ class ConcurrentSceneStateManager(object):
                 if self.screwdriver in self.poses[master]['constraints'][atp]:  # For objects that need to be screwed
                     relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                     cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                    if cart_dist<self.config['tool_position_tolerance']:
+                    if cart_dist < self.config['attached']['tool_position_tolerance']:
                         try:
-                            if time()-self.attaching_stamps[master][slave]>self.config['screwdriver_attaching_time']:
+                            if rospy.Time.now() - self.attaching_stamps[master][slave] > rospy.Duration(self.config['attached']['screwdriver_attaching_time']):
                                 rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
                                 # self.screwed.append(master+slave+str(atp))
                                 self.attached.append(master+slave+str(atp))
                         except KeyError:
                             if not self.attaching_stamps.has_key(master):
                                 self.attaching_stamps[master] = {}
-                            self.attaching_stamps[master][slave] = time()
+                            self.attaching_stamps[master][slave] = rospy.Time.now()
                 else: # For objects that only need to be inserted
                     # self.screwed.append(master+slave+str(atp))
                     self.attached.append(master+slave+str(atp))
@@ -182,8 +190,8 @@ class ConcurrentSceneStateManager(object):
 
     def pred_in_human_ws(self, obj):
         try:
-            return rospy.Time.now() - self.tfl.getLatestCommonTime(obj, "/table") < rospy.Duration(self.config['in_human_ws_time']) \
-                    and transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws_distance']
+            return rospy.Time.now() - self.tfl.getLatestCommonTime(obj, "/table") < rospy.Duration(self.config['in_human_ws']['in_human_ws_time']) \
+                    and transformations.norm(self.tfl.lookupTransform(obj, "/table", rospy.Time(0)))<self.config['in_human_ws']['in_human_ws_distance']
         except:
             return False
 
@@ -199,7 +207,7 @@ class ConcurrentSceneStateManager(object):
     def run(self):
         while not rospy.is_shutdown():
             with self.state_lock:
-                self.state.predicates = []
+                self.state.predicates = [] + self.persistent_predicates
                 self.state.header.stamp = rospy.Time.now()
                 for o in self.objects:
                     if self.pred_in_human_ws(o):
