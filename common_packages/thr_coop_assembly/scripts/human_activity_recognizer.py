@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations, json
-from thr_coop_assembly.msg import Predicate
+from thr_coop_assembly.msg import Predicate, ActionHistoryEvent, MDPAction
 from thr_coop_assembly.srv import GetSceneState, GetSceneStateRequest, UpdateRelationalState, UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from itertools import product
 from threading import RLock
@@ -27,6 +27,9 @@ class HumanActivityRecognizer(object):
 
         self.start_stop_service_name = '/thr/human_activity_recognizer/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
+
+        self.action_history_name = '/thr/action_history'
+        self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
             self.poses = json.load(f)
@@ -103,6 +106,13 @@ class HumanActivityRecognizer(object):
                         self.running_human_activity = predicate
                         if not reply.success:
                             rospy.logerr('SSM failed to add {}{}'.format(self.running_human_activity.type, str(self.running_human_activity.parameters)))
+
+                        event = ActionHistoryEvent()
+                        event.header.stamp = rospy.Time.now()
+                        event.type = ActionHistoryEvent.STARTING
+                        event.action = MDPAction(type=self.running_human_activity.type, parameters=self.running_human_activity.parameters)
+                        event.side = 'human'
+                        self.action_history.publish(event)
                 else:
                     still_running = True
                     if self.running_human_activity.type == 'start_position' and not self.pred_start_position(self.running_human_activity.parameters[0],
@@ -120,6 +130,12 @@ class HumanActivityRecognizer(object):
                         reply = self.update_relational_state(request)
                         if not reply.success:
                             rospy.logerr('SSM failed to remove {}{}'.format(self.running_human_activity.type, str(self.running_human_activity.parameters)))
+                        event = ActionHistoryEvent()
+                        event.header.stamp = rospy.Time.now()
+                        event.type = ActionHistoryEvent.FINISHED_SUCCESS
+                        event.action = MDPAction(type=self.running_human_activity.type, parameters=self.running_human_activity.parameters)
+                        event.side = 'human'
+                        self.action_history.publish(event)
                         self.running_human_activity = None
             rate.sleep()
 

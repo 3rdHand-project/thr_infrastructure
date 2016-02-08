@@ -27,6 +27,7 @@ class InteractionController(object):
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
         self.run_action_name = '/thr/run_mdp_action'
+        self.action_history_name = '/thr/action_history'
 
         # Initiating topics ands links to services/actions
         self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
@@ -37,9 +38,9 @@ class InteractionController(object):
             rospy.wait_for_service(service)
 
         self.rospack = rospkg.RosPack()
-
-        # self.web_asker = None
         self.init_webasker()
+        rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
+
 
     def init_webasker(self):
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
@@ -59,6 +60,9 @@ class InteractionController(object):
         else:
             self.web_asker.clear_all()
 
+    def cb_action_event_received(self, event):
+        if event.side == 'human':
+            print event
 
     ################################################# SERVICE CALLERS #################################################
     def set_new_training_example(self, scene, action, good):
