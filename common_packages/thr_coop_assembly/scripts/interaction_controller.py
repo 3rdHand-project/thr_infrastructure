@@ -101,7 +101,7 @@ class InteractionController(object):
     ###################################################################################################################
 
     def run_action(self, action):
-        if action.type!='wait':
+        if action.type != 'wait':
             os.system('beep')
         self.scene_before_action = deepcopy(self.current_scene)
         goal = RunMDPActionGoal()
@@ -115,21 +115,38 @@ class InteractionController(object):
         try:
             print 'Interaction starting!'
 
-            pause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, auto_remove=False)
-            unpause_question = None
+            is_running = False
+            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
+
             rospy.set_param("/thr/paused", False)
 
             while self.running and not rospy.is_shutdown():
 
-                if rospy.get_param("/thr/paused"):
-                    if unpause_question.answered():
-                        unpause_question.remove()
-                        pause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, auto_remove=False)
+                if not is_running:
+                    if start_stop_question.answered():
+                        start_stop_question.remove()
+                        is_running = True
+                        start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30)
+                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
                         rospy.set_param("/thr/paused", False)
-                elif not rospy.get_param("/thr/paused") and pause_question.answered():
-                    pause_question.remove()
-                    unpause_question = self.web_asker.ask("Unpause ?", ["Unpause !"], priority=20, auto_remove=False)
+
+                elif start_stop_question.answered():
+                    start_stop_question.remove()
+                    is_running = False
+                    start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
+                    pause_unpause_question.remove()
+
+                elif rospy.get_param("/thr/paused"):
+                    if pause_unpause_question.answered():
+                        pause_unpause_question.remove()
+                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
+                        rospy.set_param("/thr/paused", False)
+
+                elif pause_unpause_question.answered():
+                    pause_unpause_question.remove()
+                    pause_unpause_question = self.web_asker.ask("Unpause ?", ["Unpause !"], priority=20)
                     rospy.set_param("/thr/paused", True)
+
                 else:
                     self.update_scene()
                     prediction = self.predict()
@@ -142,11 +159,10 @@ class InteractionController(object):
                         #    ["Don't do that"])
 
                         self.logs.append({'timestamp': rospy.get_time(),
-                              'type': predicted_action.type,
-                              'parameters': predicted_action.parameters})
+                                          'type': predicted_action.type,
+                                          'parameters': predicted_action.parameters})
 
                         self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
-
 
                         # if question.answered():
                         #     question.remove()
