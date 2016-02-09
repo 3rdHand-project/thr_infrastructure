@@ -4,7 +4,7 @@
         "orientation_tolerance": 0.5 },
     "attached" : {
         "tool_position_tolerance": 0.1,
-        "screwdriver_attaching_time": 10.0 },
+        "screwdriver_attaching_time": 5.0 },
     "in_human_ws": {
         "in_human_ws_distance": 1.0,
         "in_human_ws_time": 1.0
