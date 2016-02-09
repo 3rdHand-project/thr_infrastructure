@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-import os, rospy, rospkg
+import os
+import rospy
+import rospkg
 import actionlib
 import numpy as np
 from copy import deepcopy
@@ -11,6 +13,7 @@ from thr_coop_assembly.msg import *
 from thr_coop_assembly.srv import *
 from actionlib_msgs.msg import *
 
+
 class InteractionController(object):
     def __init__(self):
         self.running = True
@@ -21,8 +24,7 @@ class InteractionController(object):
         self.logs = []
 
         # Parameters to be tweaked
-        self.interaction_loop_rate = rospy.Rate(20)  # Rate of the interaction loop in Hertz
-                                                    # Shouldn't go too fast, it will trigger actions at that speed!
+        self.interaction_loop_rate = rospy.Rate(20)
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
@@ -40,7 +42,6 @@ class InteractionController(object):
         self.rospack = rospkg.RosPack()
         self.init_webasker()
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
-
 
     def init_webasker(self):
         with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
@@ -98,9 +99,9 @@ class InteractionController(object):
         for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
-            rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(command=StartStopEpisodeRequest.START if start else
-                                                                                           StartStopEpisodeRequest.STOP))
-
+            rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
+                command=StartStopEpisodeRequest.START if start else
+                StartStopEpisodeRequest.STOP))
 
     ###################################################################################################################
 
@@ -126,7 +127,6 @@ class InteractionController(object):
             self.interaction_loop_rate.sleep()
         self.current_action = action
 
-
     def run(self):
         try:
             print 'Interaction starting!'
@@ -151,7 +151,7 @@ class InteractionController(object):
                     pause_unpause_question.remove()
                     is_running = False
                     self.start_or_stop_episode(False)
-                    start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
+                    start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30)
 
                 elif rospy.get_param("/thr/paused"):
                     if pause_unpause_question.answered():
@@ -210,11 +210,10 @@ class InteractionController(object):
                             self.set_new_training_example(self.current_scene, predicted_action, False)
                             correct_action = self.str_to_MDPAction(self.web_asker.ask(
                                 "Pick an action :", str_action_list).get_answer())
-                        
 
                         self.logs.append({'timestamp': rospy.get_time(),
-                              'type': correct_action.type,
-                              'parameters': correct_action.parameters})
+                                          'type': correct_action.type,
+                                          'parameters': correct_action.parameters})
                         self.run_action(correct_action)
 
                         self.set_new_training_example(self.scene_before_action, correct_action, True)
@@ -223,10 +222,9 @@ class InteractionController(object):
                         correct_action = self.str_to_MDPAction(self.web_asker.ask(
                             "Pick an action :", str_action_list).get_answer())
                         self.logs.append({'timestamp': rospy.get_time(),
-                              'type': correct_action.type,
-                              'parameters': correct_action.parameters})
+                                          'type': correct_action.type,
+                                          'parameters': correct_action.parameters})
                         self.run_action(correct_action)
-
 
                         self.set_new_training_example(self.scene_before_action, correct_action, True)
 
@@ -240,6 +238,6 @@ class InteractionController(object):
                 with open('action_decisions_'+logs_name+'.json', 'w') as f:
                     json.dump(self.logs, f)
 
-if __name__=='__main__':
+if __name__ == '__main__':
     rospy.init_node("interaction_controller")
     InteractionController().run()
