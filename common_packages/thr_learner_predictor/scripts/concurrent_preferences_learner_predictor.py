@@ -21,8 +21,8 @@ class Server(object):
 
         self.dataset = []
 
-        domain = domain_dict["multi_agent_box"].Domain({"decay_factor": 0.9, "random_start": False}, "/tmp")
-        self.algorithm = BoostedPolicyLearning(domain, {}, "/tmp")
+        self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
+        self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
         self.algorithm.load()
 
         self.start_stop_service_name = '/thr/learrner_predictor/start_stop'
@@ -111,6 +111,28 @@ class Server(object):
         :param get_next_action_req: an object of type GetNextActionRequest (scene state)
         :return: an object of type GetNextActionResponse
         """
+
+        resp = GetNextActionResponse()
+        pred_list = get_next_action_req.scene_state.predicates
+
+        pred_robot_list = [tuple([str(pred.type)] + [str(s).replace("/toolbox/", "toolbox_") for s in pred.parameters])
+                           for pred in pred_list]
+
+        pred_domain_list = []
+        for pred in pred_robot_list:
+            pred_domain_list.append(pred)
+            if pred[0] == "positioned":
+                pred_domain_list.append(("occupied_slot", pred[1], pred[3]))
+            for obj in ['toolbox_handle', 'toolbox_side_right', 'toolbox_side_left',
+                        'toolbox_side_front', 'toolbox_side_back']:
+                pred_domain_list.append(("object", obj))
+            for pose in ["0", "1"]:
+                pred_domain_list.append(("holding_position", pose))
+            if len([p for p in pred_robot_list if p[0] == "picked"]) == 0:
+                pred_domain_list.append(("free", "left"))
+
+        state = self.domain.state_to_int(("state", frozenset(pred_domain_list)))
+        action_list = [self.domain.int_to_action(a) for a in self.domain.get_actions(state)]
 
         resp = GetNextActionResponse()
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left',
@@ -407,145 +429,29 @@ class Server(object):
                     
                 else:
                     action.type = 'wait'
-                    
+
         resp = GetNextActionResponse()
         resp.confidence = resp.SURE
-
-        obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
-
-        actions_index = {}
-
         resp.probas = []
 
-        resp.actions.append(MDPAction(type="wait", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-            resp.probas.append(1.)
-        else:
-            resp.probas.append(0.)
+        for candidate_action in action_list:
+            if isinstance(candidate_action, tuple):
+                resp.actions.append(MDPAction(
+                    type=candidate_action[0].replace("activate", "start"),
+                    parameters=[c.replace("toolbox_", "/toolbox/") for c in candidate_action[1:]]))
+            else:
+                resp.actions.append(MDPAction(type=candidate_action.replace("activate", "start"),
+                                              parameters=[]))
 
-        resp.actions.append(MDPAction(type="start_go_home_left", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-            resp.probas.append(1.)
-        else:
-            resp.probas.append(0.)
-
-        resp.actions.append(MDPAction(type="start_go_home_right", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-            resp.probas.append(1.)
-        else:
-            resp.probas.append(0.)
-
-        for obj in obj_list:
-            resp.actions.append(MDPAction(type="start_give", parameters=[obj]))
             if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
                 resp.probas.append(1.)
             else:
                 resp.probas.append(0.)
 
-        for obj in obj_list:
-            for pose in ["0", "1"]:
-                resp.actions.append(MDPAction(type="start_hold", parameters=[obj, pose]))
-                if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-                    resp.probas.append(1.)
-                else:
-                    resp.probas.append(0.)
-
-        for obj in obj_list:
-            resp.actions.append(MDPAction(type="start_pick", parameters=[obj]))
-            if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-                resp.probas.append(1.)
-            else:
-                resp.probas.append(0.)
-
-        self.sequence += 1
+        if sum(resp.probas) != 1:
+            print action
+            print resp.actions
         return resp
-
-        # resp = GetNextActionResponse()
-        # obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left',
-        #             '/toolbox/side_front', '/toolbox/side_back']
-        # pred_list = get_next_action_req.scene_state.predicates
-
-        # pred_robot_list = [
-        #     tuple([str(pred.type)] +
-        #           [str(s).replace("/toolbox/", "toolbox_") for s in pred.parameters]) for pred in pred_list]
-
-        # pred_domain_list = []
-        # for pred in pred_robot_list:
-        #     pred_domain_list.append(pred)
-        #     if pred[0] == "positioned":
-        #         pred_domain_list.append(("occupied_slot", pred[1], pred[3]))
-        #     for obj in ['toolbox_handle', 'toolbox_side_right', 'toolbox_side_left',
-        #                 'toolbox_side_front', 'toolbox_side_back']:
-        #         pred_domain_list.append(("object", obj))
-        #     for pose in ["0", "1"]:
-        #         pred_domain_list.append(("holding_position", pose))
-        #     if len([p for p in pred_robot_list if p[0] == "picked"]) == 0:
-        #         pred_domain_list.append(("free", "left"))
-
-        # state = ("state", frozenset(pred_domain_list))
-
-        # policy_action = self.algorithm.policy(state)
-
-        # if isinstance(policy_action, tuple):
-        #     policy_action = tuple([a.replace("toolbox_", "/toolbox/") for a in policy_action])
-
-        # action = MDPAction()
-
-        # if policy_action == "activate_wait_for_human" or policy_action == "WAIT":
-        #     action.type = 'wait'
-        # elif type(policy_action) == str:
-        #     action.type = policy_action.replace("activate", "start")
-        #     action.parameters = []
-        # else:
-        #     action.type = policy_action[0].replace("activate", "start")
-        #     action.parameters = list(policy_action)[1:]
-
-        # resp = GetNextActionResponse()
-        # resp.confidence = resp.SURE
-
-        # resp.probas = []
-
-        # resp.actions.append(MDPAction(type="wait", parameters=[]))
-        # if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #     resp.probas.append(1.)
-        # else:
-        #     resp.probas.append(0.)
-
-        # resp.actions.append(MDPAction(type="start_go_home_left", parameters=[]))
-        # if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #     resp.probas.append(1.)
-        # else:
-        #     resp.probas.append(0.)
-
-        # resp.actions.append(MDPAction(type="start_go_home_right", parameters=[]))
-        # if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #     resp.probas.append(1.)
-        # else:
-        #     resp.probas.append(0.)
-
-        # for obj in obj_list:
-        #     resp.actions.append(MDPAction(type="start_give", parameters=[obj]))
-        #     if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #         resp.probas.append(1.)
-        #     else:
-        #         resp.probas.append(0.)
-
-        # for obj in obj_list:
-        #     for pose in ["0", "1"]:
-        #         resp.actions.append(MDPAction(type="start_hold", parameters=[obj, pose]))
-        #         if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #             resp.probas.append(1.)
-        #         else:
-        #             resp.probas.append(0.)
-
-        # for obj in obj_list:
-        #     resp.actions.append(MDPAction(type="start_pick", parameters=[obj]))
-        #     if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
-        #         resp.probas.append(1.)
-        #     else:
-        #         resp.probas.append(0.)
-
-        # return resp
 
     def learner_handler(self, new_training_ex):
         """

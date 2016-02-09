@@ -182,6 +182,8 @@ class InteractionController(object):
                         if question.answered():
                             followup_question = self.followup_question_dict[question]
                             del self.followup_question_dict[question]
+                            if question == self.wait_question:
+                                self.wait_question = None
                             question.remove()
                             feedback_question = self.web_asker.ask(
                                 followup_question["question"], followup_question["answers"])
