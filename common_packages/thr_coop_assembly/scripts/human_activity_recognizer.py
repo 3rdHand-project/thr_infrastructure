@@ -46,22 +46,24 @@ class HumanActivityRecognizer(object):
             self.running = False
         return StartStopEpisodeResponse()
 
-    def pred_start_position(self, master, slave, atp):
+    def pred_position(self, master, slave, atp):
         try:
             # WARNING: Do not ask the relative tf directly, it is outdated!
             tf_slave = self.tfl.lookupTransform(self.world, slave, rospy.Time(0))
             tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
-        except Exception, e:
+        except Exception:
             pass
         else:
             relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
             constraint = self.poses[master]['constraints'][atp][slave]
             cart_dist = transformations.distance(constraint, relative)
             quat_dist = transformations.distance_quat(constraint, relative)
-            return (cart_dist < self.config['start_position']['position_tolerance'] and quat_dist < self.config['start_position']['orientation_tolerance']) and\
-                not (cart_dist < self.config['positioned']['position_tolerance'] and quat_dist < self.config['positioned']['orientation_tolerance'])
+            return (cart_dist < self.config['start_position']['position_tolerance'] and
+                    quat_dist < self.config['start_position']['orientation_tolerance']) and\
+                not (cart_dist < self.config['positioned']['position_tolerance'] and
+                     quat_dist < self.config['positioned']['orientation_tolerance'])
 
-    def pred_start_screw(self, master, slave, atp, state):
+    def pred_screw(self, master, slave, atp, state):
         if Predicate(type='positioned', parameters=[master, slave, str(atp)]) in state.predicates:
             try:
                 # WARNING: Do not ask the relative tf directly, it is outdated!
@@ -75,9 +77,10 @@ class HumanActivityRecognizer(object):
                 if cart_dist < self.config['attached']['tool_position_tolerance']:
                     with self.lock:
                         try:
-                            return rospy.Time.now() - self.attaching_stamps[master][slave] < rospy.Duration(self.config['attached']['screwdriver_attaching_time'])
+                            return rospy.Time.now() - self.attaching_stamps[master][slave] < rospy.Duration(
+                                self.config['attached']['screwdriver_attaching_time'])
                         except KeyError:
-                            if not master in self.attaching_stamps:
+                            if master not in self.attaching_stamps:
                                 self.attaching_stamps[master] = {}
                             self.attaching_stamps[master][slave] = rospy.Time.now()
         return False
@@ -90,55 +93,66 @@ class HumanActivityRecognizer(object):
                 state = self.getscene(GetSceneStateRequest()).state
                 if self.running_human_activity is None:
                     for master, slave, atp in product(self.objects, self.objects, [0, 1]):
-                        if not ('constraints' in self.poses[master] and len([c for c in self.poses[master]['constraints'] if slave in c]) > 0):
+                        if not ('constraints' in self.poses[master] and len(
+                                [c for c in self.poses[master]['constraints'] if slave in c]) > 0):
                             continue
-                        if self.pred_start_position(master, slave, atp):
-                            predicate.type = 'start_position'
-                            predicate.parameters = [master, slave, str(atp)]
+                        if self.pred_position(master, slave, atp):
+                            predicate.type = 'position'
+                            predicate.parameters = [master, slave, str(atp), "eq1"]
                             break
-                        if self.pred_start_screw(master, slave, atp, state):
-                            predicate.type = 'start_screw'
-                            predicate.parameters = [master, slave, str(atp)]
+                        if self.pred_screw(master, slave, atp, state):
+                            predicate.type = 'screw'
+                            predicate.parameters = [master, slave, str(atp), "eq1"]
                             break
                     if predicate.type != '':
-                        request = UpdateRelationalStateRequest(command=UpdateRelationalStateRequest.ADD, predicate=predicate)
+                        request = UpdateRelationalStateRequest(
+                            command=UpdateRelationalStateRequest.ADD, predicate=predicate)
                         reply = self.update_relational_state(request)
                         self.running_human_activity = predicate
                         if not reply.success:
-                            rospy.logerr('SSM failed to add {}{}'.format(self.running_human_activity.type, str(self.running_human_activity.parameters)))
+                            rospy.logerr('SSM failed to add {}{}'.format(
+                                self.running_human_activity.type, str(self.running_human_activity.parameters)))
 
                         event = ActionHistoryEvent()
                         event.header.stamp = rospy.Time.now()
                         event.type = ActionHistoryEvent.STARTING
-                        event.action = MDPAction(type=self.running_human_activity.type, parameters=self.running_human_activity.parameters)
+                        event.action = MDPAction(type="start_" + self.running_human_activity.type,
+                                                 parameters=self.running_human_activity.parameters[:-1])
                         event.side = 'human'
                         self.action_history.publish(event)
                 else:
                     still_running = True
-                    if self.running_human_activity.type == 'start_position' and not self.pred_start_position(self.running_human_activity.parameters[0],
-                                                                                                         self.running_human_activity.parameters[1],
-                                                                                                         int(self.running_human_activity.parameters[2])):
+                    if self.running_human_activity.type == 'position' and not self.pred_position(
+                            self.running_human_activity.parameters[0],
+                            self.running_human_activity.parameters[1],
+                            int(self.running_human_activity.parameters[2])):
                         still_running = False
-                    elif self.running_human_activity.type == 'start_screw' and not self.pred_start_screw(self.running_human_activity.parameters[0],
-                                                                                                         self.running_human_activity.parameters[1],
-                                                                                                         int(self.running_human_activity.parameters[2]),
-                                                                                                         state):
+                    elif self.running_human_activity.type == 'screw' and not self.pred_screw(
+                            self.running_human_activity.parameters[0],
+                            self.running_human_activity.parameters[1],
+                            int(self.running_human_activity.parameters[2]),
+                            state):
                         still_running = False
 
                     if not still_running:
-                        request = UpdateRelationalStateRequest(command=UpdateRelationalStateRequest.REMOVE, predicate=self.running_human_activity)
+                        request = UpdateRelationalStateRequest(
+                            command=UpdateRelationalStateRequest.REMOVE, predicate=self.running_human_activity)
                         reply = self.update_relational_state(request)
                         if not reply.success:
-                            rospy.logerr('SSM failed to remove {}{}'.format(self.running_human_activity.type, str(self.running_human_activity.parameters)))
+                            rospy.logerr('SSM failed to remove {}{}'.format(
+                                self.running_human_activity.type, str(self.running_human_activity.parameters)))
+
                         event = ActionHistoryEvent()
                         event.header.stamp = rospy.Time.now()
                         event.type = ActionHistoryEvent.FINISHED_SUCCESS
-                        event.action = MDPAction(type=self.running_human_activity.type, parameters=self.running_human_activity.parameters)
+                        event.action = MDPAction(type="start_" + self.running_human_activity.type,
+                                                 parameters=self.running_human_activity.parameters[:-1])
                         event.side = 'human'
                         self.action_history.publish(event)
                         self.running_human_activity = None
             rate.sleep()
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     rospy.init_node('human_activity_recognizer')
     HumanActivityRecognizer(20).run()
