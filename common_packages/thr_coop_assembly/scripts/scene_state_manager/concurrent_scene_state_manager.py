@@ -19,7 +19,6 @@ class ConcurrentSceneStateManager(object):
         self.screwdriver = '/tools/screwdriver'
         self.state_lock = Lock()
         self.history_lock = Lock()
-        self.attached = set()
         self.persistent_predicates = []
         self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
@@ -64,7 +63,7 @@ class ConcurrentSceneStateManager(object):
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
             with self.state_lock:
-                self.attached = set()
+                self.attached = []
                 self.attaching_stamps = {}
                 self.persistent_predicates = []
             self.running = True
