@@ -81,7 +81,8 @@ class Hold(Action):
                 rospy.logwarn("Human wrist not found")
                 distance_wrist_gripper = 0
             if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
-                rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
+                # rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
+                pass
             else:
                 break
             rospy.sleep(self.action_params['sleep_step'])

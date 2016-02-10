@@ -27,7 +27,7 @@ class Give(Action):
                 rospy.logwarn("Human wrist not found")
                 rospy.sleep(self.action_params['sleep_step'])
                 continue
-            rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
+            # rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
                 world_give_pose = self._object_grasp_pose_to_world(self.poses[object]['give']["/human/wrist"], "/human/wrist")
 
@@ -39,7 +39,7 @@ class Give(Action):
                 try:
                     success = self.commander.move_to_controlled(world_give_pose, stop_test=lambda: needs_update() or self.stop_test(), pause_test=self.pause_test)
                 except ValueError:
-                    rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
+                    # rospy.logwarn("Human wrist found but not reachable, please move it a little bit...")
                     rospy.sleep(self.action_params['sleep_step'])
                     continue
                 else:
