@@ -44,46 +44,6 @@ class Server(object):
 
         return StartStopEpisodeResponse()
 
-    def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
-        return len([p for p in predictate_list if
-                    p.type == 'attached' and obj1 in p.parameters and obj2 in p.parameters and
-                    (id_c is None or str(id_c) in p.parameters)]) == 1
-
-    def check_positioned_pred(self, predictate_list, obj1, obj2, id_c=None):
-        return len([p for p in predictate_list if
-                    p.type == 'positioned' and obj1 in p.parameters and obj2 in p.parameters and
-                    (id_c is None or str(id_c) in p.parameters)]) == 1
-
-    def check_in_hws_pred(self, predictate_list, obj):
-        return len([p for p in predictate_list if
-                    p.type == 'in_human_ws' and obj in p.parameters]) == 1
-
-    def check_picked_pred(self, predictate_list, obj=None):
-        return len([p for p in predictate_list if
-                    p.type == 'picked' and (obj is None or obj in p.parameters)]) == 1
-
-    def check_holded_pred(self, predictate_list, obj):
-        return len([p for p in predictate_list if
-                    p.type == 'holded' and obj in p.parameters]) == 1
-
-    def check_at_home_pred(self, predictate_list, arm):
-        return len([p for p in predictate_list if
-                    p.type == 'at_home' and arm in p.parameters]) == 1
-
-    def check_busy_pred(self, predictate_list, arm):
-        return len([p for p in predictate_list if
-                    p.type == 'busy' and arm in p.parameters]) == 1
-
-    def check_is_holding(self, predicate_list):
-        return len([p for p in predicate_list if p.type == "hold"]) == 1
-
-    def MDPAction_to_relational_action(self, action):
-        if len(action.parameters) == 0:
-            return action.type.replace("start", "activate")
-        else:
-            return tuple([action.type.replace("start", "activate")] +
-                         [c.replace("/toolbox/", "toolbox_") for c in action.parameters])
-
     def relational_action_to_MDPAction(self, action):
         if isinstance(action, tuple):
             return MDPAction(type=action[0].replace("activate", "start"),
