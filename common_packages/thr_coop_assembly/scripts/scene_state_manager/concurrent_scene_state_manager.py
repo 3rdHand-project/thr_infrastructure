@@ -91,41 +91,41 @@ class ConcurrentSceneStateManager(object):
                     return UpdateRelationalStateResponse(success=False)
 
     def cb_action_event_received(self, msg):
-            #with self.history_lock:
+            with self.state_lock:
             # Listening action history for predicate AT_HOME
-            if msg.side in ['left', 'right']:
-                if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_left':
-                    self.at_home['left'] = True
-                elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
-                    self.at_home['right'] = True
-                elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
-                    self.at_home['right'] = False
-                elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
-                    self.at_home['left'] = False
+                if msg.side in ['left', 'right']:
+                    if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_left':
+                        self.at_home['left'] = True
+                    elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
+                        self.at_home['right'] = True
+                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
+                        self.at_home['right'] = False
+                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
+                        self.at_home['left'] = False
 
-                # Listening action events for predicate BUSY
-                if self.abilities[msg.action.type]=='left':
-                    self.busy['left'] = msg.type==ActionHistoryEvent.STARTING
-                elif self.abilities[msg.action.type]=='right':
-                    self.busy['right'] = msg.type==ActionHistoryEvent.STARTING
-                else:
-                    rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
+                    # Listening action events for predicate BUSY
+                    if self.abilities[msg.action.type]=='left':
+                        self.busy['left'] = msg.type==ActionHistoryEvent.STARTING
+                    elif self.abilities[msg.action.type]=='right':
+                        self.busy['right'] = msg.type==ActionHistoryEvent.STARTING
+                    else:
+                        rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
 
-                # Listening action events for predicates PICKED + HOLDED
-                if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
-                    self.holded = msg.action.parameters
-                elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='pick':
-                    self.picked = msg.action.parameters
-                elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='hold':
-                    self.holded = []
-                elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='give':
-                    self.picked = []
+                    # Listening action events for predicates PICKED + HOLDED
+                    if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
+                        self.holded = msg.action.parameters
+                    elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='pick':
+                        self.picked = msg.action.parameters
+                    elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='hold':
+                        self.holded = []
+                    elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='give':
+                        self.picked = []
 
-                # Listening action events for activity predicates
-                if msg.type==ActionHistoryEvent.STARTING:
-                    self.activity[self.abilities[msg.action.type]] = msg.action
-                else:
-                    self.activity[self.abilities[msg.action.type]] = None
+                    # Listening action events for activity predicates
+                    if msg.type==ActionHistoryEvent.STARTING:
+                        self.activity[self.abilities[msg.action.type]] = msg.action
+                    else:
+                        self.activity[self.abilities[msg.action.type]] = None
 
     def pred_holded(self, obj):
         #with self.history_lock:
