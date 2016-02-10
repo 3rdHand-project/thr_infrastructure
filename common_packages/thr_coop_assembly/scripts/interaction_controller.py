@@ -175,6 +175,12 @@ class InteractionController(object):
                     is_running = False
                     self.start_or_stop_episode(False)
                     start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30)
+                    for question in self.followup_question_dict:
+                        question.remove()
+                    self.followup_question_dict = {}
+                    for question in self.feedback_question_dict:
+                        question.remove()
+                    self.feedback_question_dict = {}
 
                 else:
 
