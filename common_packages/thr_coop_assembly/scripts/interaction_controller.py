@@ -14,10 +14,53 @@ from thr_coop_assembly.srv import *
 from actionlib_msgs.msg import *
 
 
+class ConfirmQuestion(object):
+    def __init__(self, web_asker, action_str, action_str_list, state):
+        self.web_asker = web_asker
+        self.action_str = action_str
+        self.action_str_list = action_str_list
+        self.state = state
+
+        self.first = self.web_asker.ask("I'm think i should do {} :".format(self.action_str),
+                                        ["Do it!", "Don't do that"])
+        self.second = None
+        self.correct_action = None
+
+    def update(self):
+        if self.first is not None and self.first.answered():
+            if self.first.get_answer() == "Do it!":
+                self.correct_action = self.action_str
+            else:
+                self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.action_str),
+                                                 self.action_str_list)
+                self.first = None
+
+        if self.second is not None and self.second.answered():
+            self.correct_action = self.second.get_answer()
+
+    def is_answered(self):
+        return self.correct_action is not None
+
+    def get_correct_action(self):
+        assert self.correct_action is not None
+        return self.correct_action
+
+    def get_state(self):
+        return self.state
+
+    def remove(self):
+        if self.first is not None:
+            self.first.remove()
+        if self.second is not None:
+            self.second.remove()
+
+
 class InteractionController(object):
     def __init__(self):
         self.running = True
         self.waiting = False
+        self.confirm_question = None
+
         self.current_scene = None
         self.scene_before_action = None
 
@@ -75,9 +118,7 @@ class InteractionController(object):
                 question_arg = self.followup_question_dict[question]
                 if question_arg["key"] == key:
                     if event.type == ActionHistoryEvent.FINISHED_SUCCESS:
-                        self.set_new_training_example(question_arg["state"],
-                                                      self.str_to_MDPAction(question_arg["action"]),
-                                                      True)
+                        self.set_new_training_example(question_arg["state"], question_arg["action"], True)
                     question.remove()
                     del self.followup_question_dict[question]
 
@@ -134,7 +175,10 @@ class InteractionController(object):
     def str_to_MDPAction(self, string):
         action = MDPAction()
         action.type = string.split("(")[0]
-        action.parameters = string.split("(")[1][:-1].split(", ")
+        if len(string.split("(")[1][:-1]) > 0:
+            action.parameters = string.split("(")[1][:-1].split(", ")
+        else:
+            action.parameters = []
         return action
 
     def run_action(self, action):
@@ -181,20 +225,25 @@ class InteractionController(object):
                     for question in self.feedback_question_dict:
                         question.remove()
                     self.feedback_question_dict = {}
+                    self.wait_question = None
+                    if self.confirm_question is not None:
+                        self.confirm_question.remove()
+                        self.confirm_question = None
 
                 else:
 
                     for question in self.followup_question_dict.keys():
                         if question.answered():
-                            followup_question = self.followup_question_dict[question]
+                            followup_question_arg = self.followup_question_dict[question]
                             del self.followup_question_dict[question]
                             if question == self.wait_question:
                                 self.wait_question = None
+
                             question.remove()
                             feedback_question = self.web_asker.ask(
-                                followup_question["question"], followup_question["answers"])
+                                followup_question_arg["question"], followup_question_arg["answers"])
                             self.feedback_question_dict[feedback_question] = {
-                                "state": followup_question["state"]}
+                                "state": followup_question_arg["state"]}
 
                     for question in self.feedback_question_dict.keys():
                         if question.answered():
@@ -233,13 +282,25 @@ class InteractionController(object):
                                     self.wait_question.remove()
                                     del self.followup_question_dict[self.wait_question]
 
+                        if self.confirm_question is not None:
+                            self.confirm_question.update()
+                            if self.confirm_question.is_answered():
+                                correct_action = self.str_to_MDPAction(self.confirm_question.get_correct_action())
+                                if (correct_action.type != "wait" or
+                                        self.current_scene.predicates == self.scene_before_action.predicates):
+                                    self.run_action(correct_action)
+                                self.set_new_training_example(self.confirm_question.get_state(), correct_action, True)
+                                self.confirm_question = None
+                            self.interaction_loop_rate.sleep()
+                            continue
+
                         prediction = self.predict()
                         str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
+                        predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
+                        action_str = self.MDPAction_to_str(predicted_action)
 
                         if prediction.confidence == prediction.SURE:
-                            predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
 
-                            action_str = self.MDPAction_to_str(predicted_action)
                             question = self.web_asker.ask(
                                "I'm doing {} :".format(action_str),
                                ["Don't do that"])
@@ -253,51 +314,23 @@ class InteractionController(object):
                             else:
                                 key = (predicted_action.type,
                                        tuple(predicted_action.parameters))
+
                             self.followup_question_dict[question] = {
                                 "question": "I did {}, What should have I done?".format(action_str),
                                 "answers": str_action_list,
                                 "state": self.current_scene,
-                                "action": action_str,
+                                "action": predicted_action,
                                 "key": key
                             }
 
-                            self.logs.append({'timestamp': rospy.get_time(),
-                                              'type': predicted_action.type,
-                                              'parameters': predicted_action.parameters})
+                            self.run_action(predicted_action)
 
-                            self.run_action(np.random.choice(prediction.actions, p=prediction.probas))
-
-
-                                # if question.answered():
-                                #     question.remove()
-                                #     correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                                #         "What should have been done ?", str_action_list).get_answer())
-                                #     self.set_new_training_example(self.scene_before_action, correct_action, True)
-                                #     self.set_new_training_example(self.scene_before_action, predicted_action, False)
-                                # else:
-                                #     question.remove()
-                                #     self.set_new_training_example(self.scene_before_action, predicted_action, True)
-                                # self.set_new_training_example(self.scene_before_action, predicted_action, True)
-
-                        # elif prediction.confidence == prediction.CONFIRM:
-                        #     predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-
-                        #     question = self.web_asker.ask(
-                        #         "Can I do {} :".format(self.MDPAction_to_str(predicted_action)),
-                        #         ["Ok", "Don't do that"])
-                        #     if question.get_answer() == "Ok":
-                        #         correct_action = predicted_action
-                        #     else:
-                        #         self.set_new_training_example(self.current_scene, predicted_action, False)
-                        #         correct_action = self.str_to_MDPAction(self.web_asker.ask(
-                        #             "Pick an action :", str_action_list).get_answer())
-
-                        #     self.logs.append({'timestamp': rospy.get_time(),
-                        #                       'type': correct_action.type,
-                        #                       'parameters': correct_action.parameters})
-                        #     self.run_action(correct_action)
-
-                        #     self.set_new_training_example(self.scene_before_action, correct_action, True)
+                        elif prediction.confidence == prediction.CONFIRM:
+                            if action_str == "wait()" and len(str_action_list) == 1:
+                                self.run_action(self.str_to_MDPAction(action_str))
+                            else:
+                                self.confirm_question = ConfirmQuestion(self.web_asker, action_str,
+                                                                        str_action_list, self.current_scene)
 
                         # elif prediction.confidence == prediction.NO_IDEA:
                         #     correct_action = self.str_to_MDPAction(self.web_asker.ask(
