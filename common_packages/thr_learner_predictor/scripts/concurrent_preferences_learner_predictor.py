@@ -3,6 +3,8 @@
 import rospy
 import rospkg
 import random
+import numpy as np
+import os
 
 from RBLT.domains import domain_dict
 # from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
@@ -15,16 +17,19 @@ from thr_coop_assembly.msg import MDPAction
 
 class Server(object):
     def __init__(self):
-        self.sequence = 1  # ID of output actions
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
         self.rospack = rospkg.RosPack()
+
+        self.tmp_dir_name = "/tmp/"
+        self.i_tree = 0
 
         self.dataset = []
 
         self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
         self.reward = self.domain.rewards["reward_built"]
-        self.q_function = self.reward.get_task_q_fun_gen()
+        self.task_q_fun = self.reward.get_task_q_fun_gen()
+        self.learned_q_fun = self.task_q_fun
 
         # self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
         # self.algorithm.load()
@@ -37,12 +42,30 @@ class Server(object):
             pass
 
         elif request.command == StartStopEpisodeRequest.STOP:
-            # for state, action in self.dataset:
-            #     print state
-            #     print action
-            pass
+            self.learn_preferences()
 
         return StartStopEpisodeResponse()
+
+    def learn_preferences(self):
+        rospy.loginfo("Start learning")
+        input_list = []
+        target_list = []
+        for state, action_expert in self.dataset:
+            for action in self.domain.get_actions(state):
+                input_list.append((state, action))
+                if action == action_expert:
+                    target_list.append(0. + np.random.normal(0, 0.000001))
+                else:
+                    target_list.append(-1. + np.random.normal(0, 0.000001))
+
+        tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
+                                                 "tree_q{}".format(self.i_tree)), maxdepth=6)
+        # shutil.rmtree(os.path.join(tmp_dir_name, "tree_q{}".format(i_tree)))
+        human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
+        self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
+
+        self.i_tree += 1
+        rospy.loginfo("Learning done")
 
     def relational_action_to_MDPAction(self, action):
         if isinstance(action, tuple):
@@ -52,15 +75,12 @@ class Server(object):
             return MDPAction(type=action.replace("activate", "start"),
                              parameters=[])
 
-    def string_to_action(self, string):
-        string = string.replace("(", "+").replace(",", "+").replace(")", "")
-        if string[-1] == "+":
-            string = string[:-1]
-
-        if "+" in string:
-            return tuple(string.split("+"))
+    def MDPAction_to_relational_action(self, action):
+        if len(action.parameters) == 0:
+            return action.type.replace("start", "activate")
         else:
-            return string
+            return tuple([action.type.replace("start", "activate")] +
+                         [c.replace("/toolbox/", "toolbox_") for c in action.parameters])
 
     def scene_state_to_state(self, scene_state):
         slot_avaiable = {
@@ -117,11 +137,14 @@ class Server(object):
         :return: an object of type GetNextActionResponse
         """
 
-        state = self.scene_state_to_state(get_next_action_req.scene_state)
-        state = self.domain.state_to_int(state)
-        # action_list = [self.domain.int_to_action(a) for a in self.domain.get_actions(state)]
+        state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
         action_list = self.domain.get_actions(state)
-        quality_list = [self.q_function(state, a) for a in action_list]
+        quality_list = [self.learned_q_fun(state, a) for a in action_list]
+
+        print self.domain.int_to_state(state)
+        print [self.domain.int_to_action(a) for a in action_list]
+        print quality_list
+
         max_quality = max(quality_list)
 
         best_action_list = [a for a, q in zip(action_list, quality_list) if q == max_quality]
@@ -132,10 +155,10 @@ class Server(object):
             self.domain.int_to_action(random.choice(best_robot_action_list)))
 
         resp = GetNextActionResponse()
-        resp.confidence = resp.SURE
+        resp.confidence = resp.CONFIRM
         resp.probas = []
 
-        for candidate_action in action_list:
+        for candidate_action in self.domain.filter_robot_actions(action_list):
             resp.actions.append(self.relational_action_to_MDPAction(
                 self.domain.int_to_action(candidate_action)))
 
@@ -159,8 +182,8 @@ class Server(object):
                                                                     str(new_training_ex.action.parameters),
                                                                     "good" if new_training_ex.good else "bad"))
 
-        state = self.scene_state_to_state(new_training_ex.scene_state)
-        action = self.MDPAction_to_relational_action(new_training_ex.action)
+        state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
+        action = self.domain.action_to_int(self.MDPAction_to_relational_action(new_training_ex.action))
         self.dataset.append((state, action))
 
         return SetNewTrainingExampleResponse()
