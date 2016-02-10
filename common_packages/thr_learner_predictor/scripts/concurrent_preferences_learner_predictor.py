@@ -2,9 +2,10 @@
 
 import rospy
 import rospkg
+import random
 
 from RBLT.domains import domain_dict
-from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
+# from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
 
 from thr_coop_assembly.srv import GetNextAction, GetNextActionResponse,\
     StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
@@ -22,8 +23,11 @@ class Server(object):
         self.dataset = []
 
         self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
-        self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
-        self.algorithm.load()
+        self.reward = self.domain.rewards["reward_built"]
+        self.q_function = self.reward.get_task_q_fun_gen()
+
+        # self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
+        # self.algorithm.load()
 
         self.start_stop_service_name = '/thr/learrner_predictor/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
@@ -33,9 +37,10 @@ class Server(object):
             pass
 
         elif request.command == StartStopEpisodeRequest.STOP:
-            for state, action in self.dataset:
-                print state
-                print action
+            # for state, action in self.dataset:
+            #     print state
+            #     print action
+            pass
 
         return StartStopEpisodeResponse()
 
@@ -69,8 +74,23 @@ class Server(object):
         return len([p for p in predictate_list if
                     p.type == 'busy' and arm in p.parameters]) == 1
 
+    def check_is_holding(self, predicate_list):
+        return len([p for p in predicate_list if p.type == "hold"]) == 1
+
     def MDPAction_to_relational_action(self, action):
-        return tuple([action.type] + action.parameters)
+        if len(action.parameters) == 0:
+            return action.type.replace("start", "activate")
+        else:
+            return tuple([action.type.replace("start", "activate")] +
+                         [c.replace("/toolbox/", "toolbox_") for c in action.parameters])
+
+    def relational_action_to_MDPAction(self, action):
+        if isinstance(action, tuple):
+            return MDPAction(type=action[0].replace("activate", "start"),
+                             parameters=[c.replace("toolbox_", "/toolbox/") for c in action[1:]])
+        else:
+            return MDPAction(type=action.replace("activate", "start"),
+                             parameters=[])
 
     def string_to_action(self, string):
         string = string.replace("(", "+").replace(",", "+").replace(")", "")
@@ -83,6 +103,15 @@ class Server(object):
             return string
 
     def scene_state_to_state(self, scene_state):
+        slot_avaiable = {
+            "toolbox_handle": 0,
+            "toolbox_side_right": 1,
+            "toolbox_side_left": 1,
+            "toolbox_side_front": 2,
+            "toolbox_side_back": 2,
+        }
+        slot_cor = ["no_slot", "one_slot", "two_slot"]
+
         pred_list = scene_state.predicates
 
         pred_robot_list = [
@@ -94,9 +123,25 @@ class Server(object):
             pred_domain_list.append(pred)
             if pred[0] == "positioned":
                 pred_domain_list.append(("occupied_slot", pred[1], pred[3]))
+                slot_avaiable[pred[2]] -= 1
+
+            if pred[0] == "attached":
+                pred_domain_list.append(("attached_slot", pred[1], pred[3]))
             for obj in ['toolbox_handle', 'toolbox_side_right', 'toolbox_side_left',
                         'toolbox_side_front', 'toolbox_side_back']:
                 pred_domain_list.append(("object", obj))
+
+            pred_domain_list.append(("object1", "toolbox_handle"))
+            pred_domain_list.append(("object2", "toolbox_side_right"))
+            pred_domain_list.append(("object2", "toolbox_side_left"))
+            pred_domain_list.append(("object3", "toolbox_side_front"))
+            pred_domain_list.append(("object3", "toolbox_side_back"))
+
+            for obj in slot_avaiable:
+                pred_domain_list.append((slot_cor[slot_avaiable[obj]], obj))
+
+            pred_domain_list.append(("no_slot", "toolbox_handle"))
+
             for pose in ["0", "1"]:
                 pred_domain_list.append(("holding_position", pose))
             if len([p for p in pred_robot_list if p[0] == "picked"]) == 0:
@@ -112,336 +157,27 @@ class Server(object):
         :return: an object of type GetNextActionResponse
         """
 
-        resp = GetNextActionResponse()
-        pred_list = get_next_action_req.scene_state.predicates
+        state = self.scene_state_to_state(get_next_action_req.scene_state)
+        state = self.domain.state_to_int(state)
+        # action_list = [self.domain.int_to_action(a) for a in self.domain.get_actions(state)]
+        action_list = self.domain.get_actions(state)
+        quality_list = [self.q_function(state, a) for a in action_list]
+        max_quality = max(quality_list)
 
-        pred_robot_list = [tuple([str(pred.type)] + [str(s).replace("/toolbox/", "toolbox_") for s in pred.parameters])
-                           for pred in pred_list]
-
-        pred_domain_list = []
-        for pred in pred_robot_list:
-            pred_domain_list.append(pred)
-            if pred[0] == "positioned":
-                pred_domain_list.append(("occupied_slot", pred[1], pred[3]))
-            for obj in ['toolbox_handle', 'toolbox_side_right', 'toolbox_side_left',
-                        'toolbox_side_front', 'toolbox_side_back']:
-                pred_domain_list.append(("object", obj))
-            for pose in ["0", "1"]:
-                pred_domain_list.append(("holding_position", pose))
-            if len([p for p in pred_robot_list if p[0] == "picked"]) == 0:
-                pred_domain_list.append(("free", "left"))
-
-        state = self.domain.state_to_int(("state", frozenset(pred_domain_list)))
-        action_list = [self.domain.int_to_action(a) for a in self.domain.get_actions(state)]
-
-        resp = GetNextActionResponse()
-        obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left',
-                    '/toolbox/side_front', '/toolbox/side_back']
-        pred_list = get_next_action_req.scene_state.predicates
-        in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
-
-        action = MDPAction()
-        action.id = self.sequence
-
-        if len(in_hws_list) == 0:
-            if not self.check_busy_pred(pred_list, "left"):
-                if not self.check_picked_pred(pred_list, '/toolbox/handle'):
-                    action.parameters = ['/toolbox/handle']
-                    action.type = 'start_pick'
-                elif not self.check_is_holding(pred_list):
-                    action.parameters = ['/toolbox/handle']
-                    action.type = 'start_give'
-                else:
-                    action.type = 'wait'
-
-            elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                action.type = 'start_go_home_right'
-
-            else:
-                action.type = 'wait'
-
-        elif len(in_hws_list) == 1:
-            if not self.check_busy_pred(pred_list, "left"):
-                if not self.check_picked_pred(pred_list, '/toolbox/side_right'):
-                    action.type = 'start_pick'
-                    action.parameters = ['/toolbox/side_right']
-                elif not self.check_is_holding(pred_list):
-                    action.type = 'start_give'
-                    action.parameters = ['/toolbox/side_right']
-                else:
-                    action.type = 'wait'
-
-            elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                action.type = 'start_go_home_right'
-
-            else:
-                action.type = 'wait'
-
-        elif len(in_hws_list) == 2:
-            if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_right'):
-                if not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-
-                elif not self.check_busy_pred(pred_list, "left"):
-                    if not self.check_picked_pred(pred_list, '/toolbox/side_left'):
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_left']
-                    elif not self.check_is_holding(pred_list):
-                        action.type = 'start_give'
-                        action.parameters = ['/toolbox/side_left']
-                    else:
-                        action.type = 'wait'
-                else:
-                    action.type = 'wait'
-
-            elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 0):
-                if not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '0']
-
-                elif not self.check_picked_pred(pred_list, '/toolbox/side_left') and not self.check_busy_pred(pred_list, "left"):
-                    action.type = 'start_pick'
-                    action.parameters = ['/toolbox/side_left']
-
-                else:
-                    action.type = 'wait'
-
-            elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_right', 1):
-                if not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '1']
-
-                elif not self.check_picked_pred(pred_list, '/toolbox/side_left') and not self.check_busy_pred(pred_list, "left"):
-                    action.type = 'start_pick'
-                    action.parameters = ['/toolbox/side_left']
-
-                else:
-                    action.type = 'wait'
-            else:
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                else:
-                    action.type = 'wait'
-        elif len(in_hws_list) == 3:
-            if self.check_attached_pred(pred_list, '/toolbox/handle', '/toolbox/side_left'):
-                if not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                elif not self.check_busy_pred(pred_list, "left"):
-                    if not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_front']
-                    elif not self.check_is_holding(pred_list):
-                        action.type = 'start_give'
-                        action.parameters = ['/toolbox/side_front']
-                    else:
-                        action.type = 'wait'
-                else:
-                    action.type = 'wait'
-
-            elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 0):
-                if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                    action.type = 'start_pick'
-                    action.parameters = ['/toolbox/side_front']
-
-                elif not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '0']
-                else:
-                    action.type = 'wait'
-
-            elif self.check_positioned_pred(pred_list, '/toolbox/handle', '/toolbox/side_left', 1):
-                if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_front'):
-                    action.type = 'start_pick'
-                    action.parameters = ['/toolbox/side_front']
-
-                elif not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/handle', '1']
-                else:
-                    action.type = 'wait'
-
-            else:
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                else:
-                    action.type = 'wait'
-
-        elif len(in_hws_list) == 4:
-            if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front') and
-                self.check_attached_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front')):
-
-                if not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                    
-
-                elif not self.check_busy_pred(pred_list, "left"):
-                    if not self.check_picked_pred(pred_list, '/toolbox/side_back'):
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_back']
-                    elif not self.check_is_holding(pred_list):
-                        action.type = 'start_give'
-                        action.parameters = ['/toolbox/side_back']
-                    else:
-                        action.type = 'wait'
-                else:
-                    action.type = 'wait'
-                    
-
-   
-            elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0) and
-                self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front', 1)):
-
-
-                if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 0):
-                    if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                        action.type = 'start_go_home_left'
-                        
-
-                    elif not self.check_busy_pred(pred_list, "right"):
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '0']
-                        
-
-                    else:
-                        action.type = 'wait'
-                        
-                else:
-                    if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_back'):
-                        rospy.logerr("1")
-                        action.type = 'start_pick'
-                        action.parameters = ['/toolbox/side_back']
-                        
-
-                    elif not self.check_busy_pred(pred_list, "right"):
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '1']
-                        
-
-                    else:
-                        action.type = 'wait'
-                        
-
-            elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1) and
-                self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_front', 0)):
-
-                if not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_front', 1):
-                    if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                        action.type = 'start_go_home_left'
-                        
-
-                    elif not self.check_busy_pred(pred_list, "right"):
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_left', '1']
-                        
-                    else:
-                        action.type = 'wait'
-                        
-                else:
-                    if not self.check_busy_pred(pred_list, "left") and not self.check_picked_pred(pred_list, '/toolbox/side_back'):
-                        action.type = 'start_pick'
-                        rospy.logerr("2")
-                        action.parameters = ['/toolbox/side_back']
-                        
-
-                    elif not self.check_busy_pred(pred_list, "right"):
-                        action.type = 'start_hold'
-                        action.parameters = ['/toolbox/side_right', '0']
-                        
-                    else:
-                        action.type = 'wait'
-                        
-
-            else:
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                    
-                elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                    
-                else:
-                    action.type = 'wait'
-                    
-
-        elif len(in_hws_list) == 5:
-            if (self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back') and
-                self.check_attached_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back')):
-
-                if not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                    
-                elif not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                    
-                else:
-                    action.type = 'wait'
-                    
-   
-            elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0) and
-                self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 1)):
-
-
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                    
-
-                elif not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 0) and not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/side_left', '0']
-                    
-                elif not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/side_right', '1']
-                    
-                else:
-                    action.type = 'wait'
-                    
-
-            elif (self.check_positioned_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1) and
-                self.check_positioned_pred(pred_list, '/toolbox/side_right', '/toolbox/side_back', 0)):
-
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action.type = 'start_go_home_left'
-                    
-
-                elif not self.check_attached_pred(pred_list, '/toolbox/side_left', '/toolbox/side_back', 1) and not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/side_left', '1']
-                    
-                elif not self.check_busy_pred(pred_list, "right"):
-                    action.type = 'start_hold'
-                    action.parameters = ['/toolbox/side_right', '0']
-                    
-                else:
-                    action.type = 'wait'
-                    
-
-            else:
-                if not self.check_busy_pred(pred_list, "left") and not self.check_at_home_pred(pred_list, "left"):
-                    action = MDPAction()
-                    action.type = 'start_go_home_left'
-                    
-                elif not self.check_busy_pred(pred_list, "right") and not self.check_at_home_pred(pred_list, "right"):
-                    action.type = 'start_go_home_right'
-                    
-                else:
-                    action.type = 'wait'
+        best_action_list = [a for a, q in zip(action_list, quality_list) if q == max_quality]
+        best_robot_action_list = self.domain.filter_robot_actions(best_action_list)
+        if len(best_robot_action_list) == 0:
+            best_robot_action_list.append(self.domain.action_to_int("wait"))
+        action = self.relational_action_to_MDPAction(
+            self.domain.int_to_action(random.choice(best_robot_action_list)))
 
         resp = GetNextActionResponse()
         resp.confidence = resp.SURE
         resp.probas = []
 
         for candidate_action in action_list:
-            if isinstance(candidate_action, tuple):
-                resp.actions.append(MDPAction(
-                    type=candidate_action[0].replace("activate", "start"),
-                    parameters=[c.replace("toolbox_", "/toolbox/") for c in candidate_action[1:]]))
-            else:
-                resp.actions.append(MDPAction(type=candidate_action.replace("activate", "start"),
-                                              parameters=[]))
+            resp.actions.append(self.relational_action_to_MDPAction(
+                self.domain.int_to_action(candidate_action)))
 
             if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
                 resp.probas.append(1.)
