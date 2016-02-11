@@ -30,7 +30,7 @@ class ConcurrentSceneStateManager(object):
         # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HOLDED, PICKED
         self.at_home = {'left': True, 'right': True}
         self.busy = {'left': False, 'right': False}
-        self.holded = []
+        self.held = []
         self.picked = []
         self.activity = {'left': None, 'right': None}
 
@@ -66,7 +66,13 @@ class ConcurrentSceneStateManager(object):
                 self.attached = []
                 self.attaching_stamps = {}
                 self.persistent_predicates = []
-            self.running = True
+                self.picked = []
+                self.held = []
+                self.at_home['left'] = True
+                self.at_home['right'] = True
+                self.busy['left'] = False
+                self.busy['right'] = False
+                self.running = True
 
         elif request.command == StartStopEpisodeRequest.STOP:
             self.running = False
@@ -113,11 +119,11 @@ class ConcurrentSceneStateManager(object):
 
                     # Listening action events for predicates PICKED + HOLDED
                     if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
-                        self.holded = msg.action.parameters
+                        self.held = msg.action.parameters
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='pick':
                         self.picked = msg.action.parameters
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='hold':
-                        self.holded = []
+                        self.held = []
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='give':
                         self.picked = []
 
@@ -129,7 +135,7 @@ class ConcurrentSceneStateManager(object):
 
     def pred_holded(self, obj):
         #with self.history_lock:
-            return obj in self.holded
+            return obj in self.held
 
     def pred_picked(self, obj):
         #with self.history_lock:
