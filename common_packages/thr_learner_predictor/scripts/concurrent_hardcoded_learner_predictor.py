@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+from thr_coop_assembly.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from thr_coop_assembly.srv import GetNextAction, GetNextActionRequest, GetNextActionResponse
 from thr_coop_assembly.srv import SetNewTrainingExample, SetNewTrainingExampleRequest, SetNewTrainingExampleResponse
 from thr_coop_assembly.msg import MDPAction, Predicate
@@ -12,7 +13,16 @@ class Server(object):
         self.sequence = 1  # ID of output actions
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
+        self.start_stop_service_name = '/thr/learner_predictor/start_stop'
+        rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
 
+    def cb_start_stop(self, request):
+        if request.command == StartStopEpisodeRequest.START:
+            pass
+        elif request.command == StartStopEpisodeRequest.STOP:
+            pass
+
+        return StartStopEpisodeResponse()
     def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
         return len([p for p in predictate_list if
             p.type == 'attached' and obj1 in p.parameters and obj2 in p.parameters and

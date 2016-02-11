@@ -205,7 +205,7 @@ class InteractionController(object):
             return MDPAction(type='wait')
 
     def start_or_stop_episode(self, start=True):
-        for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server', 'learrner_predictor']:
+        for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
             rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(

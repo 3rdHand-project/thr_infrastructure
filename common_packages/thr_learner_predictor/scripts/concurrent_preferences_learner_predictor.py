@@ -34,7 +34,7 @@ class Server(object):
         # self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
         # self.algorithm.load()
 
-        self.start_stop_service_name = '/thr/learrner_predictor/start_stop'
+        self.start_stop_service_name = '/thr/learner_predictor/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
 
     def cb_start_stop(self, request):
