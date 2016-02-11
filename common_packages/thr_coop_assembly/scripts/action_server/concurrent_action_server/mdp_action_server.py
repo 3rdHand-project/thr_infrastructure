@@ -48,9 +48,10 @@ class MDPActionServer:
             if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
                 self.clients['right'].cancel_all_goals()
             # Execute the go_homes and wait for them before stopping
-            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_left')))
-            self.execute(mdp_goal=RunMDPActionGoal(action=MDPAction(type='start_go_home_right')))
-            while not self.clients['right'].get_state() == GoalStatus.ACTIVE and not self.clients['left'].get_state() == GoalStatus.ACTIVE:
+            self.execute(RunMDPActionGoal(action=MDPAction(type='start_go_home_left')))
+            self.execute(RunMDPActionGoal(action=MDPAction(type='start_go_home_right')))
+            rospy.sleep(0.1)  # Wait for action to start before reading get_state()
+            while self.clients['right'].get_state() == GoalStatus.ACTIVE or self.clients['left'].get_state() == GoalStatus.ACTIVE:
                 rospy.sleep(0.1)
             rospy.set_param('/thr/action_server/stopped', True)
         return StartStopEpisodeResponse()
@@ -61,31 +62,27 @@ class MDPActionServer:
         :param mdp_goal:
         """
         if not rospy.get_param('/thr/action_server/stopped'):
-            if mdp_goal.action.type == 'wait':
-                self.execute_wait()
+            robot_goal = RunRobotActionGoal()
+            try:
+                robot_goal.action.type = self.mapping[mdp_goal.action.type]['type']
+                client = self.mapping[mdp_goal.action.type]['client']
+            except KeyError, k:
+                rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
+                self.server.set_aborted()
             else:
-                robot_goal = RunRobotActionGoal()
-                try:
-                    robot_goal.action.type = self.mapping[mdp_goal.action.type]['type']
-                    client = self.mapping[mdp_goal.action.type]['client']
-                except KeyError, k:
-                    rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
-                    self.server.set_aborted()
-                else:
-                    robot_goal.action.id = self.sequence
-                    self.sequence += 1
-                    robot_goal.action.parameters = mdp_goal.action.parameters
-                    self.clients[client].send_goal(robot_goal)
-                    self.current_actions[client] = robot_goal.action
+                robot_goal.action.id = self.sequence
+                robot_goal.action.parameters = mdp_goal.action.parameters
+                self.clients[client].send_goal(robot_goal)
+                self.current_actions[client] = robot_goal.action
 
-                    # Publish the event to the action history topic
-                    event = ActionHistoryEvent()
-                    event.header.stamp = rospy.Time.now()
-                    event.type = ActionHistoryEvent.STARTING
-                    event.action = robot_goal.action
-                    event.side = client
-                    self.action_history.publish(event)
-                    self.server.set_succeeded()
+                # Publish the event to the action history topic
+                event = ActionHistoryEvent()
+                event.header.stamp = rospy.Time.now()
+                event.type = ActionHistoryEvent.STARTING
+                event.action = robot_goal.action
+                event.side = client
+                self.action_history.publish(event)
+                self.server.set_succeeded()
 
     def should_interrupt(self):
         """
