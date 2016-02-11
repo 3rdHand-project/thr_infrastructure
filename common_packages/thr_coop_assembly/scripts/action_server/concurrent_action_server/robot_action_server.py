@@ -73,7 +73,7 @@ class RobotActionServer:
         try:
             assert self.abilities[goal.action.type] == self.side
             action = self.actions[goal.action.type]
-        except KeyError, AssertionError:
+        except KeyError or AssertionError:
             rospy.logwarn('{} arm is not capable of action {}'.format(self.side, goal.action.type))
             self.server.set_aborted()
         else:
