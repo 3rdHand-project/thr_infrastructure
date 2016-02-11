@@ -1,12 +1,14 @@
+<?xml version="1.0"?>
 <launch>
     <arg name="type" /> <!-- concurrent or sequential -->
-    <arg name="scene" default="romeo"/>
+    <arg name="scene" default="toolbox"/>
     <arg name="ip" /> <!-- IP of the VRPN server -->
     <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
     <arg name="name" default="none" /> <!-- Name of log files -->
     <arg name="display" default="debug" /> <!-- debug or face display -->
-
+    <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
+    
     <rosparam param="/thr/logs_name" subst_value="True">$(arg name)</rosparam>
     <rosparam param="/thr/display" subst_value="True">$(arg display)</rosparam>
     <rosparam param="/thr/paused">False</rosparam>
@@ -18,7 +20,9 @@
 	  <arg name="type" value="$(arg type)"/>
     </include>
        
-    <include file="$(find thr_coop_assembly)/launch/action_server_$(arg type).launch" />
+    <include file="$(find thr_coop_assembly)/launch/action_server_$(arg type).launch">
+      <arg name="gui" value="$(arg gui)"/>
+    </include>
 
     <!--<node pkg="google_tts_ros" name="text_to_speech" type="say.py" output="log"/>-->
     <node pkg="thr_coop_assembly" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
