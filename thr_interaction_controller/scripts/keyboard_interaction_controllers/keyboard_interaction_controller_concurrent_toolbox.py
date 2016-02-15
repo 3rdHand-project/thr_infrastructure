@@ -28,6 +28,16 @@ class InteractionController(object):
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
+        self.start_or_stop_episode(True)  # Start a new (and unique) episode
+
+    def start_or_stop_episode(self, start=True):
+        for node in ['scene_state_manager', 'action_server']:
+            url = '/thr/{}/start_stop'.format(node)
+            rospy.wait_for_service(url)
+            rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
+                command=StartStopEpisodeRequest.START if start else
+                StartStopEpisodeRequest.STOP))
+
     ################################################# SERVICE CALLERS #################################################
     def update_scene(self):
         request = GetSceneStateRequest()
