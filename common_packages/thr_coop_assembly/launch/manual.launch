@@ -22,6 +22,7 @@
        
     <include file="$(find thr_coop_assembly)/launch/action_server_$(arg type).launch">
       <arg name="gui" value="$(arg gui)"/>
+      <arg name="stopped" value="false"/>
     </include>
 
     <!--<node pkg="google_tts_ros" name="text_to_speech" type="say.py" output="log"/>-->

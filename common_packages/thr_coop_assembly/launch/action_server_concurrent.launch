@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
+    <arg name="stopped" default="true" />
 
-    <rosparam param="/thr/action_server/stopped">True</rosparam>
+    <rosparam param="/thr/action_server/stopped" subst_value="True">$(arg stopped)</rosparam>
     <include file="$(find baxter_commander)/launch/commander.launch">
       <arg name="gui" value="$(arg gui)"/>
     </include>
