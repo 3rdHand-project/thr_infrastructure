@@ -263,8 +263,6 @@ class InteractionController(object):
                     start_stop_question.remove()
                     pause_unpause_question.remove()
                     is_running = False
-                    self.start_or_stop_episode(False)
-                    start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30)
 
                     if self.confirm_question is not None:
                         self.confirm_question.remove()
@@ -272,6 +270,9 @@ class InteractionController(object):
                     for question in self.feedback_question_list:
                         question.remove()
                     self.feedback_question_list = []
+
+                    self.start_or_stop_episode(False)
+                    start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30)
 
                 else:
 
