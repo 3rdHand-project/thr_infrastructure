@@ -1,0 +1,13 @@
+# GetNextAction: Ask to the predictor what is the next action to execute
+
+# The current state of the scene
+SceneState scene_state
+---
+# Predictor returns the command to execute and its parameters
+uint8 NO_IDEA = 0
+uint8 CONFIRM = 1
+uint8 SURE = 2
+
+uint8 confidence
+MDPAction[] actions
+float64[] probas

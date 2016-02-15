@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
+    <arg name="stopped" default="true" />
+
+    <rosparam param="/thr/action_server/stopped" subst_value="True">$(arg stopped)</rosparam>
+    <include file="$(find baxter_commander)/launch/commander.launch">
+      <arg name="gui" value="$(arg gui)"/>
+    </include>
+    <node pkg="thr_action_server" name="mdp_action_server" type="mdp_action_server.py" output="screen"/>
+    <node pkg="thr_action_server" name="robot_action_server_right" type="robot_action_server.py" output="screen" args="right"/>
+    <node pkg="thr_action_server" name="robot_action_server_left" type="robot_action_server.py" output="screen" args="left"/>
+</launch>

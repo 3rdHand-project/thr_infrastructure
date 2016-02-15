@@ -1,5 +1,0 @@
-# GetSceneState requests the perception to return the return scene state
-
-# No input parameter
----
-SceneState state

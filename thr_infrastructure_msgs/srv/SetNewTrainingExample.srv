@@ -1,0 +1,9 @@
+# SetNewTrainingExample: Updates the learner with a reward
+
+# The state of the scene and command (un)validated
+SceneState scene_state
+MDPAction action
+bool good
+---
+# No return parameter
+

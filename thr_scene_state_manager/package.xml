@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package>
+  <name>thr_scene_state_manager</name>
+  <version>0.0.0</version>
+  <description>Scene State Managers computing the scene state and current human activities in the form of predicates and serving the state to other nodes</description>
+
+  <maintainer email="yoan.mollard@inria.fr">Yoan Mollard</maintainer>
+  <license>GPL3</license>
+  
+  <build_depend>thr_scenes</build_depend>
+  <run_depend>thr_scenes</run_depend>
+  <build_depend>thr_infrastructure_msgs</build_depend>
+  <run_depend>thr_infrastructure_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>optitrack_publisher</run_depend>
+  <run_depend>thr_action_server</run_depend>  <!-- To know abilities of each arm -->
+  <buildtool_depend>catkin</buildtool_depend>
+ 
+  <export>
+  </export>
+</package>

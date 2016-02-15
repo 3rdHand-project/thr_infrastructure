@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="type" /> <!-- concurrent or sequential -->
+    <arg name="scene" default="toolbox"/>
+    <arg name="ip" /> <!-- IP of the VRPN server -->
+    <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
+    <arg name="policy" default="hardcoded" /> <!-- Policy values: hardcoded, wait, normal -->
+    <arg name="name" default="none" /> <!-- Name of log files -->
+    <arg name="display" default="debug" /> <!-- debug or face display -->
+    <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
+
+    <rosparam param="/thr/logs_name" subst_value="True">$(arg name)</rosparam>
+    <rosparam param="/thr/display" subst_value="True">$(arg display)</rosparam>
+    <rosparam param="/thr/paused">False</rosparam>
+    
+    <include file="$(find thr_scene_state_manager)/launch/perception.launch" >
+      <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
+      <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
+      <arg name="scene" value="$(arg scene)"/>
+	  <arg name="type" value="$(arg type)"/>
+    </include>
+       
+    <include file="$(find thr_action_server)/launch/action_server_$(arg type).launch">
+      <arg name="gui" value="$(arg gui)"/>
+    </include>
+
+    <node pkg="thr_display" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
+    <node pkg="thr_learner_predictor" name="$(arg type)_learner_predictor" type="$(arg type)_$(arg policy)_learner_predictor.py" output="screen"/>
+    <node pkg="thr_interaction_controller" name="interaction_controller" type="interaction_controller.py" output="screen"/>
+</launch>

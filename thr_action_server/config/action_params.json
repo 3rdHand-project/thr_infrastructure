@@ -1,0 +1,34 @@
+{
+    "sleep_step": 0.1,
+    "short_sleep_step": 0.01,
+    "give": {
+        "sphere_radius": 0.33,
+        "releasing_disturbance": 0.025,
+        "inter_goal_sleep": 0.4
+    },
+    "bring": {
+        "sphere_radius": 0.3,
+        "inter_goal_sleep": 0.4
+    },
+    "place": {
+        "sphere_radius": 0.015,
+        "inter_goal_sleep": 0.4
+    },
+    "pick": {
+        "approach_cartesian_dist": 0.0125
+    },
+    "hold": {
+        "sphere_radius": 0.8,
+        "approach_cartesian_dist": 0.01,
+        "approach_angular_dist": 0.09 
+    },
+    "grasp": {
+        "sphere_radius": 0.2,
+        "approach_cartesian_dist": 0.01,
+        "approach_angular_dist": 0.09 
+    },
+    "limits": { "kv": {"right_s0":0.65, "right_s1":0.65, "right_e0":0.65, "right_e1":0.65, "right_w0":0.65, "right_w1":0.65, "right_w2":1.0,
+                       "left_s0":0.65, "left_s1":0.65, "left_e0":0.65, "left_e1":0.65, "left_w0":0.65, "left_w1":0.65, "left_w2":1.0},
+                "ka": {"right_s0":1.2, "right_s1":1.2, "right_e0":1.2, "right_e1":1.2, "right_w0":1.2, "right_w1":1.2, "right_w2":1.0,
+                       "left_s0":1.2, "left_s1":1.2, "left_e0":1.2, "left_e1":1.2, "left_w0":1.2, "left_w1":1.2, "left_w2":1.0}}
+}

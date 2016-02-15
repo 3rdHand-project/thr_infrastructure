@@ -1,0 +1,13 @@
+{
+    "start_give": {"client": "left", "type":"give"},
+    "start_hold": {"client": "right", "type":"hold"},
+    "start_grasp": {"client": "right", "type":"grasp"},
+    "start_pick": {"client": "left", "type":"pick"},
+    "start_go_home_left": {"client": "left", "type":"go_home_left"},
+    "start_go_home_right": {"client": "right", "type":"go_home_right"},
+    "start_place_left": {"client": "left", "type":"place_left"},
+    "start_place_right": {"client": "right", "type":"place_right"},
+    "start_wait": {"client": "left", "type":"wait"},
+    "start_bring_left": {"client": "left", "type":"bring_left"},
+    "start_bring_right": {"client": "right", "type":"bring_right"}
+}
