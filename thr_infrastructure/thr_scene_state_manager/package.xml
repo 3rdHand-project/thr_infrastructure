@@ -1,11 +1,10 @@
 <?xml version="1.0"?>
 <package>
-  <name>thr_learner_predictor</name>
+  <name>thr_scene_state_manager</name>
   <version>0.0.0</version>
-  <description>Activity Learner and Predictor</description>
+  <description>Scene State Managers computing the scene state and current human activities in the form of predicates and serving the state to other nodes</description>
 
   <maintainer email="yoan.mollard@inria.fr">Yoan Mollard</maintainer>
-  <maintainer email="thibaut.munzer@inria.fr">Thibaut Munzer</maintainer>
   <license>GPL3</license>
   
   <build_depend>thr_scenes</build_depend>
@@ -13,6 +12,8 @@
   <build_depend>thr_infrastructure_msgs</build_depend>
   <run_depend>thr_infrastructure_msgs</run_depend>
   <run_depend>message_runtime</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>optitrack_publisher</run_depend>
   <buildtool_depend>catkin</buildtool_depend>
  
   <export>

@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(thr_learner_predictor)
+project(thr_scenes)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin REQUIRED thr_scenes thr_infrastructure_msgs)
+find_package(catkin REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -19,6 +16,5 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES thr_coop_assembly
   CATKIN_DEPENDS
-   thr_infrastructure_msgs
 #  DEPENDS system_lib
 )
