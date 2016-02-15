@@ -26,8 +26,8 @@ Grasp poses are poses of the gripper with respect to the object.
 
 * action_params["hold"] contains all the parameters dedicated to action HOLD
 * action_params["hold"]["sphere_radius"] (meters) gives the radius of the Hold sphere. When his wrist is within this sphere, we consider that the human is working, when it leaves it, action HOLD must terminate 
-* action_params["hold"]["approach_cartesian_dist"] (meters) gives the maximum motion of objects to be holded. Above the threshold the robot will recompute its approach pose with a new goal
-* action_params["hold"]["approach_angular_dist"] (rad) gives the maximum motion of objects to be holded. Above the threshold the robot will recompute its approach pose with a new goal
+* action_params["hold"]["approach_cartesian_dist"] (meters) gives the maximum motion of objects to be held. Above the threshold the robot will recompute its approach pose with a new goal
+* action_params["hold"]["approach_angular_dist"] (rad) gives the maximum motion of objects to be held. Above the threshold the robot will recompute its approach pose with a new goal
 
 * action_params["planning"] contains all the parameters dedicated to planning (if used)
 * action_params["planning"]["planner_id"]

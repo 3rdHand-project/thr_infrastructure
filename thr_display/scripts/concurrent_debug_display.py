@@ -44,7 +44,7 @@ class ConcurrentDebugDisplay(object):
                 preds["attached"].append(p)
             elif p.type=='picked':
                 preds["picked"].append(p)
-            elif p.type=='holded':
+            elif p.type=='held':
                 preds["held"].append(p)
             elif p.type=='busy':
                 preds["busy"].append(p)

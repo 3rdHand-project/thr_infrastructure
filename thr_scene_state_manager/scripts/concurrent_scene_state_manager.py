@@ -27,7 +27,7 @@ class ConcurrentSceneStateManager(object):
         self.running = False
 
         # Action History
-        # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HOLDED, PICKED
+        # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HELD, PICKED
         self.at_home = {'left': True, 'right': True}
         self.busy = {'left': False, 'right': False}
         self.held = []
@@ -117,7 +117,7 @@ class ConcurrentSceneStateManager(object):
                     else:
                         rospy.logerr("[Scene state manager] No arm is capable of {}{}, event ignored".format(msg.action.type, str(msg.action.parameters)))
 
-                    # Listening action events for predicates PICKED + HOLDED
+                    # Listening action events for predicates PICKED + HELD
                     if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
                         self.held = msg.action.parameters
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='pick':
@@ -133,7 +133,7 @@ class ConcurrentSceneStateManager(object):
                     else:
                         self.activity[self.abilities[msg.action.type]] = None
 
-    def pred_holded(self, obj):
+    def pred_held(self, obj):
         #with self.history_lock:
             return obj in self.held
 
@@ -242,7 +242,7 @@ class ConcurrentSceneStateManager(object):
                             self.state.predicates.append(p)
                         elif self.pred_picked(o):
                             p = Predicate()
-                            p.type = 'holded'
+                            p.type = 'held'
                             p.parameters = [o]
                             self.state.predicates.append(p)
                     for o1, o2 in combinations(self.objects, 2):
