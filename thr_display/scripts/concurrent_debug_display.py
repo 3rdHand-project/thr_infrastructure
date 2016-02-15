@@ -81,7 +81,8 @@ class ConcurrentDebugDisplay(object):
             self.update_scene()
             if not self.old_state or self.state.predicates != self.old_state.predicates:
                 self.display_image()
+            self.rate.sleep()
 
 if __name__ == "__main__":
     rospy.init_node('concurrent_debug_display')
-    ConcurrentDebugDisplay(1024, 600, 2).start()
+    ConcurrentDebugDisplay(1024, 600, 10).start()
