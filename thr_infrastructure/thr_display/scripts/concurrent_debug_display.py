@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy, rospkg
-from thr_coop_assembly.srv import GetSceneStateRequest, GetSceneState
+from thr_infrastructure_msgs.srv import GetSceneStateRequest, GetSceneState
 import cv2, cv_bridge
 from numpy import zeros, uint8
 from sensor_msgs.msg import Image

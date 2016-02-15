@@ -5,8 +5,8 @@ import rospkg
 import actionlib
 
 from actionlib_msgs.msg import GoalStatus
-from thr_coop_assembly.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionGoal, RunMDPActionAction, ActionHistoryEvent, MDPAction
+from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
+from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionGoal, RunMDPActionAction, ActionHistoryEvent, MDPAction
 
 class MDPActionServer:
     """
@@ -23,9 +23,9 @@ class MDPActionServer:
         self.action_history_name = '/thr/action_history'
         self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/mdp_robot_mapping.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/mdp_robot_mapping.json") as f:
             self.mapping = json.load(f)
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/action_params.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
 
         # Connect to inner action servers L/R

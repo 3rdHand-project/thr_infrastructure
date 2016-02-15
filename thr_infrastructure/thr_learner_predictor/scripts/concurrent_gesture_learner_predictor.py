@@ -3,9 +3,9 @@
 from pyFolWorld import FolWorld
 import rospy
 import rospkg
-from thr_coop_assembly.srv import GetNextAction, GetNextActionResponse
-from thr_coop_assembly.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_coop_assembly.msg import MDPAction
+from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionResponse
+from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
+from thr_infrastructure_msgs.msg import MDPAction
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>"
 # and complete the pre-filled request message before <ENTER>

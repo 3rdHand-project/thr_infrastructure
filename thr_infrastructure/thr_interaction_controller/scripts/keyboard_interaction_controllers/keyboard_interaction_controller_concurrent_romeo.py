@@ -3,8 +3,8 @@
 import rospy, json
 import actionlib
 
-from thr_coop_assembly.msg import *
-from thr_coop_assembly.srv import *
+from thr_infrastructure_msgs.msg import *
+from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import GoalStatus
 
 class InteractionController(object):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy, rospkg
-from thr_coop_assembly.msg import ActionHistoryEvent
+from thr_infrastructure_msgs.msg import ActionHistoryEvent
 from tf import LookupException
 import json, cv2, cv_bridge
 from numpy import zeros, uint8
@@ -25,7 +25,7 @@ class ConcurrentActionDisplay(object):
         self.scene = rospy.get_param('/thr/scene')
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/display.json") as f:
+        with open(self.rospack.get_path("thr_scenes")+"/config/"+self.scene+"/display.json") as f:
             self.text = json.load(f)
 
         self.display_text(self.text['start'], [], self.font, self.scale, self.thickness, self.color, self.interline)

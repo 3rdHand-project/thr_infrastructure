@@ -9,8 +9,8 @@ import json
 
 import web_asker
 
-from thr_coop_assembly.msg import *
-from thr_coop_assembly.srv import *
+from thr_infrastructure_msgs.msg import *
+from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
 
 
@@ -135,11 +135,11 @@ class InteractionController(object):
         self.init_webasker()
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/mdp_robot_mapping.json") as config_file:
+        with open(self.rospack.get_path("thr_action_server")+"/config/mdp_robot_mapping.json") as config_file:
             self.mdp_robot_mapping = json.load(config_file)
 
     def init_webasker(self):
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/mongo_adress_list.json") as adress_file:
+        with open(self.rospack.get_path("thr_interaction_controller")+"/config/mongo_adress_list.json") as adress_file:
             adress_list = json.load(adress_file)
         for adress in adress_list:
             try:

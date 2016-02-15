@@ -14,6 +14,7 @@
   <run_depend>message_runtime</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>optitrack_publisher</run_depend>
+  <run_depend>thr_action_server</run_depend>  <!-- To know abilities of each arm -->
   <buildtool_depend>catkin</buildtool_depend>
  
   <export>

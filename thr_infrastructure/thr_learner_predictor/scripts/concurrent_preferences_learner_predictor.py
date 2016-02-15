@@ -9,10 +9,10 @@ import os
 from RBLT.domains import domain_dict
 # from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
 
-from thr_coop_assembly.srv import GetNextAction, GetNextActionResponse,\
+from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionResponse,\
     StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_coop_assembly.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_coop_assembly.msg import MDPAction
+from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
+from thr_infrastructure_msgs.msg import MDPAction
 
 
 class Server(object):

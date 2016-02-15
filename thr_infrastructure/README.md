@@ -4,10 +4,7 @@ From march 2015 Inria implemented a demonstrator with its Baxter robot illustrat
 
 Our case of study works with a 5-piece wooden toolbox designed for a great number of assembly/disassembly cycles that are: a handle, a front side, a back side, a left side, and a right side. The toolbox has actually 7 pieces, the 2 other composing the bottom of the box, that we do not use in this setup. Each of the 5 pieces is fixed to others using screws, and although they are named differently and recognized as different objects by the system, some parts are actually identical and can be inverted: front = back and left = right. Thus the assembly can differ depending to the location we assemble each side.
 
-The setup splits in 2 branches that we will both maintain as much as possible:
-
- - A non-concurrent branch: the robot performs one action at a time
- - A concurrent branch: the robot performs several actions at a time (as much as available end effectors... 2 for Baxter)
+The setup is made to execute concurrent actions, the former branch `sequential` was no longer maintained and was thus deleted.
 
 In both branches the robot is only capable of giving an object to the user, and holding an object in place, so that it does move while the user is attaching it. However these high-level actions are implemented differently in both branches and thus lead to different actual low-level actions, that will be detailed later.
 

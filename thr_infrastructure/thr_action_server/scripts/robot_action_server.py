@@ -6,9 +6,9 @@ import tf
 import sys
 import actionlib
 import transformations
-from actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place
+from thr_actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place
 from baxter_commander import ArmCommander
-from thr_coop_assembly.msg import RunRobotActionAction, RunRobotActionActionResult
+from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionActionResult
 
 class RobotActionServer:
     """
@@ -28,13 +28,13 @@ class RobotActionServer:
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.world = "base"
         self.scene = rospy.get_param("/thr/scene")
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
+        with open(self.rospack.get_path("thr_scenes")+"/config/"+self.scene+"/poses.json") as f:
             self.poses = json.load(f)
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/action_params.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/seeds.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/seeds.json") as f:
             self.seeds = json.load(f)
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/abilities.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/abilities.json") as f:
             self.abilities = json.load(f)
 
         # Motion/Grasping attributes

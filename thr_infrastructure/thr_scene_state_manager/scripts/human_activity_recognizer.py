@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations, json
-from thr_coop_assembly.msg import Predicate, ActionHistoryEvent, MDPAction
-from thr_coop_assembly.srv import GetSceneState, GetSceneStateRequest, UpdateRelationalState, UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
+from thr_infrastructure_msgs.msg import Predicate, ActionHistoryEvent, MDPAction
+from thr_infrastructure_msgs.srv import GetSceneState, GetSceneStateRequest, UpdateRelationalState, UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from itertools import product
 from threading import RLock
 
@@ -31,9 +31,9 @@ class HumanActivityRecognizer(object):
         self.action_history_name = '/thr/action_history'
         self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
+        with open(self.rospack.get_path("thr_scenes")+"/config/"+self.scene+"/poses.json") as f:
             self.poses = json.load(f)
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/perception.json") as f:
+        with open(self.rospack.get_path("thr_scene_state_manager")+"/config/perception.json") as f:
             self.config = json.load(f)
 
     def cb_start_stop(self, request):

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations
-from thr_coop_assembly.srv import GetSceneState, GetSceneStateResponse, UpdateRelationalState, UpdateRelationalStateResponse,\
+from thr_infrastructure_msgs.srv import GetSceneState, GetSceneStateResponse, UpdateRelationalState, UpdateRelationalStateResponse,\
     UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_coop_assembly.msg import SceneState, Predicate, ActionHistoryEvent
+from thr_infrastructure_msgs.msg import SceneState, Predicate, ActionHistoryEvent
 from itertools import combinations
 from threading import Lock
 import json
@@ -41,13 +41,13 @@ class ConcurrentSceneStateManager(object):
         self.scene = rospy.get_param('/thr/scene')
 
         self.rospack = rospkg.RosPack()
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/scenes/"+self.scene+"/poses.json") as f:
+        with open(self.rospack.get_path("thr_scenes")+"/config/"+self.scene+"/poses.json") as f:
             self.poses = json.load(f)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/perception.json") as f:
+        with open(self.rospack.get_path("thr_scene_state_manager")+"/config/perception.json") as f:
             self.config = json.load(f)
 
-        with open(self.rospack.get_path("thr_coop_assembly")+"/config/abilities.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/abilities.json") as f:
             self.abilities = json.load(f)
 
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
