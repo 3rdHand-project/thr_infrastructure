@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
-    
-    <include file="$(find baxter_commander)/launch/commander.launch">
-      <arg name="gui" value="$(arg gui)"/>
-    </include>
-    <node pkg="thr_coop_assembly" name="sequential_action_server" type="sequential_action_server.py" output="screen"/>
-</launch>
