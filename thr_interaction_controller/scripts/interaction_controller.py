@@ -12,14 +12,16 @@ import web_asker
 from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
-
+from baxter_commander import Halo
 
 class ConfirmQuestion(object):
-    def __init__(self, web_asker, action_str, action_str_list, state):
+    def __init__(self, web_asker, action_str, action_str_list, state, halo):
         self.web_asker = web_asker
         self.action_str = action_str
         self.action_str_list = action_str_list
         self.state = state
+        self.halo = halo
+        self.halo.start_flashing('yellow')
 
         self.first = self.web_asker.ask("I'm think i should do {} :".format(self.action_str),
                                         ["Do it!", "Don't do that"], color="blue")
@@ -28,6 +30,7 @@ class ConfirmQuestion(object):
 
     def update(self):
         if self.first is not None and self.first.answered():
+            self.halo.stop_flashing()
             if self.first.get_answer() == "Do it!":
                 self.correct_action = self.action_str
             else:
@@ -114,6 +117,7 @@ class InteractionController(object):
         self.scene_before_action = None
 
         self.logs = []
+        self.halo = Halo()
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(20)
@@ -163,7 +167,10 @@ class InteractionController(object):
                 if question.get_delete_key() == key and not question.is_user_engaged():
                     correct_action = self.str_to_MDPAction(question.get_correct_action())
                     if event.type == ActionHistoryEvent.FINISHED_SUCCESS:
+                        self.halo.set_green()
                         self.set_new_training_example(question.get_state(), correct_action, True)
+                    else:
+                        self.halo.set_red()
                     del self.feedback_question_list[i]
                     question.remove()
 
@@ -205,6 +212,7 @@ class InteractionController(object):
             return MDPAction(type='wait')
 
     def start_or_stop_episode(self, start=True):
+        self.halo.set_off()
         for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
@@ -232,6 +240,7 @@ class InteractionController(object):
         if action.type == 'wait':
             self.waiting = True
             return
+        self.halo.set_off()
         goal = RunMDPActionGoal()
         goal.action = action
         self.run_action_client.send_goal(goal)
@@ -352,7 +361,8 @@ class InteractionController(object):
                                 self.run_action(self.str_to_MDPAction(action_str))
                             else:
                                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str,
-                                                                        str_action_list, self.current_scene)
+                                                                        str_action_list, self.current_scene,
+                                                                        halo=self.halo)
 
                         elif prediction.confidence == prediction.NO_IDEA:
                             raise NotImplemented()
