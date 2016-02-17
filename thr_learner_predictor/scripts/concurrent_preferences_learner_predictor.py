@@ -7,6 +7,7 @@ import numpy as np
 import os
 
 from RBLT.domains import domain_dict
+from RBLT.learning import bagger
 # from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
 
 from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionResponse,\
@@ -30,6 +31,10 @@ class Server(object):
         self.reward = self.domain.rewards["reward_built"]
         self.task_q_fun = self.reward.get_task_q_fun_gen()
         self.learned_q_fun = self.task_q_fun
+
+        self.learner = None
+        self.threshold_confirm = 0.05
+        self.threshold_learn = 0.01
 
         # self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
         # self.algorithm.load()
@@ -58,11 +63,15 @@ class Server(object):
                 else:
                     target_list.append(-1. + np.random.normal(0, 0.000001))
 
-        tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
-                                                 "tree_q{}".format(self.i_tree)), maxdepth=6)
+        # tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
+        #                                          "tree_q{}".format(self.i_tree)), maxdepth=6)
+        self.learner = bagger.Bagger(self.domain, 50, input_list, target_list,
+                                     os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)),
+                                     maxdepth=6, nb_process=50)
+
         # shutil.rmtree(os.path.join(tmp_dir_name, "tree_q{}".format(i_tree)))
-        human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
-        self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
+        # human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
+        # self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
 
         self.i_tree += 1
         rospy.loginfo("Learning done")
@@ -139,25 +148,47 @@ class Server(object):
 
         state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
         action_list = self.domain.get_actions(state)
-        quality_list = [self.learned_q_fun(state, a) for a in action_list]
-
-        print self.domain.int_to_state(state)
-        print [self.domain.int_to_action(a) for a in action_list]
-        print quality_list
-
-        max_quality = max(quality_list)
-
-        best_action_list = [a for a, q in zip(action_list, quality_list) if q == max_quality]
-        best_robot_action_list = self.domain.filter_robot_actions(best_action_list)
-        if len(best_robot_action_list) == 0:
-            best_robot_action_list.append(self.domain.action_to_int("wait"))
-        action = self.relational_action_to_MDPAction(
-            self.domain.int_to_action(random.choice(best_robot_action_list)))
 
         resp = GetNextActionResponse()
-        resp.confidence = resp.CONFIRM
-        resp.probas = []
+        if self.learner is not None:
+            best_action, error = self.learner.get_best_actions(state, action_list, True,
+                                                               lambda sa: self.task_q_fun(sa[0], sa[1]))
+            best_action = best_action[0]
 
+            print "error:", error
+            print self.domain.int_to_action(best_action)
+            print self.domain.filter_robot_actions([best_action])
+
+            if len(self.domain.filter_robot_actions([best_action])) == 1:
+                action = self.relational_action_to_MDPAction(self.domain.int_to_action(best_action))
+            else:
+                action = self.relational_action_to_MDPAction("wait")
+
+            if error > self.threshold_confirm:
+                resp.mode = resp.CONFIRM
+            else:
+                resp.mode = resp.SURE
+            resp.confidence = error
+
+        else:
+            quality_list = [self.learned_q_fun(state, a) for a in action_list]
+
+            print self.domain.int_to_state(state)
+            print [self.domain.int_to_action(a) for a in action_list]
+            print quality_list
+
+            max_quality = max(quality_list)
+
+            best_action_list = [a for a, q in zip(action_list, quality_list) if q == max_quality]
+            best_robot_action_list = self.domain.filter_robot_actions(best_action_list)
+            if len(best_robot_action_list) == 0:
+                best_robot_action_list.append(self.domain.action_to_int("wait"))
+            action = self.relational_action_to_MDPAction(
+                self.domain.int_to_action(random.choice(best_robot_action_list)))
+            resp.mode = resp.CONFIRM
+            resp.confidence = 1.
+
+        resp.probas = []
         for candidate_action in self.domain.filter_robot_actions(action_list):
             resp.actions.append(self.relational_action_to_MDPAction(
                 self.domain.int_to_action(candidate_action)))
@@ -178,9 +209,8 @@ class Server(object):
         :param snter: an object of type SetNewTrainingExampleRequest
         :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
         """
-        rospy.loginfo("I'm learning that action {}{} was {}".format(new_training_ex.action.type,
-                                                                    str(new_training_ex.action.parameters),
-                                                                    "good" if new_training_ex.good else "bad"))
+        rospy.loginfo("I'm learning that action {}{} was good".format(new_training_ex.action.type,
+                                                                      str(new_training_ex.action.parameters)))
 
         state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
         action = self.domain.action_to_int(self.MDPAction_to_relational_action(new_training_ex.action))

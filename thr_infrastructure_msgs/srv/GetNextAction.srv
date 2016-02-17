@@ -8,6 +8,7 @@ uint8 NO_IDEA = 0
 uint8 CONFIRM = 1
 uint8 SURE = 2
 
-uint8 confidence
+uint8 mode
+float64 confidence
 MDPAction[] actions
 float64[] probas

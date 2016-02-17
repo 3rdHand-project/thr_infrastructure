@@ -3,7 +3,9 @@
 # The state of the scene and command (un)validated
 SceneState scene_state
 MDPAction action
-bool good
+MDPAction predicted_action
+bool corrected
+float64 prediction_confidence
 ---
 # No return parameter
 
