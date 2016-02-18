@@ -13,17 +13,41 @@ from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
 from baxter_commander import Halo
+from baxter_interface import Head
+
+
+class HeadSignal():
+    def __init__(self):
+        self.head = Head()
+        self.halo = Halo()
+        self.halo.set_off()
+
+    def request_attention(self, enabled=False):
+        if enabled:
+            self.halo.start_flashing()
+            self.head.command_nod()
+        else:
+            self.halo.stop_flashing()
+
+    def show_result(self, success=True):
+        if success:
+            self.halo.set_green()
+        else:
+            self.halo.set_red()
+
+    def reset_signal(self):
+        self.halo.set_off()
 
 
 class ConfirmQuestion(object):
-    def __init__(self, web_asker, action_str, decision_str_list, state, confidence, halo):
+    def __init__(self, web_asker, action_str, decision_str_list, state, confidence, head):
         self.web_asker = web_asker
         self.decision_str = action_str
         self.decision_str_list = decision_str_list
         self.state = state
         self.confidence = confidence
-        self.halo = halo
-        self.halo.start_flashing('yellow')
+        self.head = head
+        self.head.request_attention(True)
 
         self.first = self.web_asker.ask("I think i should do {} :".format(self.decision_str),
                                         ["Do it!", "Don't do that"], color="blue")
@@ -32,7 +56,7 @@ class ConfirmQuestion(object):
 
     def update(self):
         if self.first is not None and self.first.answered():
-            self.halo.stop_flashing()
+            self.head.request_attention(False)
             if self.first.get_answer() == "Do it!":
                 self.correct_decision = self.decision_str
             else:
@@ -128,7 +152,7 @@ class InteractionController(object):
         self.last_scene = None
 
         self.logs = []
-        self.halo = Halo()
+        self.head = HeadSignal()
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(20)
@@ -179,12 +203,12 @@ class InteractionController(object):
                     correct_decision = self.str_to_Decision(question.get_correct_decision())
                     predicted_decision = self.str_to_Decision(question.get_predicted_decision())
                     if event.type == ActionHistoryEvent.FINISHED_SUCCESS:
-                        self.halo.set_green()
+                        self.head.show_result(True)
                         self.set_new_training_example(question.get_state(), correct_decision,
                                                       question.confidence, predicted_decision)
                         self.waiting = False
                     else:
-                        self.halo.set_red()
+                        self.head.show_result(False)
                     del self.feedback_question_list[i]
                     question.remove()
 
@@ -232,7 +256,7 @@ class InteractionController(object):
             return GetNextActionResponse(decisions=[decision], probas=[1.])
 
     def start_or_stop_episode(self, start=True):
-        self.halo.set_off()
+        self.head.reset_signal()
         for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
@@ -259,7 +283,7 @@ class InteractionController(object):
         if decision.type == 'wait':
             self.waiting = True
             return
-        self.halo.set_off()
+        self.head.reset_signal()
         goal = RunDecisionGoal()
         goal.decision = decision
         self.run_decision_client.send_goal(goal)
@@ -390,7 +414,7 @@ class InteractionController(object):
                             else:
                                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str,
                                                                         str_action_list, self.current_scene,
-                                                                        prediction.confidence, halo=self.halo)
+                                                                        prediction.confidence, head=self.head)
 
                         elif prediction.mode == prediction.NO_IDEA:
                             raise NotImplementedError()
