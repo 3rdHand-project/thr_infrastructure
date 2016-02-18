@@ -47,8 +47,8 @@ class DecisionServer:
             if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
                 self.clients['right'].cancel_all_goals()
             # Execute the go_homes and wait for them before stopping
-            self.execute(RunDecisionGoal(action=Decision(type='start_go_home_left')))
-            self.execute(RunDecisionGoal(action=Decision(type='start_go_home_right')))
+            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_left')))
+            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_right')))
             rospy.sleep(0.1)  # Wait for action to start before reading get_state()
             while self.clients['right'].get_state() == GoalStatus.ACTIVE or self.clients['left'].get_state() == GoalStatus.ACTIVE:
                 rospy.sleep(0.1)

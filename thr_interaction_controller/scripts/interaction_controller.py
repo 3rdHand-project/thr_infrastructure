@@ -14,6 +14,7 @@ from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
 from baxter_commander import Halo
 
+
 class ConfirmQuestion(object):
     def __init__(self, web_asker, action_str, decision_str_list, state, confidence, halo):
         self.web_asker = web_asker
@@ -124,7 +125,6 @@ class InteractionController(object):
         self.feedback_question_list = []
 
         self.current_scene = None
-        self.scene_before_decision = None
         self.last_scene = None
 
         self.logs = []
@@ -255,7 +255,6 @@ class InteractionController(object):
         return decision
 
     def run_decision(self, decision):
-        self.scene_before_decision = deepcopy(self.current_scene)
         os.system('beep')
         if decision.type == 'wait':
             self.waiting = True
@@ -323,7 +322,7 @@ class InteractionController(object):
                             correct_decision = self.str_to_Decision(self.confirm_question.get_correct_decision())
                             predicted_decision = self.str_to_Decision(self.confirm_question.get_predicted_decision())
                             if (correct_decision.type != "wait" or
-                                    self.current_scene.predicates == self.last_scene.predicates):
+                                    self.current_scene.predicates == self.confirm_question.get_state().predicates):
                                 self.run_decision(correct_decision)
                             self.set_new_training_example(self.confirm_question.get_state(), correct_decision,
                                                           self.confirm_question.confidence, predicted_decision)

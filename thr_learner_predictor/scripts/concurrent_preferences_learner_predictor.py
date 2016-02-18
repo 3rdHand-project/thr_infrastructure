@@ -36,6 +36,19 @@ class Server(object):
         self.threshold_confirm = 0.05
         self.threshold_learn = 0.01
 
+        self.bagger_params = {
+            "name": "bagger",
+            "nb_learner": 50,
+            "nb_process": 50,
+            "sample_ratio": 0.75,
+            "learner": {
+                "name": "rbpl",
+                "nb_trees": 4,
+                "beta": 10,
+                "maxdepth": 10
+            }
+        }
+
         # self.algorithm = BoostedPolicyLearning(self.domain, {}, "/tmp")
         # self.algorithm.load()
 
@@ -53,22 +66,12 @@ class Server(object):
 
     def learn_preferences(self):
         rospy.loginfo("Start learning")
-        input_list = []
-        target_list = []
-        for state, decision_expert in self.dataset:
-            for decision in self.domain.get_actions(state):
-                input_list.append((state, decision))
-                if decision == decision_expert:
-                    target_list.append(0. + np.random.normal(0, 0.000001))
-                else:
-                    target_list.append(-1. + np.random.normal(0, 0.000001))
-
         # tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
         #                                          "tree_q{}".format(self.i_tree)), maxdepth=6)
-        self.learner = bagger.Bagger(self.domain, 50, input_list, target_list,
-                                     os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)),
-                                     maxdepth=6, nb_process=50)
+        self.learner = bagger.Bagger(self.domain, self.bagger_params, self.task_q_fun,
+                                     os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)))
 
+        self.learner.train(self.dataset)
         # shutil.rmtree(os.path.join(tmp_dir_name, "tree_q{}".format(i_tree)))
         # human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
         # self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
@@ -79,10 +82,10 @@ class Server(object):
     def relational_action_to_Decision(self, action):
         if isinstance(action, tuple):
             return Decision(type=action[0].replace("activate", "start"),
-                             parameters=[c.replace("toolbox_", "/toolbox/") for c in action[1:]])
+                            parameters=[c.replace("toolbox_", "/toolbox/") for c in action[1:]])
         else:
             return Decision(type=action.replace("activate", "start"),
-                             parameters=[])
+                            parameters=[])
 
     def Decision_to_relational_action(self, action):
         if len(action.parameters) == 0:
@@ -151,8 +154,7 @@ class Server(object):
 
         resp = GetNextDecisionResponse()
         if self.learner is not None:
-            best_decision, error = self.learner.get_best_actions(state, action_list, True,
-                                                               lambda sa: self.task_q_fun(sa[0], sa[1]))
+            best_decision, error = self.learner.get_best_actions(state, action_list, True)
             best_decision = best_decision[0]
 
             print "error:", error
@@ -190,17 +192,17 @@ class Server(object):
 
         resp.probas = []
         for candidate_action in self.domain.filter_robot_actions(action_list):
-            resp.actions.append(self.relational_action_to_Decision(
+            resp.decisions.append(self.relational_action_to_Decision(
                 self.domain.int_to_action(candidate_action)))
 
-            if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
+            if decision.type == resp.decisions[-1].type and decision.parameters == resp.decisions[-1].parameters:
                 resp.probas.append(1.)
             else:
                 resp.probas.append(0.)
 
         if sum(resp.probas) != 1:
             print decision
-            print resp.actions
+            print resp.decisions
         return resp
 
     def learner_handler(self, new_training_ex):
@@ -209,12 +211,12 @@ class Server(object):
         :param snter: an object of type SetNewTrainingExampleRequest
         :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
         """
-        rospy.loginfo("I'm learning that decision {}{} was good".format(new_training_ex.action.type,
-                                                                      str(new_training_ex.action.parameters)))
+        rospy.loginfo("I'm learning that decision {}{} was good".format(new_training_ex.decision.type,
+                                                                        str(new_training_ex.decision.parameters)))
 
         state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
-        decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.action))
-        self.dataset.append((state, decision))
+        decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.decision))
+        self.dataset.append((state, decision, None))
 
         return SetNewTrainingExampleResponse()
 
