@@ -15,7 +15,7 @@ find_package(catkin REQUIRED
 # Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   MDPAction.msg
+   Decision.msg
    RobotAction.msg
    Predicate.msg
    SceneState.msg
@@ -25,7 +25,7 @@ find_package(catkin REQUIRED
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-   GetNextAction.srv
+   GetNextDecision.srv
    GetSceneState.srv
    SetNewTrainingExample.srv
    UpdateRelationalState.srv
@@ -35,7 +35,7 @@ find_package(catkin REQUIRED
 ## Generate actions in the 'action' folder
  add_action_files(
    FILES
-   RunMDPAction.action
+   RunDecision.action
    RunRobotAction.action
  )
 

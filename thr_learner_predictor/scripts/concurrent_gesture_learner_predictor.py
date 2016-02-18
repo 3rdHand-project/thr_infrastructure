@@ -3,9 +3,9 @@
 from pyFolWorld import FolWorld
 import rospy
 import rospkg
-from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionResponse
+from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionResponse
 from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_infrastructure_msgs.msg import MDPAction
+from thr_infrastructure_msgs.msg import Decision
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>"
 # and complete the pre-filled request message before <ENTER>
@@ -61,10 +61,10 @@ class Server(object):
     def predictor_handler(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
-        :param get_next_action_req: an object of type GetNextActionRequest (scene state)
-        :return: an object of type GetNextActionResponse
+        :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
+        :return: an object of type GetNextDecisionResponse
         """
-        resp = GetNextActionResponse()
+        resp = GetNextDecisionResponse()
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left',
                     '/toolbox/side_front', '/toolbox/side_back']
         pred_list = get_next_action_req.scene_state.predicates
@@ -102,40 +102,40 @@ class Server(object):
         w = FolWorld(module_path + "/config/toolbox.g", "tmp_file_planner")
         action_list = [self.string_to_action(a) for a in w.get_actions(state_as_string)]
 
-        filtered_action_list = []
-        for action in action_list:
+        filtered_decision_list = []
+        for decision in action_list:
             # 1 filter hold
-            if action[0] == "activate_hold":
-                if not self.check_attached_pred(pred_list, action[1], None, action[2]):
-                    filtered_action_list.append(action)
+            if decision[0] == "activate_hold":
+                if not self.check_attached_pred(pred_list, decision[1], None, decision[2]):
+                    filtered_decision_list.append(decision)
             # 2 keep only the first pick giveb a list
-            elif action[0] == "activate_pick":
+            elif decision[0] == "activate_pick":
                 # Not optimized but simple to read (could do only once)
                 not_in_hws_list = [o for o in obj_list if not self.check_in_hws_pred(pred_list, o)]
                 ordered_not_in_hws_list = [o for o in obj_list if o in not_in_hws_list]
-                if action[1] == ordered_not_in_hws_list[0]:
-                    filtered_action_list.append(action)
+                if decision[1] == ordered_not_in_hws_list[0]:
+                    filtered_decision_list.append(decision)
             else:
-                filtered_action_list.append(action)
+                filtered_decision_list.append(decision)
 
-        resp = GetNextActionResponse()
+        resp = GetNextDecisionResponse()
         resp.confidence = resp.SURE
         resp.probas = []
 
-        for action in filtered_action_list:
-            mdp_action = MDPAction()
+        for decision in filtered_decision_list:
+            decision = Decision()
 
-            if action == "activate_wait_for_human" or action == "WAIT":
-                mdp_action.type = 'wait'
-            elif type(action) == str:
-                mdp_action.type = action.replace("activate", "start")
-                mdp_action.parameters = []
+            if decision == "activate_wait_for_human" or decision == "WAIT":
+                decision.type = 'wait'
+            elif type(decision) == str:
+                decision.type = decision.replace("activate", "start")
+                decision.parameters = []
             else:
-                mdp_action.type = action[0].replace("activate", "start")
-                mdp_action.parameters = list(action)[1:]
+                decision.type = decision[0].replace("activate", "start")
+                decision.parameters = list(decision)[1:]
 
-            resp.actions.append(mdp_action)
-            resp.probas.append(1. / len(filtered_action_list))
+            resp.actions.append(decision)
+            resp.probas.append(1. / len(filtered_decision_list))
 
         return resp
 
@@ -145,13 +145,13 @@ class Server(object):
         :param snter: an object of type SetNewTrainingExampleRequest
         :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
         """
-        rospy.loginfo("I'm learning that action {}{} was {}".format(new_training_ex.action.type,
-                                                                    str(new_training_ex.action.parameters),
-                                                                    "good" if new_training_ex.good else "bad"))
+        rospy.loginfo("I'm learning that decision {}{} was {}".format(new_training_ex.action.type,
+                                                                      str(new_training_ex.action.parameters),
+                                                                      "good" if new_training_ex.good else "bad"))
         return SetNewTrainingExampleResponse()
 
     def run(self):
-        rospy.Service(self.predictor_name, GetNextAction, self.predictor_handler)
+        rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
         rospy.spin()

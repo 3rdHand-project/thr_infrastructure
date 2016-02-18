@@ -15,42 +15,42 @@ from actionlib_msgs.msg import *
 from baxter_commander import Halo
 
 class ConfirmQuestion(object):
-    def __init__(self, web_asker, action_str, action_str_list, state, confidence, halo):
+    def __init__(self, web_asker, action_str, decision_str_list, state, confidence, halo):
         self.web_asker = web_asker
-        self.action_str = action_str
-        self.action_str_list = action_str_list
+        self.decision_str = action_str
+        self.decision_str_list = decision_str_list
         self.state = state
         self.confidence = confidence
         self.halo = halo
         self.halo.start_flashing('yellow')
 
-        self.first = self.web_asker.ask("I think i should do {} :".format(self.action_str),
+        self.first = self.web_asker.ask("I think i should do {} :".format(self.decision_str),
                                         ["Do it!", "Don't do that"], color="blue")
         self.second = None
-        self.correct_action = None
+        self.correct_decision = None
 
     def update(self):
         if self.first is not None and self.first.answered():
             self.halo.stop_flashing()
             if self.first.get_answer() == "Do it!":
-                self.correct_action = self.action_str
+                self.correct_decision = self.decision_str
             else:
-                self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.action_str),
-                                                 self.action_str_list, color="blue")
+                self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.decision_str),
+                                                 self.decision_str_list, color="blue")
                 self.first = None
 
         if self.second is not None and self.second.answered():
-            self.correct_action = self.second.get_answer()
+            self.correct_decision = self.second.get_answer()
 
     def is_answered(self):
-        return self.correct_action is not None
+        return self.correct_decision is not None
 
-    def get_correct_action(self):
-        assert self.correct_action is not None
-        return self.correct_action
+    def get_correct_decision(self):
+        assert self.correct_decision is not None
+        return self.correct_decision
 
-    def get_predicted_action(self):
-        return self.action_str
+    def get_predicted_decision(self):
+        return self.decision_str
 
     def get_state(self):
         return self.state
@@ -63,40 +63,40 @@ class ConfirmQuestion(object):
 
 
 class FeedbackQuestion(object):
-    def __init__(self, web_asker, action_str, action_str_list, state, confidence, delete_key):
+    def __init__(self, web_asker, decision_str, decision_str_list, state, confidence, delete_key):
         self.web_asker = web_asker
-        self.action_str = action_str
-        self.action_str_list = action_str_list
+        self.decision_str = decision_str
+        self.decision_str_list = decision_str_list
         self.state = state
         self.confidence = confidence
         self.delete_key = delete_key
 
-        self.first = self.web_asker.ask("I'm doing {} :".format(self.action_str),
+        self.first = self.web_asker.ask("I'm doing {} :".format(self.decision_str),
                                         ["Don't do that"])
         self.second = None
-        self.correct_action = None
+        self.correct_decision = None
 
     def update(self):
         if self.first is not None and self.first.answered():
-            self.second = self.web_asker.ask("I did {}, What should have I done?".format(self.action_str),
-                                             self.action_str_list)
+            self.second = self.web_asker.ask("I did {}, What should have I done?".format(self.decision_str),
+                                             self.decision_str_list)
             self.first.remove()
             self.first = None
 
         if self.second is not None and self.second.answered():
-            self.correct_action = self.second.get_answer()
+            self.correct_decision = self.second.get_answer()
 
     def is_answered(self):
-        return self.correct_action is not None
+        return self.correct_decision is not None
 
-    def get_correct_action(self):
-        if self.correct_action is not None:
-            return self.correct_action
+    def get_correct_decision(self):
+        if self.correct_decision is not None:
+            return self.correct_decision
         else:
-            return self.action_str
+            return self.decision_str
 
-    def get_predicted_action(self):
-        return self.action_str
+    def get_predicted_decision(self):
+        return self.decision_str
 
     def get_state(self):
         return self.state
@@ -119,12 +119,12 @@ class InteractionController(object):
         self.running = True
         self.waiting = False
         self.last_predicition_confidence = None
-        self.last_predicted_action_str = None
+        self.last_predicted_decision_str = None
         self.confirm_question = None
         self.feedback_question_list = []
 
         self.current_scene = None
-        self.scene_before_action = None
+        self.scene_before_decision = None
         self.last_scene = None
 
         self.logs = []
@@ -135,13 +135,13 @@ class InteractionController(object):
         self.reward_service = '/thr/learner'
         self.predictor_service = 'thr/predictor'
         self.scene_state_service = '/thr/scene_state'
-        self.run_action_name = '/thr/run_mdp_action'
+        self.run_decision_name = '/thr/run_decision'
         self.action_history_name = '/thr/action_history'
 
         # Initiating topics ands links to services/actions
-        self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
-        rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
-        self.run_action_client.wait_for_server()
+        self.run_decision_client = actionlib.SimpleActionClient(self.run_decision_name, RunDecisionAction)
+        rospy.loginfo("Waiting action client {}...".format(self.run_decision_name))
+        self.run_decision_client.wait_for_server()
         for service in [self.reward_service, self.predictor_service, self.scene_state_service]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
@@ -150,8 +150,8 @@ class InteractionController(object):
         self.init_webasker()
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-        with open(self.rospack.get_path("thr_action_server")+"/config/mdp_robot_mapping.json") as config_file:
-            self.mdp_robot_mapping = json.load(config_file)
+        with open(self.rospack.get_path("thr_action_server")+"/config/decision_action_mapping.json") as config_file:
+            self.decision_action_mapping = json.load(config_file)
 
     def init_webasker(self):
         with open(self.rospack.get_path("thr_interaction_controller")+"/config/mongo_adress_list.json") as adress_file:
@@ -176,12 +176,12 @@ class InteractionController(object):
             key = (event.action.type, tuple(event.action.parameters))
             for i, question in enumerate(self.feedback_question_list):
                 if question.get_delete_key() == key and not question.is_user_engaged():
-                    correct_action = self.str_to_MDPAction(question.get_correct_action())
-                    predicted_action = self.str_to_MDPAction(question.get_predicted_action())
+                    correct_decision = self.str_to_Decision(question.get_correct_decision())
+                    predicted_decision = self.str_to_Decision(question.get_predicted_decision())
                     if event.type == ActionHistoryEvent.FINISHED_SUCCESS:
                         self.halo.set_green()
-                        self.set_new_training_example(question.get_state(), correct_action,
-                                                      question.confidence, predicted_action)
+                        self.set_new_training_example(question.get_state(), correct_decision,
+                                                      question.confidence, predicted_decision)
                         self.waiting = False
                     else:
                         self.halo.set_red()
@@ -190,18 +190,18 @@ class InteractionController(object):
 
         if event.side == 'human' and event.type == ActionHistoryEvent.STARTING:
             if self.current_scene is not None:
-                predicted_action = self.str_to_MDPAction(self.last_predicted_action_str)
+                predicted_decision = self.str_to_Decision(self.last_predicted_decision_str)
                 self.set_new_training_example(self.current_scene, event.action, self.last_predicition_confidence,
-                                              predicted_action)
+                                              predicted_decision)
 
     #################################################
     # SERVICE CALLERS ###############################
     #################################################
 
-    def set_new_training_example(self, scene, action, prediction_confidence, predicted_action):
+    def set_new_training_example(self, scene, decision, prediction_confidence, predicted_action):
         request = SetNewTrainingExampleRequest()
-        request.action = action
-        request.predicted_action = predicted_action
+        request.decision = decision
+        request.predicted_decision = predicted_action
         request.scene_state = scene
         request.prediction_confidence = prediction_confidence
 
@@ -221,14 +221,15 @@ class InteractionController(object):
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
     def predict(self):
-        request = GetNextActionRequest()
+        request = GetNextDecisionRequest()
         request.scene_state = self.current_scene
         try:
-            predict = rospy.ServiceProxy(self.predictor_service, GetNextAction)
+            predict = rospy.ServiceProxy(self.predictor_service, GetNextDecision)
             return predict(request)
         except rospy.ServiceException, e:
             rospy.logerr("Cannot call predictor:".format(e.message))
-            return MDPAction(type='wait')
+            decision = Decision(type='wait')
+            return GetNextActionResponse(decisions=[decision], probas=[1.])
 
     def start_or_stop_episode(self, start=True):
         self.halo.set_off()
@@ -241,31 +242,31 @@ class InteractionController(object):
 
     ###################################################################################################################
 
-    def MDPAction_to_str(self, action):
-        return action.type + "(" + ", ".join(action.parameters) + ")"
+    def Decision_to_str(self, decision):
+        return decision.type + "(" + ", ".join(decision.parameters) + ")"
 
-    def str_to_MDPAction(self, string):
-        action = MDPAction()
-        action.type = string.split("(")[0]
+    def str_to_Decision(self, string):
+        decision = Decision()
+        decision.type = string.split("(")[0]
         if len(string.split("(")[1][:-1]) > 0:
-            action.parameters = string.split("(")[1][:-1].split(", ")
+            decision.parameters = string.split("(")[1][:-1].split(", ")
         else:
-            action.parameters = []
-        return action
+            decision.parameters = []
+        return decision
 
-    def run_action(self, action):
-        self.scene_before_action = deepcopy(self.current_scene)
+    def run_decision(self, decision):
+        self.scene_before_decision = deepcopy(self.current_scene)
         os.system('beep')
-        if action.type == 'wait':
+        if decision.type == 'wait':
             self.waiting = True
             return
         self.halo.set_off()
-        goal = RunMDPActionGoal()
-        goal.action = action
-        self.run_action_client.send_goal(goal)
-        while self.run_action_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
+        goal = RunDecisionGoal()
+        goal.decision = decision
+        self.run_decision_client.send_goal(goal)
+        while self.run_decision_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
             self.interaction_loop_rate.sleep()
-        self.current_action = action
+        self.current_decision = decision
 
     def run(self):
         try:
@@ -309,23 +310,23 @@ class InteractionController(object):
                     for i, question in enumerate(self.feedback_question_list):
                         question.update()
                         if question.is_answered():
-                            correct_action = self.str_to_MDPAction(question.get_correct_action())
-                            predicted_action = self.str_to_MDPAction(question.get_predicted_action())
-                            self.set_new_training_example(question.get_state(), correct_action,
-                                                          question.confidence, predicted_action)
+                            correct_decision = self.str_to_Decision(question.get_correct_decision())
+                            predicted_decision = self.str_to_Decision(question.get_predicted_decision())
+                            self.set_new_training_example(question.get_state(), correct_decision,
+                                                          question.confidence, predicted_decision)
                             del self.feedback_question_list[i]
                             question.remove()
 
                     if self.confirm_question is not None:
                         self.confirm_question.update()
                         if self.confirm_question.is_answered():
-                            correct_action = self.str_to_MDPAction(self.confirm_question.get_correct_action())
-                            predicted_action = self.str_to_MDPAction(self.confirm_question.get_predicted_action())
-                            if (correct_action.type != "wait" or
+                            correct_decision = self.str_to_Decision(self.confirm_question.get_correct_decision())
+                            predicted_decision = self.str_to_Decision(self.confirm_question.get_predicted_decision())
+                            if (correct_decision.type != "wait" or
                                     self.current_scene.predicates == self.last_scene.predicates):
-                                self.run_action(correct_action)
-                            self.set_new_training_example(self.confirm_question.get_state(), correct_action,
-                                                          self.confirm_question.confidence, predicted_action)
+                                self.run_decision(correct_decision)
+                            self.set_new_training_example(self.confirm_question.get_state(), correct_decision,
+                                                          self.confirm_question.confidence, predicted_decision)
                             self.confirm_question = None
                             self.interaction_loop_rate.sleep()
                             continue
@@ -354,27 +355,27 @@ class InteractionController(object):
                                 self.waiting = False
                                 for i, question in enumerate(self.feedback_question_list):
                                     if question.get_delete_key() == "wait":
-                                        correct_action = self.str_to_MDPAction(question.get_correct_action())
-                                        predicted_action = self.str_to_MDPAction(question.get_predicted_action())
-                                        self.set_new_training_example(question.get_state(), correct_action,
-                                                                      question.confidence, predicted_action)
+                                        correct_decision = self.str_to_Decision(question.get_correct_decision())
+                                        predicted_decision = self.str_to_Decision(question.get_predicted_decision())
+                                        self.set_new_training_example(question.get_state(), correct_decision,
+                                                                      question.confidence, predicted_decision)
                                         del self.feedback_question_list[i]
                                         question.remove()
 
                         prediction = self.predict()
-                        str_action_list = [self.MDPAction_to_str(a) for a in prediction.actions]
-                        predicted_action = np.random.choice(prediction.actions, p=prediction.probas)
-                        action_str = self.MDPAction_to_str(predicted_action)
+                        str_action_list = [self.Decision_to_str(a) for a in prediction.decisions]
+                        predicted_decision = np.random.choice(prediction.decisions, p=prediction.probas)
+                        action_str = self.Decision_to_str(predicted_decision)
 
-                        self.last_predicted_action_str = action_str
+                        self.last_predicted_decision_str = action_str
                         self.last_predicition_confidence = prediction.confidence
 
                         if prediction.mode == prediction.SURE:
-                            predicted_action = self.str_to_MDPAction(action_str)
+                            predicted_decision = self.str_to_Decision(action_str)
                             if action_str != "wait()" or len(str_action_list) > 1:
-                                if predicted_action.type != "wait":
-                                    key = (self.mdp_robot_mapping[predicted_action.type]["type"],
-                                           tuple(predicted_action.parameters))
+                                if predicted_decision.type != "wait":
+                                    key = (self.decision_action_mapping[predicted_decision.type]["type"],
+                                           tuple(predicted_decision.parameters))
                                 else:
                                     key = "wait"
 
@@ -382,20 +383,21 @@ class InteractionController(object):
                                     FeedbackQuestion(self.web_asker, action_str, str_action_list,
                                                      self.current_scene, prediction.confidence, key))
 
-                            self.run_action(predicted_action)
+                            self.run_decision(predicted_decision)
 
                         elif prediction.mode == prediction.CONFIRM:
                             if action_str == "wait()" and len(str_action_list) == 1:
-                                self.run_action(self.str_to_MDPAction(action_str))
+                                self.run_decision(self.str_to_Decision(action_str))
                             else:
                                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str,
                                                                         str_action_list, self.current_scene,
                                                                         prediction.confidence, halo=self.halo)
 
-                        elif prediction.confidence == prediction.NO_IDEA:
-                            raise NotImplemented()
+                        elif prediction.mode == prediction.NO_IDEA:
+                            raise NotImplementedError()
 
                         else:
+                            rospy.logerr("Received unknown prediction confidence mode {}".format(prediction.mode))
                             assert False
 
                 self.interaction_loop_rate.sleep()

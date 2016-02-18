@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy, rospkg, tf, transformations, json
-from thr_infrastructure_msgs.msg import Predicate, ActionHistoryEvent, MDPAction
+from thr_infrastructure_msgs.msg import Predicate, ActionHistoryEvent, Decision
 from thr_infrastructure_msgs.srv import GetSceneState, GetSceneStateRequest, UpdateRelationalState, UpdateRelationalStateRequest, StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from itertools import product
 from threading import RLock
@@ -116,7 +116,7 @@ class HumanActivityRecognizer(object):
                         event = ActionHistoryEvent()
                         event.header.stamp = rospy.Time.now()
                         event.type = ActionHistoryEvent.STARTING
-                        event.action = MDPAction(type="start_" + self.running_human_activity.type,
+                        event.action = Decision(type="start_" + self.running_human_activity.type,
                                                  parameters=self.running_human_activity.parameters[:-1])
                         event.side = 'human'
                         self.action_history.publish(event)
@@ -145,7 +145,7 @@ class HumanActivityRecognizer(object):
                         event = ActionHistoryEvent()
                         event.header.stamp = rospy.Time.now()
                         event.type = ActionHistoryEvent.FINISHED_SUCCESS
-                        event.action = MDPAction(type="start_" + self.running_human_activity.type,
+                        event.action = Decision(type="start_" + self.running_human_activity.type,
                                                  parameters=self.running_human_activity.parameters[:-1])
                         event.side = 'human'
                         self.action_history.publish(event)

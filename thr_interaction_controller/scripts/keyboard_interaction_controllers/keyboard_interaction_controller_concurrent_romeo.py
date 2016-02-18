@@ -12,17 +12,17 @@ class InteractionController(object):
     def __init__(self):
         self.running = True
         self.current_scene = None
-        self.previous_action = MDPAction(type='wait')
-        self.scene_before_action = None
-        self.run_action_name = '/thr/run_mdp_action'
+        self.previous_decision = Decision(type='wait')
+        self.scene_before_decision = None
+        self.run_decision_name = '/thr/run_decision'
         self.scene_state_service = '/thr/scene_state'
 
         self.logs = []
 
         # Initiating topics ands links to services/actions
-        self.run_action_client = actionlib.SimpleActionClient(self.run_action_name, RunMDPActionAction)
-        rospy.loginfo("Waiting action client {}...".format(self.run_action_name))
-        self.run_action_client.wait_for_server()
+        self.run_decision_client = actionlib.SimpleActionClient(self.run_decision_name, RunDecisionAction)
+        rospy.loginfo("Waiting action client {}...".format(self.run_decision_name))
+        self.run_decision_client.wait_for_server()
         self.services = [self.scene_state_service]
         for service in self.services:
             rospy.loginfo("Waiting service {}...".format(service))
@@ -150,45 +150,44 @@ class InteractionController(object):
 
     def run(self):
         rospy.loginfo('Manual interaction starting from keyboard!')
-        rospy.set_param('/thr/num_action', 1)
         try:
             while self.running and not rospy.is_shutdown():
                 self.update_scene()
                 ret = self.wizard_entry()
                 if ret is not None:
                     type, params = ret
-                    self.check_for_previous_actions()  # user inputs are blocking for this setup so update action state at the last time
+                    self.check_for_previous_decisions()  # user inputs are blocking for this setup so update action state at the last time
 
                     self.logs.append({'timestamp': rospy.get_time(),
                                       'type': type,
                                       'parameters': params})
-                    action = MDPAction(type=type, parameters=params)
-                    self.run_action(action)
+                    decision = Decision(type=type, parameters=params)
+                    self.run_decision(decision)
         finally:
             logs_name = rospy.get_param('/thr/logs_name')
             if logs_name != "none":
-                with open('action_decisions_'+logs_name+'.json', 'w') as f:
+                with open('decisions_'+logs_name+'.json', 'w') as f:
                     json.dump(self.logs, f)
 
 
-    def run_action(self, action):
-        if self.previous_action.type=='wait':
-            self.run_action_client.cancel_all_goals()
-            self.scene_before_action = self.current_scene
-            goal = RunMDPActionGoal()
-            goal.action = action
-            self.run_action_client.send_goal(goal)
-            self.previous_action = action
-            rospy.loginfo("You're asking to run action {}({})".format(action.type, ', '.join(action.parameters)))
+    def run_decision(self, decision):
+        if self.previous_decision.type== 'wait':
+            self.run_decision_client.cancel_all_goals()
+            self.scene_before_decision = self.current_scene
+            goal = RunDecisionGoal()
+            goal.decision = decision
+            self.run_decision_client.send_goal(goal)
+            self.previous_decision = decision
+            rospy.loginfo("You're asking to run decision {}({})".format(decision.type, ', '.join(decision.parameters)))
 
-    def check_for_previous_actions(self):
-        if self.previous_action.type != 'wait' and self.run_action_client.get_state() not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:  # ... and the action server reports it's ended...
-            state = self.run_action_client.get_state()
+    def check_for_previous_decisions(self):
+        if self.previous_decision.type != 'wait' and self.run_decision_client.get_state() not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:  # ... and the action server reports it's ended...
+            state = self.run_decision_client.get_state()
             if state == GoalStatus.SUCCEEDED:
-                rospy.loginfo("Action {}({}) succeeded!".format(self.previous_action.type, ', '.join(self.previous_action.parameters)))
+                rospy.loginfo("Decision {}({}) succeeded!".format(self.previous_decision.type, ', '.join(self.previous_decision.parameters)))
             else:
-                rospy.logwarn("Action {}({}) failed ;-(".format(self.previous_action.type, ', '.join(self.previous_action.parameters)))
-            self.previous_action = MDPAction(type='wait')
+                rospy.logwarn("Decision {}({}) failed ;-(".format(self.previous_decision.type, ', '.join(self.previous_decision.parameters)))
+            self.previous_decision = Decision(type='wait')
 
 if __name__=='__main__':
     rospy.init_node("interaction_controller")

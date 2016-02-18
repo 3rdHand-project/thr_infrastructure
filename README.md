@@ -101,7 +101,7 @@ roslaunch thr_interaction_controller manual.launch scene:=romeo policy:=hardcode
 
 ## How to implement new...
 ## New actions?
-The action server works with 2 types of actions: **Non-blocking** [`MDPAction`](thr_infrastructure_msgs/msg/MDPAction.msg)s like `start_xxxxx` causing the MDP action server to trigger a **blocking** [`RobotAction`](thr_action_server/msg/RobotAction.msg) executed by the Robot Action server. The actions themselves are implemented within a [`src/thr_actions/`](thr_action_server/src/thr_actions) subfolder. A new action must then be implemented as:
+The action server works with 2 types of actions: **Non-blocking** [`Decision`](thr_infrastructure_msgs/msg/Decision.msg)s like `start_xxxxx` causing the MDP action server to trigger a **blocking** [`RobotAction`](thr_action_server/msg/RobotAction.msg) executed by the Robot Action server. The actions themselves are implemented within a [`src/thr_actions/`](thr_action_server/src/thr_actions) subfolder. A new action must then be implemented as:
  *  A new file in this [`src/thr_actions/`](thr_action_server/src/thr_actions) subfoler
  *  A new correspondance `MDP to Robot` in [`config/mdp_robot_mapping.json`](thr_action_server/config/mdp_robot_mapping.json)
  *  A new attribution to the left or right arm in [`config/abilities.json`](thr_action_server/config/abilities.json) (To be merged with mdp_robot_mapping.json?)

@@ -10,10 +10,10 @@ from RBLT.domains import domain_dict
 from RBLT.learning import bagger
 # from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
 
-from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionResponse,\
+from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionResponse,\
     StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_infrastructure_msgs.msg import MDPAction
+from thr_infrastructure_msgs.msg import Decision
 
 
 class Server(object):
@@ -55,10 +55,10 @@ class Server(object):
         rospy.loginfo("Start learning")
         input_list = []
         target_list = []
-        for state, action_expert in self.dataset:
-            for action in self.domain.get_actions(state):
-                input_list.append((state, action))
-                if action == action_expert:
+        for state, decision_expert in self.dataset:
+            for decision in self.domain.get_actions(state):
+                input_list.append((state, decision))
+                if decision == decision_expert:
                     target_list.append(0. + np.random.normal(0, 0.000001))
                 else:
                     target_list.append(-1. + np.random.normal(0, 0.000001))
@@ -76,15 +76,15 @@ class Server(object):
         self.i_tree += 1
         rospy.loginfo("Learning done")
 
-    def relational_action_to_MDPAction(self, action):
+    def relational_action_to_Decision(self, action):
         if isinstance(action, tuple):
-            return MDPAction(type=action[0].replace("activate", "start"),
+            return Decision(type=action[0].replace("activate", "start"),
                              parameters=[c.replace("toolbox_", "/toolbox/") for c in action[1:]])
         else:
-            return MDPAction(type=action.replace("activate", "start"),
+            return Decision(type=action.replace("activate", "start"),
                              parameters=[])
 
-    def MDPAction_to_relational_action(self, action):
+    def Decision_to_relational_action(self, action):
         if len(action.parameters) == 0:
             return action.type.replace("start", "activate")
         else:
@@ -142,27 +142,27 @@ class Server(object):
     def predictor_handler(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
-        :param get_next_action_req: an object of type GetNextActionRequest (scene state)
-        :return: an object of type GetNextActionResponse
+        :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
+        :return: an object of type GetNextDecisionResponse
         """
 
         state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
         action_list = self.domain.get_actions(state)
 
-        resp = GetNextActionResponse()
+        resp = GetNextDecisionResponse()
         if self.learner is not None:
-            best_action, error = self.learner.get_best_actions(state, action_list, True,
+            best_decision, error = self.learner.get_best_actions(state, action_list, True,
                                                                lambda sa: self.task_q_fun(sa[0], sa[1]))
-            best_action = best_action[0]
+            best_decision = best_decision[0]
 
             print "error:", error
-            print self.domain.int_to_action(best_action)
-            print self.domain.filter_robot_actions([best_action])
+            print self.domain.int_to_action(best_decision)
+            print self.domain.filter_robot_actions([best_decision])
 
-            if len(self.domain.filter_robot_actions([best_action])) == 1:
-                action = self.relational_action_to_MDPAction(self.domain.int_to_action(best_action))
+            if len(self.domain.filter_robot_actions([best_decision])) == 1:
+                decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
             else:
-                action = self.relational_action_to_MDPAction("wait")
+                decision = self.relational_action_to_Decision("wait")
 
             if error > self.threshold_confirm:
                 resp.mode = resp.CONFIRM
@@ -183,23 +183,23 @@ class Server(object):
             best_robot_action_list = self.domain.filter_robot_actions(best_action_list)
             if len(best_robot_action_list) == 0:
                 best_robot_action_list.append(self.domain.action_to_int("wait"))
-            action = self.relational_action_to_MDPAction(
+            decision = self.relational_action_to_Decision(
                 self.domain.int_to_action(random.choice(best_robot_action_list)))
             resp.mode = resp.CONFIRM
             resp.confidence = 1.
 
         resp.probas = []
         for candidate_action in self.domain.filter_robot_actions(action_list):
-            resp.actions.append(self.relational_action_to_MDPAction(
+            resp.actions.append(self.relational_action_to_Decision(
                 self.domain.int_to_action(candidate_action)))
 
-            if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+            if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
                 resp.probas.append(1.)
             else:
                 resp.probas.append(0.)
 
         if sum(resp.probas) != 1:
-            print action
+            print decision
             print resp.actions
         return resp
 
@@ -209,17 +209,17 @@ class Server(object):
         :param snter: an object of type SetNewTrainingExampleRequest
         :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
         """
-        rospy.loginfo("I'm learning that action {}{} was good".format(new_training_ex.action.type,
+        rospy.loginfo("I'm learning that decision {}{} was good".format(new_training_ex.action.type,
                                                                       str(new_training_ex.action.parameters)))
 
         state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
-        action = self.domain.action_to_int(self.MDPAction_to_relational_action(new_training_ex.action))
-        self.dataset.append((state, action))
+        decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.action))
+        self.dataset.append((state, decision))
 
         return SetNewTrainingExampleResponse()
 
     def run(self):
-        rospy.Service(self.predictor_name, GetNextAction, self.predictor_handler)
+        rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
         rospy.spin()

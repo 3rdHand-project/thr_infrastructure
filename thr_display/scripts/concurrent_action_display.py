@@ -44,16 +44,16 @@ class ConcurrentActionDisplay(object):
             return ['starting', 'finished_success', 'finished_failure'][index]
 
         try:
-            action = self.text[event.action.type][map_const(event.type)]
+            decision = self.text[event.action.type][map_const(event.type)]
         except KeyError:
             return False
         else:
-            self.display_text(action['text'], event.action.parameters,
+            self.display_text(decision['text'], event.action.parameters,
                               self.font, self.scale, self.thickness, self.color, self.interline)
-            if isinstance(action['look_at'], int):
+            if isinstance(decision['look_at'], int):
                 try:
-                    if action['look_at'] >= 0:
-                        self.face.look_at(event.action.parameters[action['look_at']])
+                    if decision['look_at'] >= 0:
+                        self.face.look_at(event.action.parameters[decision['look_at']])
                     else:
                         self.face.look_at(None)  # Reset gaze at neutral position
                 except LookupException:

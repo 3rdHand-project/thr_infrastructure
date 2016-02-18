@@ -67,18 +67,18 @@ class RobotActionServer:
 
     def execute(self, goal):
         """
-        Dispatches a new goal on the method executing each type of action
+        Dispatches a new goal on the method executing each type of decision
         :param goal:
         """
         try:
             assert self.abilities[goal.action.type] == self.side
-            action = self.actions[goal.action.type]
+            decision = self.actions[goal.action.type]
         except KeyError or AssertionError:
-            rospy.logwarn('{} arm is not capable of action {}'.format(self.side, goal.action.type))
+            rospy.logwarn('{} arm is not capable of decision {}'.format(self.side, goal.action.type))
             self.server.set_aborted()
         else:
             # Note: do not try/catch: an Exception ends up in an aborted state, ... perfect!
-            if action.run(goal.action.parameters):
+            if decision.run(goal.action.parameters):
                 self.server.set_succeeded()
             else:
                 self.server.set_aborted()

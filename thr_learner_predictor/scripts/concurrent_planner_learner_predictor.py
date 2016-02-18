@@ -3,9 +3,9 @@
 from pyFolWorld import FolWorld
 import rospy, rospkg
 import tempfile
-from thr_infrastructure_msgs.srv import GetNextAction, GetNextActionRequest, GetNextActionResponse
+from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionRequest, GetNextDecisionResponse
 from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleRequest, SetNewTrainingExampleResponse
-from thr_infrastructure_msgs.msg import MDPAction, Predicate
+from thr_infrastructure_msgs.msg import Decision, Predicate
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>" and complete the pre-filled request message before <ENTER>
 
@@ -45,7 +45,7 @@ class Server(object):
         return len([p for p in predictate_list if
             p.type == 'busy' and arm in p.parameters]) == 1
 
-    def string_to_action(self, string):
+    def string_to_decision(self, string):
         string = string.replace("(", "+").replace(",", "+").replace(")", "")
         if string[-1] == "+":
             string = string[:-1]
@@ -58,10 +58,10 @@ class Server(object):
     def predictor_handler(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
-        :param get_next_action_req: an object of type GetNextActionRequest (scene state)
-        :return: an object of type GetNextActionResponse
+        :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
+        :return: an object of type GetNextDecisionResponse
         """
-        resp = GetNextActionResponse()
+        resp = GetNextDecisionResponse()
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
         pred_list = get_next_action_req.scene_state.predicates
 
@@ -88,24 +88,24 @@ class Server(object):
 
 
         w = FolWorld(module_path + "/config/toolbox.g", "tmp_file_planner")
-        best_action_string = w.get_best_action(200, 100)
-        planner_action = self.string_to_action(best_action_string)
+        best_decision_string = w.get_best_action(200, 100)
+        planner_decision = self.string_to_decision(best_decision_string)
 
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
-        action = MDPAction()
+        decision = Decision()
 
-        if planner_action == "activate_wait_for_human" or planner_action == "WAIT":
-            action.type = 'wait'
-        elif type(planner_action) == str:
-            action.type = planner_action.replace("activate", "start")
-            action.parameters = []
+        if planner_decision == "activate_wait_for_human" or planner_decision == "WAIT":
+            decision.type = 'wait'
+        elif type(planner_decision) == str:
+            decision.type = planner_decision.replace("activate", "start")
+            decision.parameters = []
         else:
-            action.type = planner_action[0].replace("activate", "start")
-            action.parameters = list(planner_action)[1:]
+            decision.type = planner_decision[0].replace("activate", "start")
+            decision.parameters = list(planner_decision)[1:]
             
-        print action, planner_action
+        print decision, planner_decision
 
-        resp = GetNextActionResponse()
+        resp = GetNextDecisionResponse()
         resp.confidence = resp.SURE
 
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
@@ -114,42 +114,42 @@ class Server(object):
 
         resp.probas = []
 
-        resp.actions.append(MDPAction(type="wait", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+        resp.actions.append(Decision(type="wait", parameters=[]))
+        if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
             resp.probas.append(1.)
         else:
             resp.probas.append(0.)
 
-        resp.actions.append(MDPAction(type="start_go_home_left", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+        resp.actions.append(Decision(type="start_go_home_left", parameters=[]))
+        if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
             resp.probas.append(1.)
         else:
             resp.probas.append(0.)
 
-        resp.actions.append(MDPAction(type="start_go_home_right", parameters=[]))
-        if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+        resp.actions.append(Decision(type="start_go_home_right", parameters=[]))
+        if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
             resp.probas.append(1.)
         else:
             resp.probas.append(0.)
 
         for obj in obj_list:
-            resp.actions.append(MDPAction(type="start_give", parameters=[obj]))
-            if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+            resp.actions.append(Decision(type="start_give", parameters=[obj]))
+            if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
                 resp.probas.append(1.)
             else:
                 resp.probas.append(0.)
 
         for obj in obj_list:
             for pose in ["0", "1"]:
-                resp.actions.append(MDPAction(type="start_hold", parameters=[obj, pose]))
-                if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+                resp.actions.append(Decision(type="start_hold", parameters=[obj, pose]))
+                if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
                     resp.probas.append(1.)
                 else:
                     resp.probas.append(0.)
 
         for obj in obj_list:
-            resp.actions.append(MDPAction(type="start_pick", parameters=[obj]))
-            if action.type == resp.actions[-1].type and action.parameters == resp.actions[-1].parameters:
+            resp.actions.append(Decision(type="start_pick", parameters=[obj]))
+            if decision.type == resp.actions[-1].type and decision.parameters == resp.actions[-1].parameters:
                 resp.probas.append(1.)
             else:
                 resp.probas.append(0.)
@@ -169,7 +169,7 @@ class Server(object):
         return SetNewTrainingExampleResponse()
 
     def run(self):
-        rospy.Service(self.predictor_name, GetNextAction, self.predictor_handler)
+        rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
         rospy.spin()

@@ -6,24 +6,23 @@ import actionlib
 
 from actionlib_msgs.msg import GoalStatus
 from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunMDPActionGoal, RunMDPActionAction, ActionHistoryEvent, MDPAction
+from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunDecisionGoal, RunDecisionAction, ActionHistoryEvent, Decision
 
-class MDPActionServer:
+class DecisionServer:
     """
     This is the action server that transform an MDP action in Robot action for the concurrent system.
-    It requires a mapping file mdp_robot_mapping.json
     """
     def __init__(self):
         # Action server attributes
         self.sequence = 1
         self.running = False
-        self.server = actionlib.SimpleActionServer('/thr/run_mdp_action', RunMDPActionAction, self.execute, False)
+        self.server = actionlib.SimpleActionServer('/thr/run_decision', RunDecisionAction, self.execute, False)
         self.rospack = rospkg.RosPack()
         self.current_actions = {'right': None, 'left': None}
         self.action_history_name = '/thr/action_history'
         self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
-        with open(self.rospack.get_path("thr_action_server")+"/config/mdp_robot_mapping.json") as f:
+        with open(self.rospack.get_path("thr_action_server")+"/config/decision_action_mapping.json") as f:
             self.mapping = json.load(f)
         with open(self.rospack.get_path("thr_action_server")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
@@ -48,30 +47,30 @@ class MDPActionServer:
             if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
                 self.clients['right'].cancel_all_goals()
             # Execute the go_homes and wait for them before stopping
-            self.execute(RunMDPActionGoal(action=MDPAction(type='start_go_home_left')))
-            self.execute(RunMDPActionGoal(action=MDPAction(type='start_go_home_right')))
+            self.execute(RunDecisionGoal(action=Decision(type='start_go_home_left')))
+            self.execute(RunDecisionGoal(action=Decision(type='start_go_home_right')))
             rospy.sleep(0.1)  # Wait for action to start before reading get_state()
             while self.clients['right'].get_state() == GoalStatus.ACTIVE or self.clients['left'].get_state() == GoalStatus.ACTIVE:
                 rospy.sleep(0.1)
             rospy.set_param('/thr/action_server/stopped', True)
         return StartStopEpisodeResponse()
 
-    def execute(self, mdp_goal):
+    def execute(self, decision_goal):
         """
         Execute a goal if the server is started or if force mode is enabled
-        :param mdp_goal:
+        :param decision_goal:
         """
         if not rospy.get_param('/thr/action_server/stopped'):
             robot_goal = RunRobotActionGoal()
             try:
-                robot_goal.action.type = self.mapping[mdp_goal.action.type]['type']
-                client = self.mapping[mdp_goal.action.type]['client']
+                robot_goal.action.type = self.mapping[decision_goal.decision.type]['type']
+                client = self.mapping[decision_goal.decision.type]['client']
             except KeyError, k:
-                rospy.logerr("No client is capable of action {}{}: KeyError={}".format(mdp_goal.action.type, str(mdp_goal.action.parameters), k.message))
+                rospy.logerr("No client is capable of action {}{}: KeyError={}".format(decision_goal.decision.type, str(decision_goal.decision.parameters), k.message))
                 self.server.set_aborted()
             else:
                 robot_goal.action.id = self.sequence
-                robot_goal.action.parameters = mdp_goal.action.parameters
+                robot_goal.action.parameters = decision_goal.decision.parameters
                 self.clients[client].send_goal(robot_goal)
                 self.current_actions[client] = robot_goal.action
 
@@ -125,5 +124,5 @@ class MDPActionServer:
 
 if __name__ == '__main__':
     rospy.init_node('robot_action_server')
-    server = MDPActionServer()
+    server = DecisionServer()
     server.start()

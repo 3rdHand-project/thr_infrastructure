@@ -2,8 +2,8 @@
 
 # The state of the scene and command (un)validated
 SceneState scene_state
-MDPAction action
-MDPAction predicted_action
+Decision decision
+Decision predicted_decision
 bool corrected
 float64 prediction_confidence
 ---
