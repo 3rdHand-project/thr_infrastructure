@@ -2,7 +2,7 @@
 <package>
   <name>thr_action_server</name>
   <version>0.0.0</version>
-  <description>Action servers executing MDP activities (non-blocking, always successful, triggering a robot activity) as well as Robot activities (one robot server for each arm, blocking, might fail)</description>
+  <description>Action servers executing Decisions (non-blocking, always successful, triggering a robot activity) as well as Robot activities (one robot server for each arm, blocking, might fail)</description>
 
   <maintainer email="yoan.mollard@inria.fr">Yoan Mollard</maintainer>
   <license>GPL3</license>

@@ -10,7 +10,7 @@ from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal
 
 class DecisionServer:
     """
-    This is the action server that transform an MDP action in Robot action for the concurrent system.
+    This is the action server that transforms a Decision in Robot action for the concurrent system.
     """
     def __init__(self):
         # Action server attributes
@@ -31,7 +31,7 @@ class DecisionServer:
         self.clients = {'left': actionlib.SimpleActionClient('/thr/robot_run_action/left', RunRobotActionAction),
                         'right': actionlib.SimpleActionClient('/thr/robot_run_action/right', RunRobotActionAction)}
         for name, client in self.clients.iteritems():
-            rospy.loginfo('MDP action server for concurrent mode is waiting for action server '+name)
+            rospy.loginfo('Decision server for concurrent mode is waiting for action server '+name)
             client.wait_for_server()
 
         self.server.start()
@@ -91,7 +91,7 @@ class DecisionServer:
 
     def update_status(self):
         """
-        This method gets the status of the children action clients and update the MDP action server according to them.
+        This method gets the status of the children action clients and update the Decision server according to them.
         :return:
         """
         for side, action in self.current_actions.iteritems():
@@ -107,15 +107,6 @@ class DecisionServer:
                     event.side = side
                     self.action_history.publish(event)
                     self.current_actions[side] = None
-
-            # Update the MDP action state of the corresponding goal here
-            #                     if robot_state == GoalStatus.ABORTED:
-            #            self.server.set_aborted(None, self.clients.get_goal_status_text())
-            #        elif robot_state == GoalStatus.PREEMPTED:
-            #            self.server.set_preempted(None, self.clients.get_goal_status_text())
-            #    else:
-            #        self.server.set_succeeded(None, self.clients.get_goal_status_text())
-
 
     def start(self):
         while not rospy.is_shutdown():
