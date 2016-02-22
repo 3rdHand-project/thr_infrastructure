@@ -50,7 +50,7 @@ class ConfirmQuestion(object):
         self.head.request_attention(True)
 
         self.first = self.web_asker.ask("I think i should do {} :".format(self.decision_str),
-                                        ["Do it!", "Don't do that"], color="blue")
+                                        ["Do it!", "Don't do that"], priority=10, color="blue")
         self.second = None
         self.correct_decision = None
 
@@ -61,11 +61,15 @@ class ConfirmQuestion(object):
                 self.correct_decision = self.decision_str
             else:
                 self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.decision_str),
-                                                 self.decision_str_list, color="blue")
+                                                 self.decision_str_list + ["something else"], priority=10, color="blue")
                 self.first = None
 
         if self.second is not None and self.second.answered():
-            self.correct_decision = self.second.get_answer()
+            answer = self.second.get_answer()
+            if answer == "something else":
+                self.correct_decision = "wait"
+            else:
+                self.correct_decision = answer
 
     def is_answered(self):
         return self.correct_decision is not None
@@ -194,6 +198,7 @@ class InteractionController(object):
             rospy.logerr("Cannot reach any adress.")
         else:
             self.web_asker.clear_all()
+            self.plot = self.web_asker.plot([20], priority=40)
 
     def cb_action_event_received(self, event):
         if event.type in [ActionHistoryEvent.FINISHED_SUCCESS, ActionHistoryEvent.FINISHED_FAILURE]:
@@ -296,20 +301,27 @@ class InteractionController(object):
             print 'Interaction starting!'
 
             is_running = False
-            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30)
+            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30, color="green")
 
             rospy.set_param("/thr/paused", False)
+            i = 0
 
             while self.running and not rospy.is_shutdown():
+                i += 1
+                if i == 11:
+                    self.plot.update([20])
+                if i == 22:
+                    i = 0
+                    self.plot.update([0])
                 if not is_running:
                     if start_stop_question.answered():
                         start_stop_question.remove()
                         is_running = True
                         self.start_or_stop_episode(True)
-                        start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30)
+                        start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30, color="green")
 
                         rospy.set_param("/thr/paused", False)
-                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
+                        pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, color="green")
 
                 elif start_stop_question.answered():
                     start_stop_question.remove()
@@ -324,7 +336,7 @@ class InteractionController(object):
                     self.feedback_question_list = []
 
                     self.start_or_stop_episode(False)
-                    start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30)
+                    start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30, color="green")
 
                 else:
 
