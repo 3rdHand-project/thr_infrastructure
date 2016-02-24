@@ -42,32 +42,31 @@ class DecisionServer:
         if request.command == StartStopEpisodeRequest.START:
             rospy.set_param('/thr/action_server/stopped', False)
         elif request.command == StartStopEpisodeRequest.STOP:
-            if self.clients['left'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
-                self.clients['left'].cancel_all_goals()
-            if self.clients['right'].get_state() in [GoalStatus.ACTIVE, GoalStatus.PREEMPTING]:
-                self.clients['right'].cancel_all_goals()
+            self.clients['left'].cancel_all_goals()
+            self.clients['right'].cancel_all_goals()
             # Execute the go_homes and wait for them before stopping
-            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_left')))
-            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_right')))
-            rospy.sleep(0.1)  # Wait for action to start before reading get_state()
-            while self.clients['right'].get_state() == GoalStatus.ACTIVE or self.clients['left'].get_state() == GoalStatus.ACTIVE:
-                rospy.sleep(0.1)
+            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_left')), force=True)
+            self.execute(RunDecisionGoal(decision=Decision(type='start_go_home_right')), force=True)
+            self.clients['left'].wait_for_result()
+            self.clients['right'].wait_for_result()
             rospy.set_param('/thr/action_server/stopped', True)
         return StartStopEpisodeResponse()
 
-    def execute(self, decision_goal):
+    def execute(self, decision_goal, force=False):
         """
         Execute a goal if the server is started or if force mode is enabled
-        :param decision_goal:
+        :param decision_goal: The Decision to execute
+        :param force: True when execution must be forced, e.g. this is an internal goal not coming from a client
         """
-        if not rospy.get_param('/thr/action_server/stopped'):
+        if force or not rospy.get_param('/thr/action_server/stopped'):
             robot_goal = RunRobotActionGoal()
             try:
                 robot_goal.action.type = self.mapping[decision_goal.decision.type]['type']
                 client = self.mapping[decision_goal.decision.type]['client']
             except KeyError, k:
                 rospy.logerr("No client is capable of action {}{}: KeyError={}".format(decision_goal.decision.type, str(decision_goal.decision.parameters), k.message))
-                self.server.set_aborted()
+                if not force:  # Decision goals sent by clients fail only if they are not mapped to robot actions
+                    self.server.set_aborted()
             else:
                 robot_goal.action.id = self.sequence
                 robot_goal.action.parameters = decision_goal.decision.parameters
@@ -81,7 +80,9 @@ class DecisionServer:
                 event.action = robot_goal.action
                 event.side = client
                 self.action_history.publish(event)
-                self.server.set_succeeded()
+
+                if not force:  # Decision goals sent by clients always succeed otherwise
+                    self.server.set_succeeded()
 
     def should_interrupt(self):
         """
