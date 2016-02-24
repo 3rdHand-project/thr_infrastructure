@@ -41,10 +41,6 @@ class Server(object):
         return len([p for p in predictate_list if
             p.type == 'picked' and obj in p.parameters]) == 1
 
-    def check_held_pred(self, predictate_list, obj):
-        return len([p for p in predictate_list if
-            p.type == 'held' and obj in p.parameters]) == 1
-
     def check_at_home_pred(self, predictate_list, arm):
         return len([p for p in predictate_list if
             p.type == 'at_home' and arm in p.parameters]) == 1

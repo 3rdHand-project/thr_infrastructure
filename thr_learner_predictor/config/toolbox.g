@@ -15,7 +15,6 @@ attached
 positioned
 in_human_ws
 picked
-held
 at_home
 busy
 free
