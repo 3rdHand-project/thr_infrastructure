@@ -20,7 +20,6 @@ class ConcurrentSceneStateManager(object):
         self.state_lock = Lock()
         self.history_lock = Lock()
         self.persistent_predicates = []
-        self.attaching_stamps = {}
         self.action_history_name = '/thr/action_history'
         self.service_update_name = '/thr/update_relational_state'
         self.logs = []
@@ -49,8 +48,6 @@ class ConcurrentSceneStateManager(object):
         with open(self.rospack.get_path("thr_action_server")+"/config/abilities.json") as f:
             self.abilities = json.load(f)
 
-        self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
-        self.screwed = [] # Pairs of screwed objects (screwdriver 7 seconds => screwed ; screw + wrist > 0.6 m => attached)
         self.tfl = tf.TransformListener(True, rospy.Duration(5*60)) # TF Interpolation ON and duration of its cache = 5 minutes
         self.image_pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=1)
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
@@ -62,8 +59,6 @@ class ConcurrentSceneStateManager(object):
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
             with self.state_lock:
-                self.attached = []
-                self.attaching_stamps = {}
                 self.persistent_predicates = []
                 self.picked = []
                 self.at_home['left'] = True
@@ -96,7 +91,7 @@ class ConcurrentSceneStateManager(object):
 
     def cb_action_event_received(self, msg):
             with self.state_lock:
-            # Listening action history for predicate AT_HOME
+                # Listening action history for predicate AT_HOME
                 if msg.side in ['left', 'right']:
                     if msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_left':
                         self.at_home['left'] = True
@@ -128,69 +123,13 @@ class ConcurrentSceneStateManager(object):
                         self.activity[self.abilities[msg.action.type]] = None
 
     def pred_picked(self, obj):
-        #with self.history_lock:
-            return obj in self.picked
+        return obj in self.picked
 
     def pred_at_home(self, side):
-        #with self.history_lock:
-            return self.at_home[side]
+        return self.at_home[side]
 
     def pred_busy(self, side):
-        #with self.history_lock:
-            return self.busy[side]
-
-    def pred_positioned(self, master, slave, atp):
-        """
-        Checks if any constraint between master and slave exists at attach point atp and returns True if the constraint is within the tolerance
-        :param master:
-        :param slave:
-        :param atp: (int)
-        :return: True if predicate POSITIONED(master, slave, atp) is True
-        """
-        if master+slave+str(atp) in self.attached:
-            return True
-        try:
-            # WARNING: Do not ask the relative tf directly, it is outdated!
-            tf_slave = self.tfl.lookupTransform(self.world, slave, rospy.Time(0))
-            tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
-        except Exception, e:
-            pass
-        else:
-            relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
-            constraint = self.poses[master]['constraints'][atp][slave]
-            cart_dist = transformations.distance(constraint, relative)
-            quat_dist = transformations.distance_quat(constraint, relative)
-            return cart_dist<self.config['positioned']['position_tolerance'] and quat_dist<self.config['positioned']['orientation_tolerance']
-        return False
-
-    def pred_attached(self, master, slave, atp):
-        if master+slave+str(atp) in self.attached:
-            return True
-        elif self.pred_positioned(master, slave, atp):
-            try:
-                # WARNING: Do not ask the relative tf directly, it is outdated!
-                screwdriver = self.tfl.lookupTransform(self.world, self.screwdriver, rospy.Time(0))
-                tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
-            except:
-                pass
-            else:
-                if self.screwdriver in self.poses[master]['constraints'][atp]:  # For objects that need to be screwed
-                    relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
-                    cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                    if cart_dist < self.config['attached']['tool_position_tolerance']:
-                        try:
-                            if rospy.Time.now() - self.attaching_stamps[master][slave] > rospy.Duration(self.config['attached']['screwdriver_attaching_time']):
-                                rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
-                                # self.screwed.append(master+slave+str(atp))
-                                self.attached.append(master+slave+str(atp))
-                        except KeyError:
-                            if not self.attaching_stamps.has_key(master):
-                                self.attaching_stamps[master] = {}
-                            self.attaching_stamps[master][slave] = rospy.Time.now()
-                else: # For objects that only need to be inserted
-                    # self.screwed.append(master+slave+str(atp))
-                    self.attached.append(master+slave+str(atp))
-        return False
+        return self.busy[side]
 
     def record_state(self):
         with self.state_lock:
@@ -230,26 +169,6 @@ class ConcurrentSceneStateManager(object):
                             p.type = 'picked'
                             p.parameters = [o]
                             self.state.predicates.append(p)
-                    for o1, o2 in combinations(self.objects, 2):
-                        if o1 in self.poses and 'constraints' in self.poses[o1] and len([c for c in self.poses[o1]['constraints'] if o2 in c])>0:
-                            master = o1
-                            slave = o2
-                        elif o2 in self.poses and 'constraints' in self.poses[o2] and len([c for c in self.poses[o2]['constraints'] if o1 in c])>0:
-                            slave = o1
-                            master = o2
-                        else:
-                            continue
-                        for atp in range(len(self.poses[master]['constraints'])):
-                            if self.pred_positioned(master, slave, atp):
-                                p = Predicate()
-                                p.type = 'positioned'
-                                p.parameters = [master, slave, str(atp)]
-                                self.state.predicates.append(p)
-                            if self.pred_attached(master, slave, atp):
-                                p = Predicate()
-                                p.type = 'attached'
-                                p.parameters = [master, slave, str(atp)]
-                                self.state.predicates.append(p)
                     with self.history_lock:
                         for side in ['left', 'right']:
                             if self.pred_busy(side):
