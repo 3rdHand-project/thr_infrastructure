@@ -43,6 +43,7 @@ class ToolBoxSceneStateUpdater(object):
 
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
+            self.running_human_activity = None
             self.old_predicates = []
             self.attaching_stamps = {}
             self.attached = []
@@ -144,12 +145,11 @@ class ToolBoxSceneStateUpdater(object):
                     self.attached.append(master+slave+str(atp))
         return False
 
-    def update_human_activity_predicate(self, master, slave, atp):
+    def check_new_activity_predicate(self, master, slave, atp, state):
         """
-        Generate the predicate related to human activities
+        Generate the predicate related to human activities, if no one is already known to the SSU
         We consider that human is not threaded so only 1 predicate can be generated here
         """
-        state = self.getscene(GetSceneStateRequest()).state
         if self.running_human_activity is None:
             predicate = Predicate()
             if self.pred_position(master, slave, atp):
@@ -160,6 +160,7 @@ class ToolBoxSceneStateUpdater(object):
                 predicate.parameters = [master, slave, str(atp), "eq1"]
 
             if predicate.type != '':
+                self.running_human_activity = predicate
                 self.add_predicate(predicate)
 
                 # Human has no action server so he can't publish its action history, we do this now
@@ -170,8 +171,12 @@ class ToolBoxSceneStateUpdater(object):
                                         parameters=self.running_human_activity.parameters[:-1])
                 event.side = 'human'
                 self.action_history.publish(event)
-                self.running_human_activity = None
-        else:
+
+    def check_ended_human_activity(self, state):
+        """
+        If the SSU knows a running human activity, check that it's still active and disable it if not
+        """
+        if self.running_human_activity is not None:
             still_running = True
             if self.running_human_activity.type == 'position' and not self.pred_position(
                     self.running_human_activity.parameters[0],
@@ -187,19 +192,19 @@ class ToolBoxSceneStateUpdater(object):
 
             if not still_running:
                 self.remove_predicate(self.running_human_activity)
+                self.running_human_activity = None
 
     def add_predicate(self, predicate):
         request = UpdateRelationalStateRequest(command=UpdateRelationalStateRequest.ADD, predicate=predicate)
         reply = self.update_relational_state(request)
-        self.running_human_activity = predicate
         if not reply.success:
-            rospy.logerr('SSM failed to add {}{}'.format(predicate.type, str(predicate.parameters)))
+            rospy.logerr('SSU failed to add {}{}'.format(predicate.type, str(predicate.parameters)))
 
     def remove_predicate(self, predicate):
         request = UpdateRelationalStateRequest(command=UpdateRelationalStateRequest.REMOVE, predicate=predicate)
         reply = self.update_relational_state(request)
         if not reply.success:
-            rospy.logerr('SSM failed to remove {}{}'.format(predicate.type, str(predicate.parameters)))
+            rospy.logerr('SSU failed to remove {}{}'.format(predicate.type, str(predicate.parameters)))
 
     def run(self):
         rate = rospy.Rate(self.rate)
@@ -207,6 +212,7 @@ class ToolBoxSceneStateUpdater(object):
             if self.running:
                 current_predicates = []
                 # Update the scene state predicates
+                state = self.getscene(GetSceneStateRequest()).state
                 for master, slave, atp in product(self.objects, self.objects, [0, 1]):
                     if not ('constraints' in self.poses[master] and len(
                             [c for c in self.poses[master]['constraints'] if slave in c]) > 0):
@@ -217,7 +223,8 @@ class ToolBoxSceneStateUpdater(object):
                         current_predicates.append(Predicate(type='attached', parameters=[master, slave, str(atp)]))
 
                     # Update the Human Activities that could be performed on these objects
-                    self.update_human_activity_predicate(master, slave, atp)
+                    self.check_new_activity_predicate(master, slave, atp, state)
+                self.check_ended_human_activity(state)
 
                 union = self.old_predicates + current_predicates
                 to_add = [p for p in union if p not in self.old_predicates]
