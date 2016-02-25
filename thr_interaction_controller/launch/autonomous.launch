@@ -25,6 +25,6 @@
     </include>
 
     <node pkg="thr_display" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
-    <node pkg="thr_learner_predictor" name="$(arg type)_learner_predictor" type="$(arg type)_$(arg policy)_learner_predictor.py" output="screen"/>
+    <node pkg="thr_learner_predictor" name="$(arg type)_learner_predictor" type="$(arg type)_$(arg policy)_learner_predictor_$(arg scene).py" output="screen"/>
     <node pkg="thr_interaction_controller" name="interaction_controller" type="interaction_controller.py" output="screen"/>
 </launch>
