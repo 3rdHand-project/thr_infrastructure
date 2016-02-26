@@ -9,14 +9,42 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="1324.2039"
-   height="722.60254"
+   width="1758.4836"
+   height="800.7757"
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
    sodipodi:docname="architecture.svg">
   <defs
      id="defs4">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect10851"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect10467"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect10038"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect9280"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect9088"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect8520"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect8516"
+       is_visible="true" />
     <marker
        inkscape:stockid="Arrow1Lend"
        orient="auto"
@@ -45,6 +73,52 @@
          transform="matrix(0.8,0,0,0.8,10,0)"
          inkscape:connector-curvature="0" />
     </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-8"
+       style="overflow:visible">
+      <path
+         id="path5091-0"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-8-3"
+       style="overflow:visible">
+      <path
+         id="path5091-0-5"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Lend-8-3-9"
+       style="overflow:visible">
+      <path
+         id="path5091-0-5-8"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect10851-3"
+       is_visible="true" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -53,11 +127,11 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="860.13781"
-     inkscape:cy="304.86417"
+     inkscape:zoom="0.5"
+     inkscape:cx="709.62635"
+     inkscape:cy="301.21767"
      inkscape:document-units="px"
-     inkscape:current-layer="g3845"
+     inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1680"
      inkscape:window-height="1021"
@@ -72,7 +146,7 @@
      inkscape:guide-bbox="true">
     <sodipodi:guide
        orientation="1,0"
-       position="-72.831981,210.57926"
+       position="-51.908821,288.75237"
        id="guide3270" />
   </sodipodi:namedview>
   <metadata
@@ -91,293 +165,57 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-65.917661,-30.109799)">
+     transform="translate(-44.994501,-30.109799)">
     <g
-       id="g3845"
+       id="g4430"
+       transform="matrix(2.1155817,0,0,1.5950636,-229.49289,-1.6707173)">
+      <path
+         sodipodi:nodetypes="cssccsc"
+         inkscape:connector-curvature="0"
+         id="path2991"
+         d="m 153.54319,233.12846 c 0,-14.50519 7.8015,-27.63717 20.41481,-37.14285 12.61331,-9.50569 30.03844,-15.38508 49.28571,-15.38508 19.24727,0 36.6724,5.87939 49.28572,15.38508 m 20.41481,37.14285 c 0,29.01038 -31.20599,52.52793 -69.70053,52.52793 -19.24727,0 -36.6724,-5.87939 -49.28571,-15.38507"
+         style="fill:none;stroke:#ab0000;stroke-width:4.06400013;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-opacity:1;stroke-dashoffset:0" />
+      <path
+         sodipodi:nodetypes="cccc"
+         inkscape:connector-curvature="0"
+         id="path4402"
+         d="m 292.80483,212.20712 -8.94468,21.91201 17.88936,0 z"
+         style="fill:#ab0000;fill-opacity:1;stroke:#ab0000;stroke-width:0.87369472px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         sodipodi:nodetypes="cccc"
+         inkscape:connector-curvature="0"
+         id="path4402-9"
+         d="m 154.04826,255.19615 -8.94468,-21.91201 17.88936,0 z"
+         style="fill:#ab0000;fill-opacity:1;stroke:#ab0000;stroke-width:0.87369472px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    </g>
+    <g
+       id="g4600"
        transform="translate(54.285714,133.2213)">
-      <g
-         transform="matrix(2.1155817,0,0,1.5950636,-280.24306,-134.18491)"
-         id="g4430">
-        <path
-           style="fill:none;stroke:#ab0000;stroke-width:4.06400013;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-opacity:1;stroke-dashoffset:0"
-           d="m 153.54319,233.12846 c 0,-14.50519 7.8015,-27.63717 20.41481,-37.14285 12.61331,-9.50569 30.03844,-15.38508 49.28571,-15.38508 19.24727,0 36.6724,5.87939 49.28572,15.38508 m 20.41481,37.14285 c 0,29.01038 -31.20599,52.52793 -69.70053,52.52793 -19.24727,0 -36.6724,-5.87939 -49.28571,-15.38507"
-           id="path2991"
-           inkscape:connector-curvature="0"
-           sodipodi:nodetypes="cssccsc" />
-        <path
-           style="fill:#ab0000;fill-opacity:1;stroke:#ab0000;stroke-width:0.87369472px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 292.80483,212.20712 -8.94468,21.91201 17.88936,0 z"
-           id="path4402"
-           inkscape:connector-curvature="0"
-           sodipodi:nodetypes="cccc" />
-        <path
-           style="fill:#ab0000;fill-opacity:1;stroke:#ab0000;stroke-width:0.87369472px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 154.04826,255.19615 -8.94468,-21.91201 17.88936,0 z"
-           id="path4402-9"
-           inkscape:connector-curvature="0"
-           sodipodi:nodetypes="cccc" />
-      </g>
       <text
          sodipodi:linespacing="125%"
-         id="text4447"
-         y="195.01135"
-         x="81.26339"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+         id="text4435"
+         y="133.28506"
+         x="25.726671"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
          xml:space="preserve"><tspan
-           style="font-size:15px"
-           y="195.01135"
-           x="81.26339"
-           id="tspan4449"
-           sodipodi:role="line">while not end:</tspan><tspan
-           style="font-size:15px"
-           id="tspan4455"
-           y="213.76135"
-           x="81.26339"
-           sodipodi:role="line">  scene = get_scene()</tspan><tspan
-           id="tspan4457"
-           style="font-size:15px"
-           y="232.51135"
-           x="81.26339"
-           sodipodi:role="line">  action = predict(scene)</tspan><tspan
-           id="tspan4459"
-           style="font-size:15px"
-           y="251.26135"
-           x="81.26339"
-           sodipodi:role="line">  run_action(action)</tspan><tspan
-           id="tspan4461"
-           style="font-size:15px"
-           y="270.01135"
-           x="81.26339"
-           sodipodi:role="line">  if action not canceled:</tspan><tspan
-           id="tspan4463"
-           style="font-size:15px"
-           y="288.76135"
-           x="81.26339"
-           sodipodi:role="line">    learn(scene, action)</tspan><tspan
-           style="font-size:15px"
-           id="tspan4453"
-           y="307.51135"
-           x="81.26339"
-           sodipodi:role="line" /><tspan
-           style="font-size:15px"
-           id="tspan4451"
-           y="326.26135"
-           x="81.26339"
-           sodipodi:role="line" /></text>
-      <path
-         sodipodi:nodetypes="ccccc"
-         inkscape:connector-curvature="0"
-         id="path4486"
-         d="m 192.52334,273.70454 0,16.25 -2.41072,0 4.64286,0 0,0"
-         style="fill:none;stroke:#c8c8c8;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <path
-         sodipodi:nodetypes="ccccc"
-         inkscape:connector-curvature="0"
-         id="path4486-5"
-         d="m 91.3997,197.69847 -0.14793,94.49435 -2.50542,0 4.64286,0 0,0"
-         style="fill:none;stroke:#999999;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
-      <g
-         id="g4600">
-        <text
-           xml:space="preserve"
-           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-           x="25.726671"
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
            y="133.28506"
-           id="text4435"
-           sodipodi:linespacing="125%"><tspan
-             sodipodi:role="line"
-             id="tspan4437"
-             x="25.726671"
-             y="133.28506"
-             style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">INTERACTION CONTROLLER</tspan></text>
-        <rect
-           style="fill:none;stroke:#000000;stroke-width:3.27740169;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-           id="rect4544"
-           width="358.32675"
-           height="67.402817"
-           x="13.27067"
-           y="90.835663" />
-      </g>
-      <path
-         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend);display:inline"
-         d="M 572,222.36218 328,343.36219"
-         id="path7018"
-         inkscape:connector-type="polyline"
-         inkscape:connector-curvature="0"
-         transform="translate(-54.285714,-133.22132)" />
-      <path
-         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend);display:inline"
-         d="M 572,543.36218 364,364.36219"
-         id="path7208"
-         inkscape:connector-type="polyline"
-         inkscape:connector-curvature="0"
-         transform="translate(-54.285714,-133.22132)" />
-      <path
-         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend)"
-         d="M 317,378.36219 570,665.36218"
-         id="path7394"
-         inkscape:connector-type="polyline"
-         inkscape:connector-curvature="0"
-         transform="translate(-54.285714,-133.22132)" />
-      <path
-         style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend);display:inline"
-         d="m 360,418.36219 214,61.99999"
-         id="path7764"
-         inkscape:connector-type="polyline"
-         inkscape:connector-curvature="0"
-         transform="translate(-54.285714,-133.22132)" />
-    </g>
-    <g
-       id="g4246"
-       transform="translate(23.707122,185.26198)">
-      <text
-         sodipodi:linespacing="125%"
-         id="text4435-9-0"
-         y="490.37402"
-         x="619.22772"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         xml:space="preserve"><tspan
-           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-           y="490.37402"
-           x="619.22772"
-           id="tspan4437-9-8"
-           sodipodi:role="line">DECISION SERVER</tspan></text>
+           x="25.726671"
+           id="tspan4437"
+           sodipodi:role="line">INTERACTION CONTROLLER</tspan></text>
       <rect
-         y="447.92462"
-         x="550.90533"
+         y="90.835663"
+         x="13.27067"
          height="67.402817"
          width="358.32675"
-         id="rect4544-7-4"
-         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-    </g>
-    <g
-       id="g4226"
-       transform="translate(11.313708,185.26198)">
-      <text
-         sodipodi:linespacing="125%"
-         id="text4435-9-0-5"
-         y="443.31525"
-         x="1051.9019"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         xml:space="preserve"><tspan
-           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-           y="443.31525"
-           x="1051.9019"
-           id="tspan4437-9-8-0"
-           sodipodi:role="line">ACTIVITY SERVER (LEFT)</tspan></text>
-      <rect
-         y="400.86584"
-         x="1018.8426"
-         height="67.402817"
-         width="358.32675"
-         id="rect4544-7-4-6"
-         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-    </g>
-    <g
-       id="g4231"
-       transform="translate(11.313708,185.26198)">
-      <text
-         sodipodi:linespacing="125%"
-         id="text4435-9-0-5-4"
-         y="540.28992"
-         x="1043.9331"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         xml:space="preserve"><tspan
-           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-           y="540.28992"
-           x="1043.9331"
-           id="tspan4437-9-8-0-5"
-           sodipodi:role="line">ACTIVITY SERVER (RIGHT)</tspan></text>
-      <rect
-         y="497.84048"
-         x="1018.8426"
-         height="67.402817"
-         width="358.32675"
-         id="rect4544-7-4-6-3"
-         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-    </g>
-    <g
-       id="g5060">
-      <rect
-         y="375.48248"
-         x="574.61243"
-         height="67.402817"
-         width="358.32675"
-         id="rect4544-7-7"
-         style="fill:#cccccc;stroke:#008700;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-      <text
-         sodipodi:linespacing="125%"
-         id="text4435-9-6"
-         y="417.9079"
-         x="623.02716"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         xml:space="preserve"><tspan
-           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-           y="417.9079"
-           x="623.02716"
-           id="tspan4437-9-0"
-           sodipodi:role="line">LEARNER/PREDICTOR</tspan></text>
-    </g>
-    <g
-       id="g5065">
-      <g
-         style="fill:none;stroke:#008000;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0"
-         transform="translate(144.65382,328.24542)"
-         id="g4657-9-9-6">
-        <path
-           sodipodi:nodetypes="cccc"
-           inkscape:connector-curvature="0"
-           id="rect4544-7-7-2-6"
-           d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
-           style="stroke:#008000;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0" />
-      </g>
-      <text
-         sodipodi:linespacing="125%"
-         id="text4435-9-6-0"
-         y="486.27924"
-         x="713.68097"
-         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         xml:space="preserve"><tspan
-           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-           y="486.27924"
-           x="713.68097"
-           id="tspan4437-9-0-3"
-           sodipodi:role="line">LEARN</tspan></text>
-    </g>
-    <g
-       id="g5075">
-      <g
-         style="fill:none;stroke:#008000;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0"
-         transform="translate(144.65382,392.50947)"
-         id="g4657-9-9-6-2">
-        <path
-           sodipodi:nodetypes="cccc"
-           inkscape:connector-curvature="0"
-           id="rect4544-7-7-2-6-0"
-           d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
-           style="stroke:#008000;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0" />
-      </g>
-      <g
-         id="g5071">
-        <text
-           xml:space="preserve"
-           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-           x="700.19281"
-           y="550.54327"
-           id="text4435-9-6-0-4"
-           sodipodi:linespacing="125%"><tspan
-             sodipodi:role="line"
-             id="tspan4437-9-0-3-0"
-             x="700.19281"
-             y="550.54327"
-             style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">PREDICT</tspan></text>
-      </g>
+         id="rect4544"
+         style="fill:none;stroke:#000000;stroke-width:3.27740169;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
     </g>
     <flowRoot
        xml:space="preserve"
        id="flowRoot4161"
        style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-       transform="translate(1.9729199,1.4285491)"><flowRegion
+       transform="translate(192.57637,1.4285491)"><flowRegion
          id="flowRegion4163"><rect
            id="rect4165"
            width="748.57141"
@@ -386,161 +224,153 @@
            y="16.647903" /></flowRegion><flowPara
          id="flowPara4167"
          style="font-size:40px">Third Hand Robot Infrastructure</flowPara></flowRoot>    <g
-       id="g4828"
-       transform="translate(-582.13768,-257.38687)">
-      <g
-         id="g3282"
-         transform="translate(1.499964,0)">
-        <g
-           id="g4621"
-           transform="translate(5.1671426,35.488139)"
-           style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
-          <text
-             sodipodi:linespacing="125%"
-             id="text4435-9-0-8"
-             y="882.79047"
-             x="663.13623"
-             style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-             xml:space="preserve"><tspan
-               style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-               y="882.79047"
-               x="663.13623"
-               id="tspan4437-9-8-3"
-               sodipodi:role="line">ROS Action Servers</tspan></text>
-          <rect
-             y="860.8584"
-             x="655.99243"
-             height="30.742088"
-             width="176.20406"
-             id="rect4544-7-4-0"
-             style="fill:none;stroke:#0066ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-        </g>
-        <g
-           transform="translate(-0.79373386,1.4076721)"
-           id="g3277">
-          <rect
-             y="855.65961"
-             x="661.95331"
-             height="30.742088"
-             width="176.20406"
-             id="rect4544-7-4-0-4-2"
-             style="fill:#b3b3b3;stroke:#0b2817;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-          <text
-             sodipodi:linespacing="125%"
-             id="text4435-9-0-8-8-1"
-             y="875.79163"
-             x="668.91064"
-             style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-             xml:space="preserve"><tspan
-               style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-               y="875.79163"
-               x="668.91064"
-               id="tspan4437-9-8-3-2-2"
-               sodipodi:role="line">Scene-specific node</tspan></text>
-        </g>
-        <g
-           transform="translate(-1.4999717,3.0454102e-6)"
-           id="g3272">
-          <rect
-             y="817.78802"
-             x="662.65955"
-             height="30.742088"
-             width="176.20406"
-             id="rect4544-7-4-0-4"
-             style="fill:none;stroke:#0b2817;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-          <text
-             sodipodi:linespacing="125%"
-             id="text4435-9-0-8-8-1-7"
-             y="837.92004"
-             x="666.15399"
-             style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-             xml:space="preserve"><tspan
-               style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
-               y="837.92004"
-               x="666.15399"
-               id="tspan4437-9-8-3-2-2-6"
-               sodipodi:role="line">Scene-agnostic node</tspan></text>
-        </g>
-        <g
-           id="g4745"
-           transform="translate(3.1468371,23.25)"
-           style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
-          <g
-             id="g4702"
-             style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
-            <text
-               xml:space="preserve"
-               style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-               x="688.97491"
-               y="934.30786"
-               id="text4435-9-08"
-               sodipodi:linespacing="125%"><tspan
-                 sodipodi:role="line"
-                 id="tspan4437-9-81"
-                 x="688.97491"
-                 y="934.30786"
-                 style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">ROS Services</tspan></text>
-            <rect
-               style="fill:none;stroke:#008000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-               id="rect4544-7-4-0-4-7"
-               width="176.20406"
-               height="30.742088"
-               x="658.01276"
-               y="912.37579" />
-          </g>
-          <g
-             id="g4739"
-             style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
-            <g
-               id="g4657-9-9-6-0"
-               transform="matrix(0.49212251,0,0,0.43586122,446.35212,891.931)"
-               style="fill:none;stroke:#008000;stroke-width:2.15918207;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:none;stroke-dashoffset:0">
-              <path
-                 style="stroke:#008000;stroke-width:2.15918207;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:none;stroke-dashoffset:0"
-                 d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
-                 id="rect4544-7-7-2-6-5"
-                 inkscape:connector-curvature="0"
-                 sodipodi:nodetypes="cccc" />
-            </g>
-            <text
-               xml:space="preserve"
-               style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-               x="709.75897"
-               y="963.36017"
-               id="text4435-9-6-0-0"
-               sodipodi:linespacing="125%"><tspan
-                 sodipodi:role="line"
-                 id="tspan4437-9-0-3-4"
-                 x="709.75897"
-                 y="963.36017"
-                 style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">Service 1</tspan></text>
-          </g>
-        </g>
-      </g>
+       id="g4621"
+       transform="translate(-575.47058,-215.85041)"
+       style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0-8"
+         y="882.79047"
+         x="663.13623"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="882.79047"
+           x="663.13623"
+           id="tspan4437-9-8-3"
+           sodipodi:role="line">ROS Action Servers</tspan></text>
       <rect
-         y="779.79449"
-         x="648.60669"
-         height="229.75337"
-         width="204.30975"
-         id="rect4756"
-         style="fill:none;stroke:#666666;stroke-width:1.10269737;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.1026974, 3.30809221;stroke-dashoffset:0" />
-      <flowRoot
-         transform="translate(47.729708,-6.7175367)"
-         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#666666;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
-         id="flowRoot4800"
-         xml:space="preserve"><flowRegion
-           id="flowRegion4802"><rect
-             style="fill:#666666"
-             y="787.55072"
-             x="671.75146"
-             height="27.223612"
-             width="154.14928"
-             id="rect4804" /></flowRegion><flowPara
-           style="font-weight:300;-inkscape-font-specification:Lato Light"
-           id="flowPara4806">Legend</flowPara></flowRoot>    </g>
+         y="860.8584"
+         x="655.99243"
+         height="30.742088"
+         width="176.20406"
+         id="rect4544-7-4-0"
+         style="fill:none;stroke:#0066ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    </g>
     <g
+       transform="translate(-581.43145,-252.95504)"
+       id="g3277">
+      <rect
+         y="855.65961"
+         x="661.95331"
+         height="30.742088"
+         width="176.20406"
+         id="rect4544-7-4-0-4-2"
+         style="fill:#b3b3b3;stroke:#0b2817;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0-8-8-1"
+         y="875.79163"
+         x="668.91064"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="875.79163"
+           x="668.91064"
+           id="tspan4437-9-8-3-2-2"
+           sodipodi:role="line">Scene-specific node</tspan></text>
+    </g>
+    <g
+       transform="translate(-582.13769,-257.38687)"
+       id="g3272">
+      <rect
+         y="817.78802"
+         x="662.65955"
+         height="30.742088"
+         width="176.20406"
+         id="rect4544-7-4-0-4"
+         style="fill:none;stroke:#0b2817;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0-8-8-1-7"
+         y="837.92004"
+         x="666.15399"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="837.92004"
+           x="666.15399"
+           id="tspan4437-9-8-3-2-2-6"
+           sodipodi:role="line">Scene-agnostic node</tspan></text>
+    </g>
+    <g
+       id="g4745"
+       transform="translate(-577.49088,-225.06439)"
+       style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
+      <g
+         id="g4702"
+         style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
+        <text
+           xml:space="preserve"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+           x="688.97491"
+           y="934.30786"
+           id="text4435-9-08"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4437-9-81"
+             x="688.97491"
+             y="934.30786"
+             style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">ROS Services</tspan></text>
+        <rect
+           style="fill:none;stroke:#008000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect4544-7-4-0-4-7"
+           width="176.20406"
+           height="30.742088"
+           x="658.01276"
+           y="912.37579" />
+      </g>
+      <g
+         id="g4739"
+         style="stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none">
+        <g
+           id="g4657-9-9-6-0"
+           transform="matrix(0.49212251,0,0,0.43586122,446.35212,891.931)"
+           style="fill:none;stroke:#008000;stroke-width:2.15918207;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:none;stroke-dashoffset:0">
+          <path
+             style="stroke:#008000;stroke-width:2.15918207;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:none;stroke-dashoffset:0"
+             d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
+             id="rect4544-7-7-2-6-5"
+             inkscape:connector-curvature="0"
+             sodipodi:nodetypes="cccc" />
+        </g>
+        <text
+           xml:space="preserve"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+           x="709.75897"
+           y="963.36017"
+           id="text4435-9-6-0-0"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4437-9-0-3-4"
+             x="709.75897"
+             y="963.36017"
+             style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">Service 1</tspan></text>
+      </g>
+    </g>
+    <rect
+       style="fill:none;stroke:#666666;stroke-width:1.22374642;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.22374643, 3.67123929;stroke-dashoffset:0"
+       id="rect4756"
+       width="204.18871"
+       height="283.13232"
+       x="66.529533"
+       y="522.46814" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot4800"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#666666;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(-534.40797,-264.10441)"><flowRegion
+         id="flowRegion4802"><rect
+           id="rect4804"
+           width="154.14928"
+           height="27.223612"
+           x="671.75146"
+           y="787.55072"
+           style="fill:#666666" /></flowRegion><flowPara
+         id="flowPara4806"
+         style="font-weight:300;-inkscape-font-specification:Lato Light">Legend</flowPara></flowRoot>    <g
        id="g4106"
-       transform="translate(23.707108,0)">
+       transform="translate(23.707108,5.4561843e-6)">
       <text
          sodipodi:linespacing="125%"
          id="text4435-9"
@@ -566,7 +396,8 @@
       </g>
     </g>
     <g
-       id="g5036">
+       id="g5036"
+       transform="translate(0,5.4561843e-6)">
       <g
          style="fill:none;stroke:#008000;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0"
          transform="translate(144.65384,70.541313)"
@@ -592,7 +423,8 @@
            sodipodi:role="line">GET SCENE STATE</tspan></text>
     </g>
     <g
-       id="g5042">
+       id="g5042"
+       transform="translate(0,5.4561843e-6)">
       <g
          id="g4992">
         <g
@@ -622,38 +454,355 @@
     </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker-start:none;marker-end:url(#Arrow1Lend)"
-       d="m 1021.5435,284.17124 -88.60429,-0.0265"
+       d="m 1217.8049,284.22989 -284.86569,-0.0851"
        id="path5530"
        inkscape:connector-type="polyline"
        inkscape:connector-curvature="0"
        inkscape:connection-end="#g5042"
-       inkscape:connection-end-point="d4"
-       transform="translate(0,-2.2302535e-5)" />
+       inkscape:connection-end-point="d4" />
+    <rect
+       style="fill:none;stroke:#ff6600;stroke-width:2.26788116;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.26788136, 6.8036441;stroke-dashoffset:0"
+       id="rect4756-6-9"
+       width="861.07684"
+       height="230.5882"
+       x="546.37921"
+       y="100.91827" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3492"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(157.91766,21.109804)"><flowRegion
+         id="flowRegion3494"><rect
+           id="rect3496"
+           width="281"
+           height="35"
+           x="1014"
+           y="84.602539" /></flowRegion><flowPara
+         id="flowPara3498"
+         style="fill:#ff6600">thr_scene_state_manager</flowPara></flowRoot>    <g
+       id="g5060"
+       transform="translate(0,-9.999995)">
+      <rect
+         y="375.48248"
+         x="574.61243"
+         height="67.402817"
+         width="358.32675"
+         id="rect4544-7-7"
+         style="fill:#cccccc;stroke:#008700;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-6"
+         y="417.9079"
+         x="623.02716"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="417.9079"
+           x="623.02716"
+           id="tspan4437-9-0"
+           sodipodi:role="line">LEARNER/PREDICTOR</tspan></text>
+    </g>
+    <g
+       id="g5065"
+       transform="translate(0,-9.999995)">
+      <g
+         style="fill:none;stroke:#008000;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0"
+         transform="translate(144.65382,328.24542)"
+         id="g4657-9-9-6">
+        <path
+           sodipodi:nodetypes="cccc"
+           inkscape:connector-curvature="0"
+           id="rect4544-7-7-2-6"
+           d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
+           style="stroke:#008000;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0" />
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-6-0"
+         y="486.27924"
+         x="700.19281"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="486.27924"
+           x="700.19281"
+           id="tspan4437-9-0-3"
+           sodipodi:role="line">PREDICT</tspan></text>
+    </g>
+    <g
+       id="g5075"
+       transform="translate(0,-9.999995)">
+      <g
+         style="fill:none;stroke:#008000;stroke-width:3;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0"
+         transform="translate(144.65382,392.50947)"
+         id="g4657-9-9-6-2">
+        <path
+           sodipodi:nodetypes="cccc"
+           inkscape:connector-curvature="0"
+           id="rect4544-7-7-2-6-0"
+           d="m 788.28537,115.5844 0,67.40281 -358.32675,0 0,-67.40281"
+           style="stroke:#008000;stroke-opacity:0.50196078;stroke-dasharray:3, 6;stroke-dashoffset:0" />
+      </g>
+      <g
+         id="g5071"
+         transform="translate(13.488192,0)">
+        <text
+           xml:space="preserve"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:0.50196078;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+           x="700.19281"
+           y="550.54327"
+           id="text4435-9-6-0-4"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4437-9-0-3-0"
+             x="700.19281"
+             y="550.54327"
+             style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;fill-opacity:0.50196078;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">LEARN</tspan></text>
+      </g>
+    </g>
+    <rect
+       style="fill:none;stroke:#ff00cc;stroke-width:2.33999991;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.34, 7.02;stroke-dashoffset:0"
+       id="rect4756-6-0"
+       width="861.00464"
+       height="245.51605"
+       x="546.41528"
+       y="351.57687" />
+    <g
+       id="g4246"
+       transform="translate(19.077002,257.40286)">
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0"
+         y="490.37402"
+         x="619.22772"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="490.37402"
+           x="619.22772"
+           id="tspan4437-9-8"
+           sodipodi:role="line">DECISION SERVER</tspan></text>
+      <rect
+         y="447.92462"
+         x="550.90533"
+         height="67.402817"
+         width="358.32675"
+         id="rect4544-7-4"
+         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    </g>
+    <g
+       id="g4226"
+       transform="translate(6.6835878,257.40286)">
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0-5"
+         y="443.31525"
+         x="1051.9019"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="443.31525"
+           x="1051.9019"
+           id="tspan4437-9-8-0"
+           sodipodi:role="line">ACTIVITY SERVER (LEFT)</tspan></text>
+      <rect
+         y="400.86584"
+         x="1018.8426"
+         height="67.402817"
+         width="358.32675"
+         id="rect4544-7-4-6"
+         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    </g>
+    <g
+       id="g4231"
+       transform="translate(6.6835878,257.40286)">
+      <text
+         sodipodi:linespacing="125%"
+         id="text4435-9-0-5-4"
+         y="540.28992"
+         x="1043.9331"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0066ff;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0066ff;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros"
+           y="540.28992"
+           x="1043.9331"
+           id="tspan4437-9-8-0-5"
+           sodipodi:role="line">ACTIVITY SERVER (RIGHT)</tspan></text>
+      <rect
+         y="497.84048"
+         x="1018.8426"
+         height="67.402817"
+         width="358.32675"
+         id="rect4544-7-4-6-3"
+         style="fill:none;stroke:#0066ff;stroke-width:3.27699995;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:10;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-mid:none;marker-end:url(#Arrow1Lend)"
-       d="m 932.93921,648.38002 97.21709,-10.04276"
+       d="m 928.30909,720.52088 97.21711,-10.04276"
        id="path6276"
        inkscape:connector-type="polyline"
        inkscape:connector-curvature="0"
        inkscape:connection-start="#g4246"
        inkscape:connection-start-point="d4"
        inkscape:connection-end="#g4226"
-       inkscape:connection-end-point="d4"
-       transform="translate(0,-2.2302535e-5)" />
+       inkscape:connection-end-point="d4" />
     <path
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend)"
-       d="m 932.93921,686.51972 97.21709,10.65249"
+       d="m 928.30909,758.66058 97.21711,10.65249"
        id="path6278"
        inkscape:connector-type="polyline"
        inkscape:connector-curvature="0"
        inkscape:connection-start="#g4246"
        inkscape:connection-start-point="d4"
        inkscape:connection-end="#g4231"
-       inkscape:connection-end-point="d4"
-       transform="translate(0,-2.2302535e-5)" />
+       inkscape:connection-end-point="d4" />
+    <rect
+       style="fill:none;stroke:#2a7fff;stroke-width:2.17813897;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.17813928, 6.53441784;stroke-dashoffset:0"
+       id="rect4756-6"
+       width="861.16656"
+       height="212.67793"
+       x="546.33435"
+       y="617.11847" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3492-5"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(227.05915,536.47609)"><flowRegion
+         id="flowRegion3494-3"><rect
+           id="rect3496-3"
+           width="281"
+           height="35"
+           x="1014"
+           y="84.602539" /></flowRegion><flowPara
+         id="flowPara3498-4"
+         style="fill:#0066ff">thr_action_server</flowPara></flowRoot>    <rect
+       style="fill:none;stroke:#88aa00;stroke-width:2.3499999;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.35, 7.05;stroke-dashoffset:0"
+       id="rect4756-6-0-0"
+       width="332.58453"
+       height="164.46808"
+       x="1469.7186"
+       y="387.54376" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3492-4-8"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#88aa00;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(681.98574,308.88732)"><flowRegion
+         id="flowRegion3494-5-4"><rect
+           id="rect3496-6-6"
+           width="281"
+           height="35"
+           x="1014"
+           y="84.602539"
+           style="fill:#88aa00" /></flowRegion><flowPara
+         id="flowPara3498-1-8"
+         style="fill:#88aa00">thr_scenes</flowPara></flowRoot>    <g
+       id="g4597"
+       transform="translate(-63.488921,-22.728952)">
+      <g
+         transform="matrix(0.41635631,0,0,0.41635631,1543.1869,446.20591)"
+         id="g3008">
+        <path
+           style="fill:#ffffff;stroke:#999999;stroke-width:2"
+           inkscape:connector-curvature="0"
+           d="M 131,10 H 43 V 174 H 167 V 46 z m 0,0 v 36 h 36"
+           id="path4" />
+        <path
+           style="stroke:#999999;stroke-width:72;stroke-dasharray:6, 10"
+           inkscape:connector-curvature="0"
+           d="m 94,25 v 135 m 23,-1 V 56"
+           id="path6" />
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4567"
+         y="539.82983"
+         x="1584.9192"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           y="539.82983"
+           x="1584.9192"
+           id="tspan4569"
+           sodipodi:role="line">toolbox</tspan><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           id="tspan4571"
+           y="562.32983"
+           x="1584.9192"
+           sodipodi:role="line">config files</tspan></text>
+    </g>
+    <g
+       id="g4697"
+       transform="translate(-45.839873,-6.5370093)">
+      <g
+         transform="matrix(0.41635631,0,0,0.41635631,1626.6184,430.01398)"
+         id="g3008-9">
+        <path
+           style="fill:#ffffff;stroke:#999999;stroke-width:2"
+           inkscape:connector-curvature="0"
+           d="M 131,10 H 43 V 174 H 167 V 46 z m 0,0 v 36 h 36"
+           id="path4-0" />
+        <path
+           style="stroke:#999999;stroke-width:72;stroke-dasharray:6, 10"
+           inkscape:connector-curvature="0"
+           d="m 94,25 v 135 m 23,-1 V 56"
+           id="path6-9" />
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4567-0"
+         y="523.63788"
+         x="1670.3024"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           y="523.63788"
+           x="1670.3024"
+           id="tspan4569-6"
+           sodipodi:role="line">romeo</tspan><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           id="tspan4571-1"
+           y="546.13788"
+           x="1670.3024"
+           sodipodi:role="line">config files</tspan></text>
+    </g>
+    <g
+       id="g4689"
+       transform="translate(-30.488799,-6.5370093)">
+      <g
+         transform="matrix(0.41635631,0,0,0.41635631,1714.2996,430.01398)"
+         id="g3008-9-0">
+        <path
+           style="fill:#ffffff;stroke:#999999;stroke-width:2"
+           inkscape:connector-curvature="0"
+           d="M 131,10 H 43 V 174 H 167 V 46 z m 0,0 v 36 h 36"
+           id="path4-0-2" />
+        <path
+           style="stroke:#999999;stroke-width:72;stroke-dasharray:6, 10"
+           inkscape:connector-curvature="0"
+           d="m 94,25 v 135 m 23,-1 V 56"
+           id="path6-9-5" />
+      </g>
+      <text
+         sodipodi:linespacing="125%"
+         id="text4567-0-1"
+         y="523.63788"
+         x="1757.9835"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+         xml:space="preserve"><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           y="523.63788"
+           x="1757.9835"
+           id="tspan4569-6-7"
+           sodipodi:role="line">chair</tspan><tspan
+           style="font-size:18px;text-align:center;text-anchor:middle;fill:#4d4d4d"
+           id="tspan4571-1-0"
+           y="546.13788"
+           x="1757.9835"
+           sodipodi:role="line">config files</tspan></text>
+    </g>
     <g
        id="g3180"
-       transform="translate(-26.572326,21.009308)">
+       transform="translate(-26.572326,21.009313)">
       <g
          style="fill:#cccccc;stroke:#000000"
          transform="translate(31.911715,-171.42346)"
@@ -679,5 +828,297 @@
            y="271.89178"
            style="font-size:24px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">SCENE STATE UPDATER</tspan></text>
     </g>
-  </g>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3492-4"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ff00cc;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(195.35204,270.97609)"><flowRegion
+         id="flowRegion3494-5"><rect
+           id="rect3496-6"
+           width="281"
+           height="35"
+           x="1014"
+           y="84.602539"
+           style="fill:#ff00cc" /></flowRegion><flowPara
+         id="flowPara3498-1"
+         style="fill:#ff00cc">thr_learner_predictor</flowPara></flowRoot>    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:12, 4;stroke-dashoffset:0;marker-end:url(#Arrow1Lend)"
+       d="m 1647.9024,386.96156 0,-102.23153 -263.7317,0"
+       id="path4895"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:12, 4;stroke-dashoffset:0;marker-start:none;marker-end:url(#Arrow1Lend-8)"
+       d="m 1647.8993,552.59704 0,143.52951 -262.1038,0"
+       id="path5380"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:12, 4;stroke-dashoffset:0;marker-end:url(#Arrow1Lend-8)"
+       d="m 1402.8009,377.0741 -535.77938,0"
+       id="path5760"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0"
+       transform="translate(65.917661,30.109799)"
+       inkscape:connection-end-point="d4"
+       inkscape:connection-end="#g5060"
+       inkscape:connection-start-point="d4"
+       inkscape:connection-start="#rect4756-6-0-0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:12, 4;stroke-dashoffset:0;marker-start:none;marker-end:url(#Arrow1Lend-8)"
+       d="m 1648.0419,696.61993 0,97.81865 -262.389,0"
+       id="path5380-2"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="154.68245"
+       y="339.27664"
+       id="text4447-6"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="154.68245"
+         y="339.27664"
+         style="font-size:15px"
+         id="tspan4463-7">scene = get_scene()</tspan><tspan
+         sodipodi:role="line"
+         x="154.68245"
+         y="358.02664"
+         id="tspan4453-5"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="154.68245"
+         y="376.77664"
+         id="tspan4451-8"
+         style="font-size:15px" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="154.96809"
+       y="362.08307"
+       id="text4447-8"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="154.96809"
+         y="362.08307"
+         style="font-size:15px"
+         id="tspan4457-9">action = predict(scene)</tspan><tspan
+         sodipodi:role="line"
+         x="154.96809"
+         y="380.83307"
+         style="font-size:15px"
+         id="tspan4463-9" /><tspan
+         sodipodi:role="line"
+         x="154.96809"
+         y="399.58307"
+         id="tspan4453-3"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="154.96809"
+         y="418.33307"
+         id="tspan4451-5"
+         style="font-size:15px" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="154.13313"
+       y="384.8895"
+       id="text4447-4"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="154.13313"
+         y="384.8895"
+         style="font-size:15px"
+         id="tspan4463-1">run_action(action)</tspan><tspan
+         sodipodi:role="line"
+         x="154.13313"
+         y="403.6395"
+         id="tspan4453-7"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="154.13313"
+         y="422.3895"
+         id="tspan4451-86"
+         style="font-size:15px" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="154.85823"
+       y="407.69589"
+       id="text4447-2"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="154.85823"
+         y="407.69589"
+         style="font-size:15px"
+         id="tspan4463-12">if action not canceled:</tspan><tspan
+         sodipodi:role="line"
+         x="154.85823"
+         y="426.44589"
+         id="tspan4453-50"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="154.85823"
+         y="445.19589"
+         id="tspan4451-0"
+         style="font-size:15px" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="172.53587"
+       y="427.57999"
+       id="text4447-5"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="172.53587"
+         y="427.57999"
+         style="font-size:15px"
+         id="tspan4463-91">learn(scene, action)</tspan><tspan
+         sodipodi:role="line"
+         x="172.53587"
+         y="446.32999"
+         id="tspan4453-34"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="172.53587"
+         y="465.07999"
+         id="tspan4451-7"
+         style="font-size:15px" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Liberation Mono;-inkscape-font-specification:Liberation Mono"
+       x="141.4232"
+       y="319.39258"
+       id="text4447-9"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="141.4232"
+         y="319.39258"
+         style="font-size:15px"
+         id="tspan4463-5">while not end:</tspan><tspan
+         sodipodi:role="line"
+         x="141.4232"
+         y="338.14258"
+         id="tspan4453-9"
+         style="font-size:15px" /><tspan
+         sodipodi:role="line"
+         x="141.4232"
+         y="356.89258"
+         id="tspan4451-77"
+         style="font-size:15px" /></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow1Lstart);marker-end:none"
+       d="m 263.75083,305.40954 167.58431,0 0,-115.25841 75.66042,0 0,2.12132"
+       id="path8518"
+       inkscape:path-effect="#path-effect8520"
+       inkscape:original-d="m 263.75083,305.40954 167.58431,0 0,-115.25841 75.66042,0 0,2.12132"
+       inkscape:connector-curvature="0"
+       transform="translate(65.917661,30.109799)" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow1Lstart)"
+       d="m 301.22749,328.74406 130.10765,0 0,111.01577 74.95332,0"
+       id="path9086"
+       inkscape:path-effect="#path-effect9088"
+       inkscape:original-d="m 301.22749,328.74406 130.10765,0 0,111.01577 74.95332,0"
+       inkscape:connector-curvature="0"
+       transform="translate(65.917661,30.109799)" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:none;marker-end:url(#Arrow1Lend-8-3)"
+       d="m 258.09398,352.07858 150.61374,0 0,359.21025 94.0452,0 0,-0.70711 0,0"
+       id="path9278"
+       inkscape:path-effect="#path-effect9280"
+       inkscape:original-d="m 258.09398,352.07858 150.61374,0 0,359.21025 94.0452,0 0,-0.70711 0,0"
+       inkscape:connector-curvature="0"
+       transform="translate(65.917661,30.109799)" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Lend-8-3)"
+       d="m 289.91378,393.79789 91.21678,0 0,113.13708 125.1579,0"
+       id="path10036"
+       inkscape:path-effect="#path-effect10038"
+       inkscape:original-d="m 289.91378,393.79789 91.21678,0 0,113.13708 125.1579,0"
+       inkscape:connector-curvature="0"
+       transform="translate(65.917661,30.109799)" />
+    <g
+       transform="translate(-511.84391,-59.44673)"
+       id="g3272-0">
+      <g
+         id="g11041"
+         transform="translate(0,1.3576015)">
+        <text
+           xml:space="preserve"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+           x="630.65399"
+           y="829.22009"
+           id="text4435-9-0-8-8-1-7-3"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4437-9-8-3-2-2-6-8"
+             x="630.65399"
+             y="829.22009"
+             style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">ROS data stream</tspan></text>
+        <path
+           transform="translate(577.76157,89.556529)"
+           inkscape:connector-curvature="0"
+           inkscape:original-d="m 14.5,733.10254 33,0"
+           inkscape:path-effect="#path-effect10851"
+           id="path10849"
+           d="m 14.5,733.10254 33,0"
+           style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-8-3)" />
+      </g>
+      <g
+         id="g11085">
+        <text
+           xml:space="preserve"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#0b2817;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+           x="699.59827"
+           y="854.58502"
+           id="text4435-9-0-8-8-1-7-3-8"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4437-9-8-3-2-2-6-8-1"
+             x="699.59827"
+             y="854.58502"
+             style="font-size:18px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#0b2817;font-family:TeX Gyre Heros;-inkscape-font-specification:TeX Gyre Heros">File data</tspan></text>
+        <path
+           inkscape:connector-curvature="0"
+           inkscape:original-d="m 591.53482,848.15904 98.84202,0"
+           inkscape:path-effect="#path-effect10851-3"
+           id="path10849-1"
+           d="m 591.53482,848.15904 98.84202,0"
+           style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:6, 2;stroke-dashoffset:0;marker-end:url(#Arrow1Lend-8-3)" />
+      </g>
+    </g>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot11111"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(112.58671,-109.19024)"><flowRegion
+         id="flowRegion11113"><rect
+           id="rect11115"
+           width="111"
+           height="74"
+           x="1659"
+           y="579.7757" /></flowRegion><flowPara
+         id="flowPara11117"
+         style="font-size:25px;fill:#4d4d4d">...</flowPara></flowRoot>    <rect
+       style="fill:none;stroke:#c83737;stroke-width:2.29999995;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.3, 6.9;stroke-dashoffset:0"
+       id="rect4756-6-9-5"
+       width="415.54626"
+       height="287.05762"
+       x="46.144501"
+       y="183.35669" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3492-5-7"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Lato;-inkscape-font-specification:Lato Light"
+       transform="translate(-779.83156,104.63924)"><flowRegion
+         id="flowRegion3494-3-2"><rect
+           id="rect3496-3-7"
+           width="281"
+           height="35"
+           x="1014"
+           y="84.602539" /></flowRegion><flowPara
+         id="flowPara3498-4-8"
+         style="fill:#800000">thr_interaction_controller</flowPara></flowRoot>  </g>
 </svg>
