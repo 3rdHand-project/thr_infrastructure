@@ -16,19 +16,19 @@ Videos:
 
 The global architecture is illustrated and explained hereunder, while the ROS messages can be  [viewed online](thr_infrastructure_msgs/msg).
 
-![Architecture](/architecture.svg)
+Check out the ![architecture diagram](/architecture.svg).
 
 The experimental setup is fully built on ROS, and composed by the following nodes [Type of node in brackets]:
 
- - **Optitrack Publisher** [Publisher]: Generic ROS node previously developed that publishes optitrack rigid bodies in TF frames. Comes with a calibration tool for the bridge ROS <-> Optitrack
- - **Scene State Manager** [Service]: Observes the scene, creates a representation of the scene made of predicates. It is also the guard of the predicates, it containts all of them and serves them to other nodes emitting a request.
- - **Human Activity Recognizer** [Node]: Observes the scene, creates a representation of what the human is doing made with predicates and connects to the guard (Scene State Manager 
+ - **Scene State Manager** [2 Services]: Observes the scene, creates a representation of the scene made of predicates by generating only generic predicates (in human workspace, arms business, activity predicates...). It is also the guard of the predicates, it stores all of them and serves them to other nodes emitting a request through service `/thr/scene_state`. Other nodes may add or remov predicates through service `/thr/update_relational_state`.
+ - **Scene State Updater** [Node]: Observes the scene, creates a representation of the scene made of predicates by generating scene-specific predicates (positioning, attaching, ...). There is thus a different SSU for each scene.
 
- - **Action Server** [Action Server]: Executes an action (pick, go home, hold, ...) onto an agent
- - **Learner/Predictor** [2 Services]: This is the policy provider. It provides two services, one for learning (called each time an action is being run, it can potentially be unused), one for predicting (infinitely called by the interaction controller to get the next action).
- -  **Interaction controller** [Simple node]: Controller mastering the whole interaction process, requesting the scene state, the actions to perform from the predictor, sending goals to the arms through their action server, and warning the learner than the action succeeded or has been interrupted. We have implemented two kinds of interaction controllers:
+ - **Decision Server** [Action Server]: Executes a decision (start_pick, start_go_home, start_hold, ...) through channel `/thr/run_decision` by checking what arms are able to execute it, forwarding the goal to the Action server of the corresponding arm (left/right). All decisions are non-blocking and always successful.
+ - **Activity Server** [Action server]: Executes an action (pick, go_home, hold) on its associated arm through channel `/thr/robot_run_action`. There is one running Activity Server per arm.
+ - **Learner/Predictor** [2 Services]: This is the policy provider. It provides two services, one for learning `thr/learner` (called each time an action is being run, it can potentially be unused), one for predicting `/thr/predictor` (infinitely called by the interaction controller to get the next action).
+ -  **Interaction controller** [Node]: Controller mastering the whole interaction process, requesting the scene state, the actions to perform from the predictor, sending goals to the arms through their action server, and warning the learner than the action succeeded or has been interrupted. We have implemented two kinds of interaction controllers:
   - *Autonomous interaction controller* (automatically looping)
-  - *Keyboard interaction controller* (waits for user commands in a Command-Line Interface).
+  - *Keyboard interaction controller* (waits for user commands in a Command-Line Interface for Wizard-Of-Oz commanding).
 
 ### Learner/Predictor couple (aka the Planner, package `thr_learner_predictor`)
 This node Learner/Predictor is in charge of learning good and bad actions and predicting the next one. It is implemented as a single node instead of two separated ones to be able to share easily a representation of the task in memory (Prolog, or database, or ...). This node has two distinct services for these two features though.
@@ -42,7 +42,9 @@ At the moment, different Planners exist, and launching the process requires to c
 (1) Marc Toussaint from Stuttgart uni developed a concurrent action planner. Based on his work we defined how concurrent actions are handled by the system, thanks to non-blocking and always successful decisions (ROS message `Decision`), triggering blocking Robot actions (ROS message `Action`) on a compatible arm, which might fail if the robot cannot execute this action in that context.
 
 ### Action servers (Package `thr_action_server`)
-When it receives a new goal to reach, the Decision server considers both arms as two different agents capable of several actions that take parameters:
+When it receives a new goal to reach, the Decision server considers both arms as two different agents capable of several actions that take parameters. Decisions are orders like "start_something", they are not blocking and they are always successful. Decisions are then forwarded to the right Activity Server able to execute this "something" action.
+
+One Activity Server is declared for each arm and accepts a range of activities, that are:
 
 - Left arm (vacuum gripper):
 
@@ -71,20 +73,22 @@ Notes :
 - Action servers are automatically started in all scenarii (autonomous, manual/WoZ)
 
 ### Perception (package `thr_scene_state_manager`)
-The perception ability of the robot is ensured by the Optitrack publisher and the Scene State Manager. The scene state is described within a ROS message in the form of predicates. The set of predicates is richer for the concurrent branch as the predictor needs more information about the scene to take decisions.
+The perception ability of the robot is ensured by the Scene State Manager. The scene state is described in the form of predicates. Some predicates are generic and handled by the manager itself, some other predicates are scene-specific and thus require a dedicated scen state updater, a second node adding or removing scene-specific predicates from the manager.
+
+Here are the generic predicates generated by the manager itself:
 
 - `IN_HUMAN_WORKSPACE(Object obj)`: True if `obj` is directly reachable by the human
-- `POSITIONED(Object master, Object slave)`: True if the transformation `slave`->`master` matches a documented constraint (i.e. `slave` is positioned close to `master` and is ready to be attached)
-- `ATTACHED(Object master, Object slave)`: True if `POSITIONED(master, slave)` and the screwdriver has been seen close to these objects enough time to assume they have been attached together.
-- `IN_HOME_POSITION(Arm arm)` True if `arm` is currently in home position
 - `BUSY(Arm arm)` True if `arm` is currently performing an operation (recall that there is no `WAIT` operation so sometimes arms perform no action)
-- `PICKED(Object obj)` True if `obj` is currently in robot hand
-- `HELD(Object obj)` True if `obj` is currently held by robot hand
+- `IN_HOME_POSITION(Arm arm)` True if `arm` is currently in home position
 - All Robot and Human actions are also included within the scene state, to make the learner/predictor aware of what it is currently being executed
 
-If detecting human actions is relevant, the main node can be completed with a Human Activity Recognizer node, detecting only human's actions and calling a special service "update relational state" of the scene state manager to add or remove these new predicates.
+Here are the toolbox-specific predicates generated by the toolbox scene state updater:
 
-Since interesting predicates are different fr each scene, a decicated scene state manager exists for each one of them. Thus the `scene` argument selects the right scene state manager, the user cannot change it.
+- `POSITIONED(Object master, Object slave)`: True if the transformation `slave`->`master` matches a documented constraint (i.e. `slave` is positioned close to `master` and is ready to be attached)
+- `ATTACHED(Object master, Object slave)`: True if `POSITIONED(master, slave)` and the screwdriver has been seen close to these objects enough time to assume they have been attached together.
+- `PICKED(Object obj)` True if `obj` is currently in robot hand
+
+Since interesting predicates are different fr each scene, a decicated scene state updater exists for each one of them. Thus the `scene` argument selects the right scene state updater. The state state manager is generic, produces generic predicates whatever the scene is and allow updaters to update its relational state.
 
 ### Interaction controller (package `thr_interaction_controller`)
 The Interaction controller is the conductor of the worflow, it orchestrates the other nodes above to create a specific mode of interaction. The default interaction controller requests the current scene state, asks the predictor to return the next action, pass the order to the decision server, it can be for instance replaced by other interaction controllers, like the keyboard interaction controllers which do not call the planners but wait for the user to type commands in a Wizard-Of-Oz mode.
