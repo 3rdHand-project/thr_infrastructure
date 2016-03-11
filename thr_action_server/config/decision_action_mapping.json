@@ -7,7 +7,6 @@
     "start_go_home_right": {"client": "right", "type":"go_home_right"},
     "start_place_left": {"client": "left", "type":"place_left"},
     "start_place_right": {"client": "right", "type":"place_right"},
-    "start_wait": {"client": "left", "type":"wait"},
     "start_bring_left": {"client": "left", "type":"bring_left"},
     "start_bring_right": {"client": "right", "type":"bring_right"}
 }
