@@ -18,7 +18,7 @@ class Give(Action):
             return False
 
         # 4. Wait for human wrist and approach object until we are close enough to release object
-        rospy.loginfo("Bringing {} to human wrist".format(object))
+        rospy.loginfo("Giving {} to human wrist".format(object))
         while not self._should_interrupt():
             if not self.commander.gripping():
                 break
@@ -32,12 +32,14 @@ class Give(Action):
                 continue
             # rospy.loginfo("User wrist at {}m from gripper, threshold {}m".format(distance_wrist_gripper, self.action_params['give']['sphere_radius']))
             if distance_wrist_gripper > self.action_params['give']['sphere_radius']:
-                world_give_pose = self._object_grasp_pose_to_world(self.poses[object]['give']["/human/wrist"], "/human/wrist")
+                obj_gripper = [self.poses[object]['pick'][0]['contact'], self.poses[object]['pick'][0]['approach'][1]]  # TODO: ugly
+                wrist_gripper = transformations.multiply_transform(self.poses[object]['give']["/human/wrist"], obj_gripper)
+                world_give_pose = self._object_grasp_pose_to_world(wrist_gripper, "/human/wrist")
 
                 # The function below returns True if human as moved enough so that we need to replan the trajectory
                 def needs_update():
                     p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
-                    return transformations.distance(world_give_pose, p_wrist)>self.action_params['give']['sphere_radius']
+                    return transformations.distance(world_give_pose, p_wrist) > self.action_params['give']['sphere_radius']
 
                 try:
                     success = self.commander.move_to_controlled(world_give_pose, stop_test=lambda: needs_update() or self.stop_test(), pause_test=self.pause_test)
@@ -48,11 +50,6 @@ class Give(Action):
                 else:
                     if not success:
                         return False
-
-                #if not self.low_level_execute_workaround(self.side, give_traj, needs_update):
-                #    rospy.logwarn("Human has moved, changing the goal...")
-                #    rospy.sleep(self.action_params['give']['inter_goal_sleep'])
-                #    continue
             else:
                 can_release = True
 

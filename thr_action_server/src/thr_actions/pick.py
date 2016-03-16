@@ -48,15 +48,15 @@ class Pick(Action):
             if not self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['descent'], object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to generate picking descent")
                 return False
-        elif 'grasp' in self.poses[object]["pick"][0]:
-            grasp = np.array(self.poses[object]["pick"][0]['grasp'])
+        elif 'contact' in self.poses[object]["pick"][0]:
+            grasp = np.array(self.poses[object]["pick"][0]['contact'])
             approach = np.array(self.poses[object]["pick"][0]['approach'][0])
             descent = list(grasp - approach)
             if not self.commander.translate_to_cartesian(descent, object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to generate picking descent")
                 return False
         else:
-            rospy.logerr("No 'grasp' nor 'descent' attribute defined for picking object {}".format(object))
+            rospy.logerr("No 'contact' nor 'descent' attribute defined for picking object {}".format(object))
             return False
 
 

@@ -2,6 +2,7 @@ from . action import Action
 from baxter_commander.persistence import dicttostate
 from numpy import array
 import rospy
+import numpy as np
 import transformations
 
 class Hold(Action):
@@ -57,7 +58,10 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Grasping {}".format(object))
-        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['descent'], object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
+        grasp = np.array(self.poses[object]["hold"][pose]['contact'])
+        approach = np.array(self.poses[object]["hold"][pose]['approach'][0])
+        descent = list(grasp - approach)
+        if not self.commander.translate_to_cartesian(descent, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
         # 3. Close gripper to grasp object
@@ -98,7 +102,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Leaving {}".format(object))
-        rising = list(-array(self.poses[object]["hold"][pose]['descent']))
+        rising = list(-array(descent))
         if not self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 

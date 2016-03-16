@@ -15,7 +15,6 @@ class DecisionServer:
     def __init__(self):
         # Action server attributes
         self.sequence = 1
-        self.running = False
         self.server = actionlib.SimpleActionServer('/thr/run_decision', RunDecisionAction, self.execute, False)
         self.rospack = rospkg.RosPack()
         self.current_actions = {'right': None, 'left': None}
