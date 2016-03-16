@@ -257,7 +257,7 @@ class InteractionController(object):
 
     def start_or_stop_episode(self, start=True):
         self.head.reset_signal()
-        for node in ['scene_state_manager', 'human_activity_recognizer', 'action_server', 'learner_predictor']:
+        for node in ['scene_state_manager', 'scene_state_updater', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
             rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(

@@ -32,7 +32,7 @@ class ToolBoxSceneStateUpdater(object):
         self.objects = rospy.get_param('/thr/objects')[rospy.get_param('/thr/scene')]
         self.running = False
 
-        self.start_stop_service_name = '/thr/human_activity_recognizer/start_stop'
+        self.start_stop_service_name = '/thr/scene_state_updater/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
         self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
