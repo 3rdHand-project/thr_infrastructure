@@ -20,6 +20,9 @@ class Give(Action):
         # 4. Wait for human wrist and approach object until we are close enough to release object
         rospy.loginfo("Bringing {} to human wrist".format(object))
         while not self._should_interrupt():
+            if not self.commander.gripping():
+                break
+
             can_release = False
             try:
                 distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform(self.gripper_name, "/human/wrist", rospy.Time(0)))
@@ -56,13 +59,11 @@ class Give(Action):
             # 5. Wait for position disturbance of the gripper and open it to release object
             if can_release:
                 rospy.loginfo("Waiting for perturbation of the gripper...")
-                self.commander.wait_for_human_grasp(1.9)  # Blocking call
+                self.commander.wait_for_human_grasp(1.4, ignore_gripping=False)  # Blocking call
                 if not rospy.is_shutdown():
                     rospy.loginfo("Releasing suction for {}".format(object))
                     self.commander.open()
                     break
-            elif not self.commander.gripping():
-                break
             else:
                 rospy.sleep(self.action_params['short_sleep_step'])
 
