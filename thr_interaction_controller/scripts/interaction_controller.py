@@ -177,14 +177,14 @@ class FeedbackQuestion(object):
         self.delete_key = delete_key
 
         self.first = self.web_asker.ask("I'm doing {} :".format(self.decision_str),
-                                        ["Don't do that"])
+                                        ["Don't do that"], color="green")
         self.second = None
         self.correct_decision = None
 
     def update(self):
         if self.first is not None and self.first.answered():
             self.second = self.web_asker.ask("I did {}, What should have I done?".format(self.decision_str),
-                                             self.decision_str_list + ["something else/nothing"])
+                                             self.decision_str_list + ["something else/nothing"], color="green")
             self.first.remove()
             self.first = None
 
@@ -457,7 +457,7 @@ class InteractionController(object):
         if rospy.get_param("/thr/paused"):
             if self.pause_unpause_question.answered():
                 self.pause_unpause_question.remove()
-                self.pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20)
+                self.pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, color="grey")
                 rospy.set_param("/thr/paused", False)
                 return False
             else:
@@ -465,7 +465,7 @@ class InteractionController(object):
 
         elif self.pause_unpause_question.answered():
             self.pause_unpause_question.remove()
-            self.pause_unpause_question = self.web_asker.ask("Unpause ?", ["Unpause !"], priority=20)
+            self.pause_unpause_question = self.web_asker.ask("Unpause ?", ["Unpause !"], priority=20, color="grey")
             rospy.set_param("/thr/paused", True)
             return True
 
@@ -540,7 +540,7 @@ class InteractionController(object):
             print 'Interaction starting!'
 
             is_running = False
-            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30, color="green")
+            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30, color="grey")
 
             rospy.set_param("/thr/paused", False)
 
@@ -551,10 +551,11 @@ class InteractionController(object):
                             start_stop_question.remove()
                             is_running = True
                             self.start_or_stop_episode(True)
-                            start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30, color="green")
+                            start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30, color="grey")
 
                             rospy.set_param("/thr/paused", False)
-                            self.pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20, color="green")
+                            self.pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20,
+                                                                             color="grey")
 
                     elif start_stop_question.answered():
                         start_stop_question.remove()
@@ -572,7 +573,7 @@ class InteractionController(object):
                         self.feedback_question_list = []
 
                         self.start_or_stop_episode(False)
-                        start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30, color="green")
+                        start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30, color="grey")
 
                     else:
 
