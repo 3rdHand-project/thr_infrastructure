@@ -2,13 +2,15 @@
 
 import rospy
 import rospkg
-import random
-import numpy as np
 import os
 import json
+import termcolor
+
+from threading import Lock
 
 from RBLT.domains import domain_dict
 from RBLT.learning import bagger
+from RBLT import world
 # from RBLT.learning.boosted_policy_learning import BoostedPolicyLearning
 
 from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionResponse,\
@@ -22,6 +24,9 @@ class Server(object):
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
         self.rospack = rospkg.RosPack()
+        self.main_loop_rate = rospy.Rate(20)
+
+        self.lock = Lock()
 
         self.tmp_dir_name = "/tmp/"
         self.i_tree = 0
@@ -29,6 +34,7 @@ class Server(object):
         self.dataset = []
         self.results = []
         self.i_episode = 0
+        self.last_state = None
 
         self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
         self.reward = self.domain.rewards["reward_built"]
@@ -57,6 +63,8 @@ class Server(object):
         self.start_stop_service_name = '/thr/learner_predictor/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
 
+        self.learn_preferences()
+
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
             pass
@@ -71,10 +79,11 @@ class Server(object):
         rospy.loginfo("Start learning")
         # tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
         #                                          "tree_q{}".format(self.i_tree)), maxdepth=6)
-        self.learner = bagger.Bagger(self.domain, self.bagger_params, self.task_q_fun,
-                                     os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)))
+        with self.lock:
+            self.learner = bagger.Bagger(self.domain, self.bagger_params, self.task_q_fun, None,
+                                         os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)))
 
-        self.learner.train(self.dataset)
+            self.learner.train(self.dataset)
         # shutil.rmtree(os.path.join(tmp_dir_name, "tree_q{}".format(i_tree)))
         # human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
         # self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
@@ -151,44 +160,28 @@ class Server(object):
         :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
         :return: an object of type GetNextDecisionResponse
         """
-
         state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
+        self.last_state = state
         action_list = self.domain.get_actions(state)
 
         resp = GetNextDecisionResponse()
-        if self.learner is not None:
+        with self.lock:
             best_decision, error = self.learner.get_best_actions(state, action_list)
-            best_decision = best_decision[0]
+        best_decision = best_decision[0]
+        if self.i_episode == 0:
+            error = self.threshold_ask * 2
 
-            print "error:", error
-            print self.domain.int_to_action(best_decision)
-            print self.domain.filter_robot_actions([best_decision])
+        # print "error:", error
+        # print self.domain.int_to_action(best_decision)
+        # print self.domain.filter_robot_actions([best_decision])
 
-            decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
+        decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
 
-            if error > self.threshold_ask:
-                resp.mode = resp.CONFIRM
-            else:
-                resp.mode = resp.SURE
-            resp.confidence = error
-
-        else:
-            quality_list = [self.learned_q_fun(state, a) for a in action_list]
-
-            print self.domain.int_to_state(state)
-            print [self.domain.int_to_action(a) for a in action_list]
-            print quality_list
-
-            max_quality = max(quality_list)
-
-            best_action_list = [a for a, q in zip(action_list, quality_list) if q == max_quality]
-            best_robot_action_list = self.domain.filter_robot_actions(best_action_list)
-            if len(best_robot_action_list) == 0:
-                best_robot_action_list.append(self.domain.action_to_int("wait"))
-            decision = self.relational_action_to_Decision(
-                self.domain.int_to_action(random.choice(best_robot_action_list)))
+        if error > self.threshold_ask:
             resp.mode = resp.CONFIRM
-            resp.confidence = 1.
+        else:
+            resp.mode = resp.SURE
+        resp.confidence = error
 
         resp.probas = []
         for candidate_action in action_list:
@@ -203,6 +196,7 @@ class Server(object):
         if sum(resp.probas) != 1:
             print decision
             print resp.decisions
+
         return resp
 
     def learner_handler(self, new_training_ex):
@@ -259,7 +253,32 @@ class Server(object):
         rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
-        rospy.spin()
+
+        last_state_plan_computed = None
+        while not rospy.is_shutdown():
+            if self.last_state is not None and last_state_plan_computed != self.last_state:
+                last_state_plan_computed = self.last_state
+                w = world.World(last_state_plan_computed, self.domain)
+                print "prediction"
+                for i in range(20):
+                    with self.lock:
+                        best_decision, error = self.learner.get_best_actions(
+                            w.state, self.domain.get_actions(w.state))
+
+                    best_decision = best_decision[0]
+                    if self.i_episode == 0:
+                        error = self.threshold_ask * 2
+
+                    if error < self.threshold_ask:
+                        color = "green"
+                    else:
+                        color = "red"
+                    print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
+
+                    w.apply_action(best_decision)
+                print "end prediction"
+
+            self.main_loop_rate.sleep()
 
         resfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
             "/thr/logs_name") + "/results.json"
