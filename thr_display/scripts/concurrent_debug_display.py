@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 import rospy, rospkg
+from thr_infrastructure_msgs.msg import PredictedPlan
 from thr_infrastructure_msgs.srv import GetSceneStateRequest, GetSceneState
 import cv2, cv_bridge
 from numpy import zeros, uint8
 from sensor_msgs.msg import Image
-import os
+
 class ConcurrentDebugDisplay(object):
-    def __init__(self, width, height, rate, face=cv2.FONT_HERSHEY_SIMPLEX):
+    def __init__(self, width, height, rate, maximum_confidence=0.1, face=cv2.FONT_HERSHEY_SIMPLEX):
         self.rospack = rospkg.RosPack()
         self.face = face
         self.rate = rospy.Rate(rate)
@@ -21,6 +22,15 @@ class ConcurrentDebugDisplay(object):
         rospy.loginfo("[concurrent_debug_display] Waiting service /thr/scene_state...")
         rospy.wait_for_service('/thr/scene_state')
         self.getscene = rospy.ServiceProxy('/thr/scene_state', GetSceneState)
+
+        # Attributes of predicted plans display
+        self.predicted_plan = PredictedPlan()
+        self.old_predicted_plan = None
+        self.maximum_confidence = maximum_confidence
+        rospy.Subscriber('/thr/predicted_plan', PredictedPlan, self.handler_predicted_plan, queue_size=1)
+
+    def handler_predicted_plan(self, msg):
+        self.predicted_plan = msg
 
     def update_scene(self):
         request = GetSceneStateRequest()
@@ -69,15 +79,27 @@ class ConcurrentDebugDisplay(object):
             cv2.putText(img, p.type+str(p.parameters), (self.width/2, 20*line), self.face, 0.5, [180]*3)
             line += 1
 
+        cv2.putText(img, '# PREDICTED PLAN ['+str(len(self.predicted_plan.decisions))+']', (self.width/2, self.height/2), self.face, 0.55, [255]*3)
+        line = 1
+        for i, decision in enumerate(self.predicted_plan.decisions):
+            confidence = self.predicted_plan.confidences[i]
+            cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/2 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
+            line += 1
+
         #cv2.imshow("Predicates", img)
         #cv2.waitKey(1)
         msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
         self.image_pub.publish(msg)
+        self.old_predicted_plan = self.predicted_plan
+
+    def confidence_to_bgr(self, confidence):
+        ratio = confidence/self.maximum_confidence
+        return 0, int(255*(1-ratio)), int(255*ratio)
 
     def start(self):
         while not rospy.is_shutdown():
             self.update_scene()
-            if not self.old_state or self.state.predicates != self.old_state.predicates:
+            if not self.old_state or self.state.predicates != self.old_state.predicates or self.predicted_plan != self.old_predicted_plan:
                 self.display_image()
             self.rate.sleep()
 

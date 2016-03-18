@@ -20,6 +20,7 @@ find_package(catkin REQUIRED
    Predicate.msg
    SceneState.msg
    ActionHistoryEvent.msg
+   PredictedPlan.msg
  )
 
 ## Generate services in the 'srv' folder
