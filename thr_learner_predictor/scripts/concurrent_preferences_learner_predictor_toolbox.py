@@ -16,7 +16,7 @@ from RBLT import world
 from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionResponse,\
     StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_infrastructure_msgs.msg import Decision
+from thr_infrastructure_msgs.msg import Decision, PredictedPlan
 
 
 class Server(object):
@@ -62,6 +62,8 @@ class Server(object):
 
         self.start_stop_service_name = '/thr/learner_predictor/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
+
+        self.predicted_plan_publisher = rospy.Publisher('/thr/predicted_plan', PredictedPlan, queue_size=1)
 
         self.learn_preferences()
 
@@ -259,8 +261,10 @@ class Server(object):
             if self.last_state is not None and last_state_plan_computed != self.last_state:
                 last_state_plan_computed = self.last_state
                 w = world.World(last_state_plan_computed, self.domain)
-                print "prediction"
-                for i in range(20):
+
+                predicted_plan = PredictedPlan()
+
+                for _ in range(20):
                     with self.lock:
                         best_decision, error = self.learner.get_best_actions(
                             w.state, self.domain.get_actions(w.state))
@@ -269,14 +273,18 @@ class Server(object):
                     if self.i_episode == 0:
                         error = self.threshold_ask * 2
 
-                    if error < self.threshold_ask:
-                        color = "green"
-                    else:
-                        color = "red"
-                    print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
+                    # if error < self.threshold_ask:
+                    #     color = "green"
+                    # else:
+                    #     color = "red"
+                    # print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
+
+                    predicted_plan.decisions.append(self.relational_action_to_Decision(
+                        self.domain.int_to_action(best_decision)))
+                    predicted_plan.confidences.append(error)
 
                     w.apply_action(best_decision)
-                print "end prediction"
+                self.predicted_plan_publisher.publish(predicted_plan)
 
             self.main_loop_rate.sleep()
 
