@@ -8,7 +8,7 @@ from numpy import zeros, uint8
 from sensor_msgs.msg import Image
 
 class ConcurrentDebugDisplay(object):
-    def __init__(self, width, height, rate, maximum_confidence=0.1, face=cv2.FONT_HERSHEY_SIMPLEX):
+    def __init__(self, width, height, rate, maximum_confidence=0.01, face=cv2.FONT_HERSHEY_SIMPLEX):
         self.rospack = rospkg.RosPack()
         self.face = face
         self.rate = rospy.Rate(rate)
@@ -93,8 +93,8 @@ class ConcurrentDebugDisplay(object):
         self.old_predicted_plan = self.predicted_plan
 
     def confidence_to_bgr(self, confidence):
-        ratio = confidence/self.maximum_confidence
-        return 0, int(255*(1-ratio)), int(255*ratio)
+        ratio = min(self.maximum_confidence, confidence) / self.maximum_confidence
+        return 0, int(255 * (1 - ratio)), int(255 * ratio)
 
     def start(self):
         while not rospy.is_shutdown():
