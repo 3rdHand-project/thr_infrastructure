@@ -5,6 +5,7 @@ import rospkg
 import random
 import numpy as np
 import os
+import json
 
 from RBLT.domains import domain_dict
 from RBLT.learning import bagger
@@ -26,25 +27,26 @@ class Server(object):
         self.i_tree = 0
 
         self.dataset = []
+        self.results = []
+        self.i_episode = 0
 
         self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
         self.reward = self.domain.rewards["reward_built"]
+
         self.task_q_fun = self.reward.get_task_q_fun_gen()
         self.learned_q_fun = self.task_q_fun
 
         self.learner = None
-        self.threshold_confirm = 0.05
-        self.threshold_learn = 0.01
+        self.threshold_ask = 0.005
 
         self.bagger_params = {
             "name": "bagger",
             "nb_learner": 50,
             "nb_process": 50,
             "sample_ratio": 0.75,
+            "only_one_action": True,
             "learner": {
                 "name": "rbpl",
-                "nb_trees": 4,
-                "beta": 10,
                 "maxdepth": 10
             }
         }
@@ -61,6 +63,7 @@ class Server(object):
 
         elif request.command == StartStopEpisodeRequest.STOP:
             self.learn_preferences()
+            self.i_episode += 1
 
         return StartStopEpisodeResponse()
 
@@ -154,19 +157,16 @@ class Server(object):
 
         resp = GetNextDecisionResponse()
         if self.learner is not None:
-            best_decision, error = self.learner.get_best_actions(state, action_list, True)
+            best_decision, error = self.learner.get_best_actions(state, action_list)
             best_decision = best_decision[0]
 
             print "error:", error
             print self.domain.int_to_action(best_decision)
             print self.domain.filter_robot_actions([best_decision])
 
-            if len(self.domain.filter_robot_actions([best_decision])) == 1:
-                decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
-            else:
-                decision = self.relational_action_to_Decision("wait")
+            decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
 
-            if error > self.threshold_confirm:
+            if error > self.threshold_ask:
                 resp.mode = resp.CONFIRM
             else:
                 resp.mode = resp.SURE
@@ -191,7 +191,7 @@ class Server(object):
             resp.confidence = 1.
 
         resp.probas = []
-        for candidate_action in self.domain.filter_robot_actions(action_list):
+        for candidate_action in action_list:
             resp.decisions.append(self.relational_action_to_Decision(
                 self.domain.int_to_action(candidate_action)))
 
@@ -215,8 +215,43 @@ class Server(object):
                                                                         str(new_training_ex.decision.parameters)))
 
         state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
-        decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.decision))
-        self.dataset.append((state, decision, None))
+        correct_decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.decision))
+        predicted_decision = self.domain.action_to_int(
+            self.Decision_to_relational_action(new_training_ex.predicted_decision))
+
+        self.dataset.append((state, correct_decision, None))
+
+        if len(self.domain.filter_robot_actions([predicted_decision])) > 0:
+            if predicted_decision == correct_decision:
+                feedback = "validation"
+            else:
+                if new_training_ex.prediction_confidence > self.threshold_ask:
+                    feedback = "modification"
+                else:
+                    feedback = "correction"
+        else:
+            if predicted_decision == correct_decision:
+                feedback = "validation"
+            else:
+                feedback = "modification"
+
+        is_predicted_robot = bool(len(self.domain.filter_robot_actions([predicted_decision])) > 0)
+        is_correct_robot = bool(len(self.domain.filter_robot_actions([correct_decision])) > 0)
+
+        self.results.append((self.i_episode,
+                             new_training_ex.prediction_confidence,
+                             1,
+                             len(self.domain.get_actions(state)),
+                             bool(new_training_ex.corrected),
+                             feedback,
+                             is_predicted_robot,
+                             is_correct_robot,
+                             is_predicted_robot and (not feedback == "modification" or is_correct_robot),
+                             len(self.dataset),
+                             0.,
+                             bool(new_training_ex.prediction_confidence > self.threshold_ask),
+                             bool(correct_decision != predicted_decision),
+                             0.))
 
         return SetNewTrainingExampleResponse()
 
@@ -225,6 +260,12 @@ class Server(object):
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
         rospy.spin()
+
+        resfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
+            "/thr/logs_name") + "/results.json"
+        self.rospack = rospkg.RosPack()
+        with open(resfile, "w") as f:
+            json.dump(self.results, f)
 
 if __name__ == "__main__":
     rospy.init_node('learner_and_predictor')
