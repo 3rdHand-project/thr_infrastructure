@@ -17,6 +17,11 @@
     "pick": {
         "approach_cartesian_dist": 0.0125
     },
+    "turn": {
+        "approach_cartesian_dist": 0.01,
+        "goal_angular_dist": 0.09,
+        "approach_angular_dist": 0.09 
+    },
     "hold": {
         "sphere_radius": 0.8,
         "approach_cartesian_dist": 0.01,

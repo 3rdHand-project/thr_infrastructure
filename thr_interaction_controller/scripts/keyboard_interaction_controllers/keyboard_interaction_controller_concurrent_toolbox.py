@@ -70,13 +70,13 @@ class InteractionController(object):
                 type = 'start_go_home_right'
             elif command[0] == 'e':
                 type = 'end'
-            elif command[0] == 'f':
-                type = 'fail'
+            elif command[0] == 't':
+                type = 'start_turn'
             else:
                 rospy.logerr("Invalid command {}".format(command))
                 continue
 
-            if type in ['start_pick', 'start_hold', 'start_give']:
+            if type in ['start_pick', 'start_hold', 'start_give', 'start_turn']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {}".format(command))
                     continue
@@ -105,6 +105,9 @@ class InteractionController(object):
                     else:
                         rospy.logerr("Invalid command {}".format(command))
                         continue
+
+                elif type in ['start_turn']:
+                    parameters += map(str, [0, 0, 0, 1])
             return type, parameters
 
     ###################################################################################################################

@@ -2,6 +2,7 @@
     "give": "left",
     "hold": "right",
     "pick": "left",
+    "turn": "right",
     "go_home_left": "left",
     "go_home_right": "right",
     "grasp": "right",
