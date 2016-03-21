@@ -90,7 +90,8 @@ class Turn(Action):
 
             rospy.loginfo("Turning {}".format(object))
             # We want to rotate, no matter the goal angle since we'll stop once object has reached the goal quaternion
-            self.commander.rotate_joint(self.rotating_joint, 6.29, pause_test=self.pause_test, stop_test=lambda: self.stop_test() or goal_reached())
+            goal = -6.29 if backward else 6.29
+            self.commander.rotate_joint(self.rotating_joint, goal, pause_test=self.pause_test, stop_test=lambda: self.stop_test() or goal_reached())
 
             if self._should_interrupt():
                 return False
