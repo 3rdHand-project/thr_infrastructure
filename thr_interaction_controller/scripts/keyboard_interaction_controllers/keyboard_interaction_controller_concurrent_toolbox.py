@@ -94,7 +94,7 @@ class InteractionController(object):
                     rospy.logerr("Invalid command {}".format(command))
                     continue
 
-                if type in ['start_hold']:
+                if type in ['start_hold', 'start_turn']:
                     if len(command)<3:
                         rospy.logerr("Invalid command {}".format(command))
                         continue
@@ -106,8 +106,9 @@ class InteractionController(object):
                         rospy.logerr("Invalid command {}".format(command))
                         continue
 
-                elif type in ['start_turn']:
+                if type in ['start_turn']:
                     parameters += map(str, [0, 0, 0, 1])
+
             return type, parameters
 
     ###################################################################################################################
