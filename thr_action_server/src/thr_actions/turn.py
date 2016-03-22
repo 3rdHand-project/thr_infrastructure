@@ -15,7 +15,7 @@ class Turn(Action):
         # This quaternion is given wrt the world frame (base)
         rospy.loginfo("[ActionServer] Executing turn{}".format(str(parameters)))
         object = parameters[0]
-        quaternion = map(float, parameters[2:5])
+        quaternion = map(float, parameters[2:6])
         backward = parameters[1] == "1"
 
         def goal_reached():
