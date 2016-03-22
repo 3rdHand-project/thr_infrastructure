@@ -4,7 +4,6 @@ import rospy
 import rospkg
 import actionlib
 import numpy as np
-from copy import deepcopy
 import json
 
 from threading import Lock

@@ -23,6 +23,7 @@ class ToolBoxSceneStateUpdater(object):
         # Predicate holders
         self.old_predicates = []
         self.attaching_stamps = {}
+        self.attaching_started = []
         self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
         self.screwed = [] # Pairs of screwed objects (screwdriver 7 seconds => screwed ; screw + wrist > 0.6 m => attached)
 
@@ -46,6 +47,7 @@ class ToolBoxSceneStateUpdater(object):
             self.running_human_activity = None
             self.old_predicates = []
             self.attaching_stamps = {}
+            self.attaching_started = []
             self.attached = []
             self.screwed = []
             self.running = True
@@ -82,15 +84,12 @@ class ToolBoxSceneStateUpdater(object):
             else:
                 relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), screwdriver)
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
-                if cart_dist < self.config['attached']['tool_position_tolerance']:
-                    try:
-                        return rospy.Time.now() - self.attaching_stamps[master][slave] < rospy.Duration(
-                            self.config['attached']['screwdriver_attaching_time'])
-                    except KeyError:
-                        if master not in self.attaching_stamps:
-                            self.attaching_stamps[master] = {}
-                        self.attaching_stamps[master][slave] = rospy.Time.now()
+                #quat_dist = transformations.distance_quat(relative, self.poses[master]['constraints'][atp][self.screwdriver])
+                # Do not measure orientation, since the screwdriver has to spin to screw
+                print cart_dist
+                return cart_dist < self.config['attached']['tool_position_tolerance']
         return False
+
 
     def pred_positioned(self, master, slave, atp):
         """
@@ -133,13 +132,13 @@ class ToolBoxSceneStateUpdater(object):
                     if cart_dist < self.config['attached']['tool_position_tolerance']:
                         try:
                             if rospy.Time.now() - self.attaching_stamps[master][slave] > rospy.Duration(self.config['attached']['screwdriver_attaching_time']):
-                                rospy.logwarn("[Scene state manager] User has attached {} and {}".format(master, slave))
-                                # self.screwed.append(master+slave+str(atp))
-                                self.attached.append(master+slave+str(atp))
+                                self.attaching_started.append(master+slave+str(atp))
                         except KeyError:
                             if not self.attaching_stamps.has_key(master):
                                 self.attaching_stamps[master] = {}
                             self.attaching_stamps[master][slave] = rospy.Time.now()
+                    elif master+slave+str(atp) in self.attaching_started:
+                        self.attached.append(master+slave+str(atp))
                 else: # For objects that only need to be inserted
                     # self.screwed.append(master+slave+str(atp))
                     self.attached.append(master+slave+str(atp))

@@ -1,5 +1,6 @@
 from . action import Action
 from baxter_commander.persistence import dicttostate
+from thr_infrastructure_msgs.srv import GetSceneStateRequest, GetSceneState
 from numpy import array
 import rospy
 import numpy as np
@@ -9,6 +10,16 @@ class Hold(Action):
     def __init__(self, commander, tf_listener, action_params, poses, seeds, should_interrupt=None):
         super(Hold, self).__init__(commander, tf_listener, action_params, poses, seeds, should_interrupt)
         self.gripper = commander.name+'_gripper'
+        self.scene = None
+        self.scene_state_service = '/thr/scene_state'
+
+    def update_scene(self):
+        request = GetSceneStateRequest()
+        try:
+            getscene = rospy.ServiceProxy(self.scene_state_service, GetSceneState)
+            self.scene = getscene(request).state
+        except rospy.ServiceException, e:
+            rospy.logerr("Cannot update scene {}:".format(e.message))
 
     def run(self, parameters=None):
         # Parameters could be "/thr/handle 0", it asks the robot to hold the handle using its first hold pose
@@ -37,10 +48,6 @@ class Hold(Action):
             rospy.loginfo("Approaching {}".format(object))
             if not self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test, stop_test=self.stop_test):
                 return False
-
-            # 1.bis. Double motion to improve precision
-            #rospy.sleep(4)
-            #self.commander.move_to_controlled(goal_approach, pause_test=self.pause_test)
 
             try:
                 new_world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["hold"][pose]['approach'], object)
@@ -85,7 +92,9 @@ class Hold(Action):
             except:
                 rospy.logwarn("Human wrist not found")
                 distance_wrist_gripper = 0
-            if distance_wrist_gripper < self.action_params['hold']['sphere_radius']:
+            self.update_scene()
+            attached = len([pred for pred in self.scene.predicates if pred.type == 'attached' and pred.parameters[0] == object and int(pred.parameters[2]) == pose]) > 0
+            if distance_wrist_gripper < self.action_params['hold']['sphere_radius'] or attached:
                 # rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
                 pass
             else:
