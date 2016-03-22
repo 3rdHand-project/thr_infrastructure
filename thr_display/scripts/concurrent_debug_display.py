@@ -84,7 +84,7 @@ class ConcurrentDebugDisplay(object):
         for i, decision in enumerate(self.predicted_plan.decisions):
             if decision.type != 'wait':
                 confidence = self.predicted_plan.confidences[i]
-                cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/2 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
+                cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/5 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
                 line += 1
 
         #cv2.imshow("Predicates", img)
