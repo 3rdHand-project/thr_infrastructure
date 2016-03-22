@@ -72,6 +72,7 @@ class Server(object):
             pass
 
         elif request.command == StartStopEpisodeRequest.STOP:
+            self.predicted_plan_publisher.publish(PredictedPlan())
             self.learn_preferences()
             self.i_episode += 1
 
