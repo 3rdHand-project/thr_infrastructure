@@ -50,7 +50,7 @@ class Pick(Action):
                 return False
         elif 'contact' in self.poses[object]["pick"][0]:
             grasp = np.array(self.poses[object]["pick"][0]['contact'])
-            approach = np.array(self.poses[object]["pick"][0]['approach'][0])
+            approach = self.tfl.lookupTransform(object, self.gripper, rospy.Time(0))[0]
             descent = list(grasp - approach)
             if not self.commander.translate_to_cartesian(descent, object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to generate picking descent")

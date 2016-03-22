@@ -59,7 +59,7 @@ class Hold(Action):
 
         rospy.loginfo("Grasping {}".format(object))
         grasp = np.array(self.poses[object]["hold"][pose]['contact'])
-        approach = np.array(self.poses[object]["hold"][pose]['approach'][0])
+        approach = self.tfl.lookupTransform(object, self.gripper, rospy.Time(0))[0]
         descent = list(grasp - approach)
         if not self.commander.translate_to_cartesian(descent, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
             return False

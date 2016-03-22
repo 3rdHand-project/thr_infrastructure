@@ -56,7 +56,7 @@ class Grasp(Action):
 
         rospy.loginfo("Grasping {}".format(object))
         grasp = np.array(self.poses[object]["grasp"][pose]['grasp'])
-        approach = np.array(self.poses[object]["grasp"][pose]['approach'][0])
+        approach = self.tfl.lookupTransform(object, self.gripper, rospy.Time(0))[0]
         descent = list(grasp - approach)
         rospy.loginfo("Generated descent vector {}".format(str(descent)))
         if not self.commander.translate_to_cartesian(descent, object, 2., pause_test=self.pause_test, stop_test=self.stop_test):

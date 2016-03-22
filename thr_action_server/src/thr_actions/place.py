@@ -8,14 +8,14 @@ class Place(Action):
     def __init__(self, commander, tf_listener, action_params, poses, seeds, should_interrupt=None):
         super(Place, self).__init__(commander, tf_listener, action_params, poses, seeds, should_interrupt)
         self.starting_state = self.commander.get_current_state()
-        self.gripper_name = self.commander.name + '_gripper'
+        self.gripper = self.commander.name + '_gripper'
 
 
     def get_place_pose(self, location_T_object, object, location, viapoint=None):
         # Computes the world_T_gripper transform, taking into account the viapoint if it exists
         location_T_object = deepcopy(location_T_object)
         try:
-            object_T_gripper = self.tfl.lookupTransform(object, self.gripper_name, rospy.Time(0))
+            object_T_gripper = self.tfl.lookupTransform(object, self.gripper, rospy.Time(0))
             world_T_location = self.tfl.lookupTransform(self.world, location, rospy.Time(0))
         except KeyError:
             rospy.logerr("No declared pose to place {} at {}".format(object, location))
@@ -106,7 +106,7 @@ class Place(Action):
         elif 'grasp' in self.poses[object][method][pose]:
             rospy.loginfo("Leaving {} using () attributes".format(object))
             grasp = array(self.poses[object][method][pose]['grasp'])
-            approach = array(self.poses[object][method][pose]['approach'][pose])
+            approach = self.tfl.lookupTransform(object, self.gripper, rospy.Time(0))[0]
             pull_out = list(approach - grasp)
             if not self.commander.translate_to_cartesian(pull_out, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
                 rospy.logerr("Unable to pull the gripper out")
