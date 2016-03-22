@@ -74,7 +74,8 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Forcing down on {}".format(object))
-        if not self.commander.translate_to_cartesian(self.poses[object]["hold"][pose]['force'], object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
+        force_vector = self.poses[object]["hold"][pose]['force'] * array(descent)
+        if not self.commander.translate_to_cartesian(force_vector, object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
         # 5. Wait for interruption
