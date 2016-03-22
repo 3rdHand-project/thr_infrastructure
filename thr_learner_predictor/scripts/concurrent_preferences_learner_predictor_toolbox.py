@@ -257,8 +257,10 @@ class Server(object):
         rospy.loginfo('[LearnerPredictor] server ready...')
 
         last_state_plan_computed = None
+        predicted_plan_list = []
         while not rospy.is_shutdown():
             if self.last_state is not None and last_state_plan_computed != self.last_state:
+                predicted_plan_list.append(([], rospy.Time.now().to_sec()))
                 last_state_plan_computed = self.last_state
                 w = world.World(last_state_plan_computed, self.domain)
 
@@ -272,6 +274,8 @@ class Server(object):
                     best_decision = best_decision[0]
                     if self.i_episode == 0:
                         error = self.threshold_ask * 2
+
+                    predicted_plan_list[-1][0].append((best_decision, error))
 
                     # if error < self.threshold_ask:
                     #     color = "green"
@@ -290,9 +294,13 @@ class Server(object):
 
         resfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
             "/thr/logs_name") + "/results.json"
-        self.rospack = rospkg.RosPack()
         with open(resfile, "w") as f:
             json.dump(self.results, f)
+
+        planfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
+            "/thr/logs_name") + "/plans.json"
+        with open(planfile, "w") as f:
+            json.dump(predicted_plan_list, f)
 
 if __name__ == "__main__":
     rospy.init_node('learner_and_predictor')
