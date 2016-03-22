@@ -571,7 +571,9 @@ class InteractionController(object):
                             question.remove()
                         self.feedback_question_list = []
 
+                        learning_prompt = self.web_asker.ask("Learning...", [], color="grey")
                         self.start_or_stop_episode(False)
+                        learning_prompt.remove()
                         start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30, color="grey")
 
                     else:
