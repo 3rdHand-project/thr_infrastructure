@@ -16,7 +16,7 @@ from RBLT import world
 from thr_infrastructure_msgs.srv import GetNextDecision, GetNextDecisionResponse,\
     StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from thr_infrastructure_msgs.srv import SetNewTrainingExample, SetNewTrainingExampleResponse
-from thr_infrastructure_msgs.msg import Decision
+from thr_infrastructure_msgs.msg import Decision, PredictedPlan
 
 
 class Server(object):
@@ -62,6 +62,8 @@ class Server(object):
 
         self.start_stop_service_name = '/thr/learner_predictor/start_stop'
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
+
+        self.predicted_plan_publisher = rospy.Publisher('/thr/predicted_plan', PredictedPlan, queue_size=1)
 
         self.learn_preferences()
 
@@ -255,12 +257,16 @@ class Server(object):
         rospy.loginfo('[LearnerPredictor] server ready...')
 
         last_state_plan_computed = None
+        predicted_plan_list = []
         while not rospy.is_shutdown():
             if self.last_state is not None and last_state_plan_computed != self.last_state:
+                predicted_plan_list.append(([], rospy.Time.now().to_sec()))
                 last_state_plan_computed = self.last_state
                 w = world.World(last_state_plan_computed, self.domain)
-                print "prediction"
-                for i in range(20):
+
+                predicted_plan = PredictedPlan()
+
+                for _ in range(20):
                     with self.lock:
                         best_decision, error = self.learner.get_best_actions(
                             w.state, self.domain.get_actions(w.state))
@@ -269,22 +275,32 @@ class Server(object):
                     if self.i_episode == 0:
                         error = self.threshold_ask * 2
 
-                    if error < self.threshold_ask:
-                        color = "green"
-                    else:
-                        color = "red"
-                    print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
+                    predicted_plan_list[-1][0].append((best_decision, error))
+
+                    # if error < self.threshold_ask:
+                    #     color = "green"
+                    # else:
+                    #     color = "red"
+                    # print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
+
+                    predicted_plan.decisions.append(self.relational_action_to_Decision(
+                        self.domain.int_to_action(best_decision)))
+                    predicted_plan.confidences.append(error)
 
                     w.apply_action(best_decision)
-                print "end prediction"
+                self.predicted_plan_publisher.publish(predicted_plan)
 
             self.main_loop_rate.sleep()
 
         resfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
             "/thr/logs_name") + "/results.json"
-        self.rospack = rospkg.RosPack()
         with open(resfile, "w") as f:
             json.dump(self.results, f)
+
+        planfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
+            "/thr/logs_name") + "/plans.json"
+        with open(planfile, "w") as f:
+            json.dump(predicted_plan_list, f)
 
 if __name__ == "__main__":
     rospy.init_node('learner_and_predictor')
