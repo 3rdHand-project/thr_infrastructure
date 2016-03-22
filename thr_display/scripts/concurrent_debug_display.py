@@ -79,12 +79,13 @@ class ConcurrentDebugDisplay(object):
             cv2.putText(img, p.type+str(p.parameters), (self.width/2, 20*line), self.face, 0.5, [180]*3)
             line += 1
 
-        cv2.putText(img, '# PREDICTED PLAN ['+str(len(self.predicted_plan.decisions))+']', (self.width/2, self.height/2), self.face, 0.55, [255]*3)
+        cv2.putText(img, '# PREDICTED PLAN ['+str(len(self.predicted_plan.decisions))+']', (self.width/2, self.height/5), self.face, 0.55, [255]*3)
         line = 1
         for i, decision in enumerate(self.predicted_plan.decisions):
-            confidence = self.predicted_plan.confidences[i]
-            cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/2 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
-            line += 1
+            if decision.type != 'wait':
+                confidence = self.predicted_plan.confidences[i]
+                cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/2 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
+                line += 1
 
         #cv2.imshow("Predicates", img)
         #cv2.waitKey(1)
