@@ -5,6 +5,7 @@ import rospkg
 import actionlib
 
 from actionlib_msgs.msg import GoalStatus
+from thr_decisions import decision_action_mapping
 from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
 from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunDecisionGoal, RunDecisionAction, ActionHistoryEvent, Decision
 
@@ -21,8 +22,6 @@ class DecisionServer:
         self.action_history_name = '/thr/action_history'
         self.action_history = rospy.Publisher(self.action_history_name, ActionHistoryEvent, queue_size=10)
 
-        with open(self.rospack.get_path("thr_action_server")+"/config/decision_action_mapping.json") as f:
-            self.mapping = json.load(f)
         with open(self.rospack.get_path("thr_action_server")+"/config/action_params.json") as f:
             self.action_params = json.load(f)
 
@@ -58,30 +57,20 @@ class DecisionServer:
         :param force: True when execution must be forced, e.g. this is an internal goal not coming from a client
         """
         if force or not rospy.get_param('/thr/action_server/stopped'):
-            robot_goal = RunRobotActionGoal()
-            try:
-                robot_goal.action.type = self.mapping[decision_goal.decision.type]['type']
-                client = self.mapping[decision_goal.decision.type]['client']
-            except KeyError, k:
-                rospy.logerr("No client is capable of action {}{}: KeyError={}".format(decision_goal.decision.type, str(decision_goal.decision.parameters), k.message))
-                if not force:  # Decision goals sent by clients fail only if they are not mapped to robot actions
-                    self.server.set_aborted()
-            else:
-                robot_goal.action.id = self.sequence
-                robot_goal.action.parameters = decision_goal.decision.parameters
-                self.clients[client].send_goal(robot_goal)
-                self.current_actions[client] = robot_goal.action
+            robot_goal, client = decision_action_mapping(decision_goal.decision)
+            self.clients[client].send_goal(RunRobotActionGoal(action=robot_goal))
+            self.current_actions[client] = robot_goal
 
-                # Publish the event to the action history topic
-                event = ActionHistoryEvent()
-                event.header.stamp = rospy.Time.now()
-                event.type = ActionHistoryEvent.STARTING
-                event.action = robot_goal.action
-                event.side = client
-                self.action_history.publish(event)
+            # Publish the event to the action history topic
+            event = ActionHistoryEvent()
+            event.header.stamp = rospy.Time.now()
+            event.type = ActionHistoryEvent.STARTING
+            event.action = robot_goal
+            event.side = client
+            self.action_history.publish(event)
 
-                if not force:  # Decision goals sent by clients always succeed otherwise
-                    self.server.set_succeeded()
+            if not force:  # Decision goals sent by clients always succeed otherwise
+                self.server.set_succeeded()
 
     def should_interrupt(self):
         """

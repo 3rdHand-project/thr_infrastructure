@@ -263,9 +263,6 @@ class InteractionController(object):
         self.init_webasker()
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
-        with open(self.rospack.get_path("thr_action_server")+"/config/decision_action_mapping.json") as config_file:
-            self.decision_action_mapping = json.load(config_file)
-
     def init_webasker(self):
         with open(self.rospack.get_path("thr_interaction_controller")+"/config/mongo_adress_list.json") as adress_file:
             adress_list = json.load(adress_file)
@@ -506,7 +503,7 @@ class InteractionController(object):
                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str, str_action_list, self.current_scene,
                                                         prediction.confidence, head=self.head)
             else:
-                key = (self.decision_action_mapping[predicted_decision.type]["type"],
+                key = (predicted_decision.type.replace('start_', ''),
                        tuple(predicted_decision.parameters))
                 self.feedback_question_list.append(FeedbackQuestion(self.web_asker, action_str, str_action_list,
                                                                     self.current_scene, prediction.confidence, key))

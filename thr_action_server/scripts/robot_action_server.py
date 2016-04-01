@@ -72,7 +72,9 @@ class RobotActionServer:
         :param goal:
         """
         try:
-            assert self.abilities[goal.action.type] == self.side
+            assert self.abilities[goal.action.type] == self.side,\
+                "{} is not able to execute {} according to {}, " \
+                "make sure it matches the Decision->Action mapping in thr_decisions".format(self.side, goal.action.type, 'abilities.json')
             decision = self.actions[goal.action.type]
         except KeyError or AssertionError:
             rospy.logwarn('{} arm is not capable of decision {}'.format(self.side, goal.action.type))
