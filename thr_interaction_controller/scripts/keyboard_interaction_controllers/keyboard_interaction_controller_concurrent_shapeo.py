@@ -51,26 +51,64 @@ class InteractionController(object):
         while not rospy.is_shutdown():
             command = raw_input("> ").strip('\r\n').lower()
             parameters = []
-            type = "wait"
 
-            if len(command)<1 or len(command)>4:
+            if len(command)<1 or len(command)>6:
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'a':
                 type = 'start_grasp'
+            elif command[0] == 'c':
+                type = 'start_carry'
             else:
                 rospy.logerr("Invalid command {} (1b)".format(command))
                 continue
 
-            # Place and Bring also require Left or Right
-            if type in ['start_grasp']:
+            if type in ['start_grasp', 'start_carry']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {} (2a)".format(command))
                     continue
                 elif command[1] == 's':
                     parameters.append('/shapeo')
                 else:
-                    rospy.logerr("Invalid command {} (2b: missing l or r)".format(command))
+                    rospy.logerr("Invalid command {} (2b)".format(command))
+                    continue
+
+            if type in ['start_carry']:
+                if len(command)<3:
+                    rospy.logerr("Invalid command {} (3a)".format(command))
+                    continue
+                elif command[2] == 'f':
+                    parameters.append('fixed')
+                else:
+                    rospy.logerr("Invalid command {} (3b)".format(command))
+                    continue
+
+            if type in ['start_carry']:
+                if len(command)<6:
+                    rospy.logerr("Invalid command {} (4a)".format(command))
+                    continue
+                elif command[3:6] == 'tra':
+                    parameters.append('trapezium')
+                elif command[3:6] == 'tri':
+                    parameters.append('triangle')
+                elif command[3:6] == 'sta':
+                    parameters.append('star')
+                elif command[3:6] == 'ell':
+                    parameters.append('ellipse')
+                elif command[3:6] == 'hex':
+                    parameters.append('hexagon')
+                elif command[3:6] == 'circle':
+                    parameters.append('circle')
+                elif command[3:6] == 'cro':
+                    parameters.append('cross')
+                elif command[3:6] == 'squ':
+                    parameters.append('square')
+                elif command[3:6] == 'pen':
+                    parameters.append('pentagon')
+                elif command[3:6] == 'sli':
+                    parameters.append('slice')
+                else:
+                    rospy.logerr("Invalid command {} (4b: shape)".format(command))
                     continue
 
             return type, parameters

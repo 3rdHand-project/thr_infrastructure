@@ -6,3 +6,4 @@ from . hold import Hold
 from . pick import Pick
 from . place import Place
 from . turn import Turn
+from . carry import Carry

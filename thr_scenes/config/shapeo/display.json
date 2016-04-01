@@ -12,6 +12,9 @@
     "turn": {
                 "starting": {"text": ["I'm turning", 0, "so you can work"], "look_at": 0},
                 "finished_failure": {"text": ["I can't reach", 0, "Move it a bit"], "look_at": -1}
+            },
+    "carry": {
+                "starting": {"text": ["Let's insert", 0, "so you can work"], "look_at": 0}
             }
 }
 

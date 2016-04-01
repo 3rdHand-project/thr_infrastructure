@@ -1,4 +1,4 @@
-from . import pick, give, hold, grasp, go_home, place, bring, turn
+from . import pick, give, hold, grasp, go_home, place, bring, turn, carry
 from thr_infrastructure_msgs.msg import Decision, RobotAction
 
 def decision_action_mapping(decision):
@@ -17,6 +17,8 @@ def decision_action_mapping(decision):
         return grasp.map(decision), 'right'
     elif decision.type=='start_turn':
         return turn.map(decision), 'right'
+    elif decision.type=='start_carry':
+        return carry.CarryDecisionMapper().map(decision), 'right'
     elif decision.type=='start_go_home_left':
         return go_home.map(decision), 'left'
     elif decision.type=='start_go_home_right':
