@@ -173,8 +173,8 @@ roslaunch thr_interaction_controller manual.launch scene:=romeo policy:=hardcode
 ## How to implement new...
 ## New actions?
 The action server works with 2 types of actions: **Non-blocking** [`Decision`](thr_infrastructure_msgs/msg/Decision.msg)s like `start_xxxxx` causing the Decision server to trigger a **blocking** [`RobotAction`](thr_action_server/msg/RobotAction.msg) executed by the Robot Action server. The actions themselves are implemented within a [`src/thr_actions/`](thr_action_server/src/thr_actions) subfolder. A new action must then be implemented as:
- *  A new file in this [`src/thr_actions/`](thr_action_server/src/thr_actions) subfoler
- *  A new correspondance `MDP to Robot` in [`config/mdp_robot_mapping.json`](thr_action_server/config/mdp_robot_mapping.json)
+ *  A new robot action implementation as a new file in [`src/thr_actions/`](thr_action_server/src/thr_actions) subfolder
+ *  A new correspondance `Decision -> Action` implemented as a map() function in a new file in [`src/thr_decisions/`](thr_action_server/src/thr_decisions). Tips: make sure you also update [`__init__.py`](thr_action_server/src/thr_decisions/__init__.py), and use a singleton if needed to keep track of attributes
  *  A new attribution to the left or right arm in [`config/abilities.json`](thr_action_server/config/abilities.json) (To be merged with mdp_robot_mapping.json?)
  *  Its specific command-line command within the Concurrent Keyboard Interaction Controllers
  *  Its specific tweakable parameters  in [`config/action_params.json`](thr_action_server/config/action_params.json)
