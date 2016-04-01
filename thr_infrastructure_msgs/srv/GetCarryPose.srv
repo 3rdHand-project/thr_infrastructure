@@ -1,0 +1,4 @@
+string type
+string shape
+---
+geometry_msgs/PoseStamped object_pose

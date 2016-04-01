@@ -21,6 +21,7 @@ find_package(catkin REQUIRED
    SceneState.msg
    ActionHistoryEvent.msg
    PredictedPlan.msg
+   UserAction.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -31,6 +32,7 @@ find_package(catkin REQUIRED
    SetNewTrainingExample.srv
    UpdateRelationalState.srv
    StartStopEpisode.srv
+   GetCarryPose.srv
  )
 
 ## Generate actions in the 'action' folder
