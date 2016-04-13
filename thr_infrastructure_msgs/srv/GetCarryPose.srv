@@ -1,4 +1,5 @@
 string type
 string shape
+string laterality
 ---
 geometry_msgs/PoseStamped object_pose
