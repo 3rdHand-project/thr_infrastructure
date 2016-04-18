@@ -9,8 +9,7 @@ Videos:
 - [Video: Online planner (RAP) + offline learning](https://vimeo.com/139342248)
 - [Video: Commented offline learning](https://vimeo.com/145653515)
 - [Video: Gesture-based interaction](https://vimeo.com/151623144)
-- [Video: Assistive Robotics "Romeo" projet #1](https://www.dropbox.com/s/75z9ircb5mbsox3/coop_cooking.mp4)
-- [Video: Assistive Robotics "Romeo" projet #2](https://www.dropbox.com/s/oyl1w7pybcrpque/Rom%C3%A9o.mp4)
+- [Video: Assistive Robotics "Romeo" project](https://www.dropbox.com/s/75z9ircb5mbsox3/coop_cooking.mp4)
 
 ## Implementation
 
@@ -66,6 +65,7 @@ The Robot action server publishes a topic `action_history` with events each time
 
 Notes :
 
+- Additionally to the parameters hereabove given online, activities may also rely on hardcoded parameters defined in `thr_scenes` if they are scene-specific or in [`action_params.json`](thr_action_server/config/action_params.json) if they are action-specific. 
 - There is no `WAIT` action or at least, it is not considered as a Decision. The interaction controller may simulate waiting, but th action servers are wait-agnostic.
 - `GRASP` and `PICK` are similar actions, but grasp applies to the electric gripper and pick to the vacuum gripper
 - `BRING`, `PLACE`, `GIVE`, and `GO_HOME` actions are symmetrically executable on both arms so they are implemented once and only instanciated twice.
