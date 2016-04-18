@@ -52,7 +52,7 @@ class InteractionController(object):
             command = raw_input("> ").strip('\r\n').lower()
             parameters = []
 
-            if len(command)<1 or len(command)>6:
+            if len(command)<1 or len(command)>7:
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'a':
@@ -79,6 +79,8 @@ class InteractionController(object):
                     continue
                 elif command[2] == 'f':
                     parameters.append('fixed')
+                elif command[2] == 'r':
+                    parameters.append('relative')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
@@ -109,6 +111,18 @@ class InteractionController(object):
                     parameters.append('slice')
                 else:
                     rospy.logerr("Invalid command {} (4b: shape)".format(command))
+                    continue
+
+            if type in ['start_carry']:
+                if len(command)<7:
+                    rospy.logerr("Invalid command {} (5: laterality)".format(command))
+                    continue
+                elif command[6] == 'r':
+                    parameters.append('right')
+                elif command[6] == 'l':
+                    parameters.append('left')
+                else:
+                    rospy.logerr("Invalid command {} (5b: laterality)".format(command))
                     continue
 
             return type, parameters
