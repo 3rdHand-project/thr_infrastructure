@@ -18,12 +18,13 @@ class Carry(Action):
             return world_T_gripper
 
     def run(self, parameters=None):
-        # Parameters could be "/shapeo x y z qx qy qz qw frame_id"
+        # Parameters could be "/shapeo ellipse x y z qx qy qz qw frame_id True"
         rospy.loginfo("[ActionServer] Executing carry{}".format(str(parameters)))
         object = parameters[0]
-        pose = transformations.raw_list_to_list(map(float, parameters[1:8]))
-        frame_id = parameters[8]
-        success = parameters[9] == 'True'
+        shape = parameters[1]
+        pose = transformations.raw_list_to_list(map(float, parameters[2:9]))
+        frame_id = parameters[9]
+        success = parameters[10] == 'True'
 
         if not success:
             rospy.logerr("REBA service could not compute the carry pose")
