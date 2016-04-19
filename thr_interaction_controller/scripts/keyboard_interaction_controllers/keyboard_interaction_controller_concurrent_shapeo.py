@@ -83,8 +83,10 @@ class InteractionController(object):
                     continue
                 elif command[2] == 'f':
                     parameters.append('fixed')
-                elif command[2] == 'r':
+                elif command[2] == 'v':
                     parameters.append('relative')
+                elif command[2] == 'r':
+                    parameters.append('reba')
                 else:
                     rospy.logerr("Invalid command {} (3b)".format(command))
                     continue
