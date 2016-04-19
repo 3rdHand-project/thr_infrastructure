@@ -2,4 +2,5 @@ string type
 string shape
 string laterality
 ---
+bool success
 geometry_msgs/PoseStamped object_pose
