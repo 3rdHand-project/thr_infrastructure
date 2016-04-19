@@ -55,6 +55,10 @@ class InteractionController(object):
             if len(command)<1 or len(command)>7:
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
+            elif command[0] == 'l':
+                type = 'start_go_home_left'
+            elif command[0] == 'r':
+                type = 'start_go_home_right'
             elif command[0] == 'a':
                 type = 'start_grasp'
             elif command[0] == 'c':
