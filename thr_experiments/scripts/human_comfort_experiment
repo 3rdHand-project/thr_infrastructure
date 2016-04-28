@@ -4,16 +4,19 @@ import rospkg
 import json
 import rospy
 import os
+import sys
 
 
 class ComfortExperiment(object):
-    def __init__(self):
+    def __init__(self, laterality, new_subject=True):
         rospack = rospkg.RosPack()
+        self.user_laterality = laterality
         self.pkg_human = rospack.get_path('human_moveit_config')
         self.pkg_reba = rospack.get_path('human_moveit_config')
-        self.init_experiment()
+        self.new_subject = new_subject
+        self.init_experiment(new_subject)
 
-    def init_experiment(self):
+    def init_experiment(self, new_subject):
         # get the list of permutations
         perm_list_file = self.pkg_human + '/config/permutations.json'
         with open(perm_list_file) as data_file:
@@ -30,26 +33,65 @@ class ComfortExperiment(object):
             with open(perm_file) as data_file:
                 perm_dict = json.load(data_file)
             # get next permutation
-            perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
+            if self.new_subject:
+                perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
         # get corresponding permutation values
         permutation = perm_list[perm_dict['id_permutation']]
         rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
+        perm_dict['permutation'] = permutation
         # write current config
         with open(perm_file, 'w') as outfile:
             json.dump(perm_dict, outfile, sort_keys=True, indent=4)
 
-    def start_launchfile(self, pkg, launchfile):
-        check_call(['roslaunch', pkg, launchfile])
+    def start_launchfile(self, pkg, launchfile, args=[]):
+        command = ['roslaunch', pkg, launchfile + '.launch']
+        command += args
+        check_call(command)
+
+    def do_again(self, task):
+        if not self.new_subject:
+            rospy.loginfo('Redo ' + task + '? y/N')
+            return (raw_input() == 'y')
+        return True
 
     def generate_model(self):
-        self.start_launchfile('human_moveit_config', 'generate_model.launch')
+        if self.do_again('model generation'):
+            rospy.loginfo('Generating Human model, press enter when subject is ready')
+            raw_input()
+            self.start_launchfile('human_moveit_config', 'generate_model')
+
+    def generate_calibration(self):
+        if self.do_again('optitrack calibration'):
+            rospy.loginfo('Generating Human calibrations, press enter when subject is ready')
+            raw_input()
+            args = ['sensor:=optitrack', 'reset_pose:=True', 'parameter:=' + self.user_laterality]
+            self.start_launchfile('human_moveit_config', 'calibration', args)
+
+    def generate_reba_pose(self):
+        if self.do_again('reba calculation'):
+            rospy.loginfo('Optimize REBA pose')
+            self.start_launchfile('reba_optim', 'optimize_reba_pose')
 
     def record_user(self):
         return 0
 
 if __name__ == '__main__':
     rospy.init_node('human_comfort_experiment')
-    expe = ComfortExperiment()
-
+    new_subject = (sys.argv[1] == 'True')
+    if new_subject:
+        # ask subject laterality
+        lat = ''
+        while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
+            rospy.loginfo('What is the subject laterality?')
+            lat = raw_input()
+        # set laterality on parameter server
+        rospy.set_param('/human/laterality', lat)
+    else:
+        lat = rospy.get_param('/human/laterality')
+    expe = ComfortExperiment(lat, new_subject)
     # start model generation
     expe.generate_model()
+    # start the optitrack calibration
+    expe.generate_calibration()
+    # optimize the reba pose of the user
+    expe.generate_reba_pose()
