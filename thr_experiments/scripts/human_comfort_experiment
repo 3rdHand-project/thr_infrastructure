@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+from subprocess import check_call
+import rospkg
+import json
+import rospy
+import os
+
+
+class ComfortExperiment(object):
+    def __init__(self):
+        rospack = rospkg.RosPack()
+        self.pkg_human = rospack.get_path('human_moveit_config')
+        self.pkg_reba = rospack.get_path('human_moveit_config')
+        self.init_experiment()
+
+    def init_experiment(self):
+        # get the list of permutations
+        perm_list_file = self.pkg_human + '/config/permutations.json'
+        with open(perm_list_file) as data_file:
+            perm_list = json.load(data_file)
+        # get the number of possible permutations
+        nb_permuts = len(perm_list)
+        # get current permutation
+        perm_file = self.pkg_human + '/tmp/user_permutation.json'
+        # if the file does not exist get initial permutation
+        if not os.path.exists(perm_file):
+            perm_dict = {}
+            perm_dict['id_permutation'] = 0
+        else:
+            with open(perm_file) as data_file:
+                perm_dict = json.load(data_file)
+            # get next permutation
+            perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
+        # get corresponding permutation values
+        permutation = perm_list[perm_dict['id_permutation']]
+        rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
+        # write current config
+        with open(perm_file, 'w') as outfile:
+            json.dump(perm_dict, outfile, sort_keys=True, indent=4)
+
+    def start_launchfile(self, pkg, launchfile):
+        check_call(['roslaunch', pkg, launchfile])
+
+    def generate_model(self):
+        self.start_launchfile('human_moveit_config', 'generate_model.launch')
+
+    def record_user(self):
+        return 0
+
+if __name__ == '__main__':
+    rospy.init_node('human_comfort_experiment')
+    expe = ComfortExperiment()
+
+    # start model generation
+    expe.generate_model()
