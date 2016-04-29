@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>thr_experiments</name>
+  <name>thr_xp_human_comfort</name>
   <version>0.0.0</version>
-  <description>The thr_experiments package</description>
+  <description>The thr_xp_human_comfort package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/thr_experiments</url> -->
+  <!-- <url type="website">http://wiki.ros.org/thr_xp_human_comfort</url> -->
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
