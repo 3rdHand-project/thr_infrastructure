@@ -87,7 +87,16 @@ if __name__ == '__main__':
         # set laterality on parameter server
         rospy.set_param('/human/laterality', lat)
     else:
-        lat = rospy.get_param('/human/laterality')
+        try:
+            lat = rospy.get_param('/human/laterality')
+        except KeyError:
+            # ask subject laterality
+            lat = ''
+            while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
+                rospy.loginfo('Problem with saving latereality. What is the subject laterality?')
+                lat = raw_input()
+            # set laterality on parameter server
+            rospy.set_param('/human/laterality', lat)
     expe = ComfortExperiment(lat, new_subject)
     # start model generation
     expe.generate_model()
