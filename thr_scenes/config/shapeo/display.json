@@ -1,5 +1,5 @@
 {
-    "start": ["Let's play with", "toys as if we", "were children!"],
+    "start": [""],
     "grasp": {
                 "starting": {"text": ["I'm grasping", 0, "..."], "look_at": 0},
                 "finished_failure": {"text": ["Oh oooh!", "I can't grasp", 0, "Move it a bit"], "look_at": -1}
@@ -14,8 +14,8 @@
                 "finished_failure": {"text": ["I can't reach", 0, "Move it a bit"], "look_at": -1}
             },
     "carry": {
-                "starting": {"text": ["Let me bringing", 0, "close to you"], "look_at": 0},
-                "finished_success": {"text": ["Now insert", 1], "look_at": -1},
+                "starting": {"text": ["Let's insert", 1], "look_at": -1},
+                "finished_success": {"text": ["Please insert", 1], "look_at": -1},
                 "finished_failure": {"text": ["Oh oooh!", "I can't rotate", 0], "look_at": -1}
             },
     "go_home_right": {
