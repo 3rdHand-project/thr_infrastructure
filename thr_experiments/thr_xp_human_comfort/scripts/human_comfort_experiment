@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 from subprocess import check_call
+from random import shuffle
+from random import randint
+from copy import deepcopy
+import itertools
 import rospkg
 import json
 import rospy
@@ -8,40 +12,14 @@ import sys
 
 
 class ComfortExperiment(object):
-    def __init__(self, laterality, new_subject=True):
+    def __init__(self, new_subject=True):
         rospack = rospkg.RosPack()
-        self.user_laterality = laterality
         self.pkg_human = rospack.get_path('human_moveit_config')
         self.pkg_reba = rospack.get_path('human_moveit_config')
         self.new_subject = new_subject
-        self.init_experiment(new_subject)
-
-    def init_experiment(self, new_subject):
-        # get the list of permutations
-        perm_list_file = self.pkg_human + '/config/permutations.json'
-        with open(perm_list_file) as data_file:
-            perm_list = json.load(data_file)
-        # get the number of possible permutations
-        nb_permuts = len(perm_list)
-        # get current permutation
-        perm_file = self.pkg_human + '/tmp/user_permutation.json'
-        # if the file does not exist get initial permutation
-        if not os.path.exists(perm_file):
-            perm_dict = {}
-            perm_dict['id_permutation'] = 0
-        else:
-            with open(perm_file) as data_file:
-                perm_dict = json.load(data_file)
-            # get next permutation
-            if self.new_subject:
-                perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
-        # get corresponding permutation values
-        permutation = perm_list[perm_dict['id_permutation']]
-        rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
-        perm_dict['permutation'] = permutation
-        # write current config
-        with open(perm_file, 'w') as outfile:
-            json.dump(perm_dict, outfile, sort_keys=True, indent=4)
+        self.shapes = ['slice', 'trapezium', 'hexagone', 'ellipse', 'star']
+        self.conditions = ['reba', 'fixed', 'relative', 'desired']
+        self.config_file = self.pkg_human + '/tmp/user_config.json'
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
@@ -64,7 +42,8 @@ class ComfortExperiment(object):
         if self.do_again('optitrack calibration'):
             rospy.loginfo('Generating Human calibrations, press enter when subject is ready')
             raw_input()
-            args = ['sensor:=optitrack', 'reset_pose:=True', 'parameter:=' + self.user_laterality]
+            lat = rospy.get_param('/human/laterality')
+            args = ['sensor:=optitrack', 'reset_pose:=True', 'parameter:=' + lat]
             self.start_launchfile('human_moveit_config', 'calibration', args)
 
     def generate_reba_pose(self):
@@ -72,35 +51,157 @@ class ComfortExperiment(object):
             rospy.loginfo('Optimize REBA pose')
             self.start_launchfile('reba_optim', 'optimize_reba_pose')
 
+    def get_conditions(self):
+        # get the list of permutations
+        perm_list_file = self.pkg_human + '/config/permutations.json'
+        with open(perm_list_file) as data_file:
+            perm_list = json.load(data_file)
+        # get the number of possible permutations
+        nb_permuts = len(perm_list)
+        # if the file does not exist get initial permutation
+        if not os.path.exists(self.config_file):
+            # force the new user to be set to True
+            self.new_subject = True
+            # cretate the config directory
+            perm_dict = {}
+            perm_dict['id_permutation'] = 0
+        else:
+            with open(self.config_file) as data_file:
+                perm_dict = json.load(data_file)
+            # get next permutation
+            if self.new_subject:
+                perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
+        # get corresponding permutation values
+        permutation = perm_list[perm_dict['id_permutation']]
+        rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
+        perm_dict['conditions'] = permutation
+        # remove conditions that are not in the current experiment
+        for c in self.conditions:
+            if c not in perm_dict['conditions']:
+                perm_dict.pop(c, None)
+        # return current config
+        return perm_dict
+
+    def get_user_id(self):
+        id_file = self.pkg_human + '/tmp/id_list.json'
+        if not os.path.exists(id_file):
+            id_list = []
+        else:
+            with open(id_file) as data_file:
+                id_list = json.load(data_file)
+        # generate a random id between 0 and 9999
+        id_user = randint(0, 9999)
+        # check the id is not already used
+        while id_user in id_list:
+            id_user = randint(0, 9999)
+        # append to the list and write the file
+        id_list.append(id_user)
+        with open(id_file, 'w') as outfile:
+            json.dump(id_list, outfile)
+        return id_user
+
+    def get_user_laterality(self):
+        if self.new_subject:
+            # ask subject laterality
+            lat = ''
+            while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
+                rospy.loginfo('What is the subject laterality?')
+                lat = raw_input()
+        return lat
+
+    def generate_experimental_conditions(self, nb_shapes=5):
+        # get both conditions
+        expe_dict = self.get_conditions()
+        # get the user laterality
+        if self.new_subject:
+            expe_dict['laterality'] = self.get_user_laterality()
+        # write the laterality on the parameter server
+        rospy.set_param('/human/laterality', expe_dict['laterality'])
+        # generate new id for the user
+        if self.new_subject:
+            expe_dict['user_id'] = self.get_user_id()
+        rospy.logwarn('User ID is ' + str(expe_dict['user_id']) +
+                      '. Fill limesurvey field and press enter to continue.')
+        raw_input()
+        # write the shapes permutation
+        if self.do_again('shapes permutations'):
+            rospy.loginfo('Generating shapes permutations')
+            for c in expe_dict['conditions']:
+                # generate a random permutation of shapes
+                if nb_shapes == len(self.shapes):
+                    list_shape = deepcopy(self.shapes)
+                    shuffle(list_shape)
+                    expe_dict[c] = list_shape
+                else:
+                    perms = itertools.permutations(self.shapes, nb_shapes)
+                    id_perm = randint(0, len(perms))
+                    expe_dict[c] = perms[id_perm]
+            # erase current shpae as they were permuted
+            expe_dict['current_shape'] = ''
+        # write the current configuration
+        if self.do_again('current configuration'):
+            expe_dict['current_condition'] = ''
+            expe_dict['current_shape'] = ''
+        # write the config file
+        with open(self.config_file, 'w') as outfile:
+            json.dump(expe_dict, outfile, sort_keys=True, indent=4)
+        # store it for reuse when running the experiment
+        self.experiment_parameters = expe_dict
+
+    def run_condition(self, condition, shape):
+        # TODO do something
+        rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
+        rospy.sleep(5)
+
+    def run_experiment(self):
+        conditions = self.experiment_parameters['conditions']
+        # get starting index from previous condition in case of crash
+        prev_cond = self.experiment_parameters['current_condition']
+        if prev_cond:
+            cond_index = conditions.index(prev_cond)
+        else:
+            cond_index = 0
+        # get shape index from previous shape in case of crash
+        prev_shape = self.experiment_parameters['current_shape']
+        # loop through all conditions
+        while cond_index < len(conditions) and not rospy.is_shutdown():
+            condition = conditions[cond_index]
+            self.experiment_parameters['current_condition'] = condition
+            shapes = self.experiment_parameters[condition]
+            if prev_shape:
+                shape_index = shapes.index(prev_shape)
+            else:
+                shape_index = 0
+            # loop through all the shapes
+            while shape_index < len(shapes) and not rospy.is_shutdown():
+                shape = shapes[shape_index]
+                # write the config file
+                self.experiment_parameters['current_shape'] = shape
+                with open(self.config_file, 'w') as outfile:
+                    json.dump(self.experiment_parameters, outfile, sort_keys=True, indent=4)
+                # run the condition with the parameters
+                self.run_condition(condition, shape)
+                # increment index
+                shape_index += 1
+            # erase previous condition
+            prev_shape = ''
+            # increment index
+            cond_index += 1
+
     def record_user(self):
         return 0
 
 if __name__ == '__main__':
     rospy.init_node('human_comfort_experiment')
     new_subject = (sys.argv[1] == 'True')
-    if new_subject:
-        # ask subject laterality
-        lat = ''
-        while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
-            rospy.loginfo('What is the subject laterality?')
-            lat = raw_input()
-        # set laterality on parameter server
-        rospy.set_param('/human/laterality', lat)
-    else:
-        try:
-            lat = rospy.get_param('/human/laterality')
-        except KeyError:
-            # ask subject laterality
-            lat = ''
-            while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
-                rospy.loginfo('Problem with saving latereality. What is the subject laterality?')
-                lat = raw_input()
-            # set laterality on parameter server
-            rospy.set_param('/human/laterality', lat)
-    expe = ComfortExperiment(lat, new_subject)
+    expe = ComfortExperiment(new_subject)
+    # start expe configuration
+    expe.generate_experimental_conditions()
     # start model generation
     expe.generate_model()
     # start the optitrack calibration
     expe.generate_calibration()
     # optimize the reba pose of the user
     expe.generate_reba_pose()
+    # run the experiment
+    expe.run_experiment()
