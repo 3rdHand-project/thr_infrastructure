@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="type" /> <!-- concurrent or sequential -->
     <arg name="scene" default="toolbox"/>
     <arg name="ip" default="BAXTERFLOWERS.local"/> <!-- IP of the VRPN server -->
     <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
@@ -17,14 +16,13 @@
       <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
       <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
       <arg name="scene" value="$(arg scene)"/>
-	  <arg name="type" value="$(arg type)"/>
     </include>
        
-    <include file="$(find thr_action_server)/launch/action_server_$(arg type).launch">
+    <include file="$(find thr_action_server)/launch/action_server_concurrent.launch">
       <arg name="gui" value="$(arg gui)"/>
       <arg name="stopped" value="false"/>
     </include>
 
-    <node pkg="thr_display" name="$(arg type)_$(arg display)_display" type="$(arg type)_$(arg display)_display.py" output="log"/>
-    <node pkg="thr_interaction_controller" name="keyboard_interaction_controller_$(arg type)_$(arg scene)" type="keyboard_interaction_controller_$(arg type)_$(arg scene).py" output="screen"/>
+    <node pkg="thr_display" name="concurrent_$(arg display)_display" type="concurrent_$(arg display)_display.py" output="log"/>
+    <node pkg="thr_interaction_controller" name="keyboard_interaction_controller_concurrent_$(arg scene)" type="keyboard_interaction_controller_concurrent_$(arg scene).py" output="screen"/>
 </launch>
