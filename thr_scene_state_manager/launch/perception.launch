@@ -3,13 +3,13 @@
     <arg name="ip" /> <!-- IP of the VRPN server (default 3883) -->
     <arg name="port" default="3884" /> <!-- Port of the VRPN server (default 3883) -->
     <arg name="scene"/>
-    <arg name="load_marker_names" default="true"/> <!-- Load optitrack marker names on the parameter server, if False another script must load them instead -->
+    <arg name="load_optitrack_config" default="true"/>
 
     <param name="/thr/scene" value="$(arg scene)"/> 
-    <rosparam if="$(arg load_marker_names)" command="load" file="$(find thr_scenes)/config/$(arg scene)/tracked_objects.yaml" param="optitrack/objects"/>
+    <rosparam if="$(arg load_optitrack_config)" command="load" file="$(find thr_scenes)/config/$(arg scene)/tracked_objects.yaml" param="optitrack/objects"/>
     <rosparam command="load" file="$(find thr_scenes)/config/scenes.yaml" param="/thr/objects"/>
     
-    <include file="$(find optitrack_publisher)/launch/optitrack_publisher.launch" >
+    <include if="$(arg load_optitrack_config)" file="$(find optitrack_publisher)/launch/optitrack_publisher.launch" >
       <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
       <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
       <arg name="output" value="log"/>
