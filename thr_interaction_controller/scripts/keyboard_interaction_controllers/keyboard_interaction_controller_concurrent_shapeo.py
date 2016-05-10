@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 
-import rospy, json
+import rospy
+import json
 import actionlib
 
 from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import GoalStatus
+
 
 class InteractionController(object):
 
@@ -52,7 +54,7 @@ class InteractionController(object):
             command = raw_input("> ").strip('\r\n').lower()
             parameters = []
 
-            if len(command)<1 or len(command)>7:
+            if len(command)<1 or len(command)>6:
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'l':
@@ -119,18 +121,6 @@ class InteractionController(object):
                     rospy.logerr("Invalid command {} (4b: shape)".format(command))
                     continue
 
-            if type in ['start_carry']:
-                if len(command)<7:
-                    rospy.logerr("Invalid command {} (5: laterality)".format(command))
-                    continue
-                elif command[6] == 'r':
-                    parameters.append('right')
-                elif command[6] == 'l':
-                    parameters.append('left')
-                else:
-                    rospy.logerr("Invalid command {} (5b: laterality)".format(command))
-                    continue
-
             return type, parameters
 
     ###################################################################################################################
@@ -158,7 +148,7 @@ class InteractionController(object):
 
 
     def run_decision(self, decision):
-        if self.previous_decision.type== 'wait':
+        if self.previous_decision.type == 'wait':
             self.run_decision_client.cancel_all_goals()
             self.scene_before_decision = self.current_scene
             goal = RunDecisionGoal()
