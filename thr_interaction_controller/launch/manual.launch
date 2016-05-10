@@ -7,6 +7,7 @@
     <arg name="name" default="none" /> <!-- Name of log files -->
     <arg name="display" default="debug" /> <!-- debug or face display -->
     <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
+    <arg name="load_marker_names" default="true"/> <!-- Load optitrack marker names on the parameter server, if False another script must load them instead -->
     
     <rosparam param="/thr/logs_name" subst_value="True">$(arg name)</rosparam>
     <rosparam param="/thr/display" subst_value="True">$(arg display)</rosparam>
@@ -16,6 +17,7 @@
       <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
       <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
       <arg name="scene" value="$(arg scene)"/>
+      <arg name="load_marker_names" value="$(arg load_marker_names)"/>
     </include>
        
     <include file="$(find thr_action_server)/launch/action_server_concurrent.launch">
