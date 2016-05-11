@@ -16,15 +16,14 @@ from actionlib_msgs.msg import GoalStatus
 
 
 class ComfortExperiment(object):
-    def __init__(self, ic, new_subject=True):
+    def __init__(self, new_subject=True):
         rospack = rospkg.RosPack()
         self.pkg_human = rospack.get_path('human_moveit_config')
-        self.pkg_reba = rospack.get_path('human_moveit_config')
         self.new_subject = new_subject
-        self.shapes = ['slice', 'trapezium', 'hexagone', 'ellipse', 'star']
+        self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative', 'desired']
         self.config_file = self.pkg_human + '/tmp/user_config.json'
-        self.controller = ic
+        self.controller = None
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
@@ -159,16 +158,23 @@ class ComfortExperiment(object):
 
     def run_condition(self, condition, shape):
         rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
+        rospy.loginfo('Press enter to execute the action.')
+        raw_input()
         # ensure that the robot is ready to receive new command
         self.controller.check_for_previous_decisions()
         # create a decision
         dec_type = 'start_carry'
-        parameters = []
-        parameters.append(condition)
-        parameters.append(shape)
+        parameters = ['/shapeo', condition, shape]
         decision = Decision(type=dec_type, parameters=parameters)
+        # loop till decision is successed
+        success = False
         # send decision
-        self.controller.run_decision(decision)
+        while not success:
+            self.controller.run_decision(decision)
+            rospy.loginfo('Action complete? [Y]/n.')
+            res = raw_input()
+            if res != 'n':
+                success = True
         # wait to go home
         rospy.loginfo('Decision sent. Press enter to go home.')
         raw_input()
@@ -219,6 +225,7 @@ class InteractionController(object):
         self.scene_before_decision = None
         self.run_decision_name = '/thr/run_decision'
         self.scene_state_service = '/thr/scene_state'
+        self.rate = rospy.Rate(20)
 
         self.logs = []
         # Initiating topics ands links to services/actions
@@ -241,32 +248,23 @@ class InteractionController(object):
                 StartStopEpisodeRequest.STOP))
 
     def run_decision(self, decision):
-        if self.previous_decision.type == 'wait':
-            self.run_decision_client.cancel_all_goals()
-            self.scene_before_decision = self.current_scene
-            goal = RunDecisionGoal()
-            goal.decision = decision
-            self.run_decision_client.send_goal(goal)
-            self.previous_decision = decision
-            rospy.loginfo("You're asking to run decision {}({})".format(decision.type, ', '.join(decision.parameters)))
+        self.run_decision_client.cancel_all_goals()
+        self.scene_before_decision = self.current_scene
+        goal = RunDecisionGoal()
+        goal.decision = decision
+        self.run_decision_client.send_goal(goal)
+        self.previous_decision = decision
+        rospy.loginfo("You're asking to run decision {}({})".format(decision.type, ', '.join(decision.parameters)))
 
     def check_for_previous_decisions(self):
-        if self.previous_decision.type != 'wait' and self.run_decision_client.get_state() not in [GoalStatus.PENDING, GoalStatus.ACTIVE]:  # ... and the action server reports it's ended...
-            state = self.run_decision_client.get_state()
-            if state == GoalStatus.SUCCEEDED:
-                rospy.loginfo("Decision {}({}) succeeded!".format(self.previous_decision.type, ', '.join(self.previous_decision.parameters)))
-            else:
-                rospy.logwarn("Decision {}({}) failed ;-(".format(self.previous_decision.type, ', '.join(self.previous_decision.parameters)))
-            self.previous_decision = Decision(type='wait')
+        while (self.run_decision_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and
+               not rospy.is_shutdown()):
+            self.rate.sleep()
 
 if __name__ == '__main__':
     rospy.init_node('human_comfort_experiment')
     new_subject = (sys.argv[1] == 'True')
-    # create interaction controller
-    ic = InteractionController()
-    expe = ComfortExperiment(ic, new_subject)
-    # put the robot in home configuration
-    expe.send_go_home()
+    expe = ComfortExperiment(new_subject)
     # start expe configuration
     expe.generate_experimental_conditions()
     # start model generation
@@ -275,5 +273,13 @@ if __name__ == '__main__':
     expe.generate_calibration()
     # optimize the reba pose of the user
     expe.generate_reba_pose()
+    # tell the user to start the launchfile to run the experiment
+    rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
+    raw_input()
+    # create interaction controller
+    ic = InteractionController()
+    expe.controller = ic
+    # put the robot in home configuration
+    expe.send_go_home()
     # run the experiment
     expe.run_experiment()
