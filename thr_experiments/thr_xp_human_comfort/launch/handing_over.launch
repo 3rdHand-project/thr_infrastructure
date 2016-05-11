@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="new_user" default="True"/>
+    <arg name="scene" default="shapeo"/>
+    <arg name="use_kinect" default="False" />
+
+    <include file="$(find thr_interaction_controller)/launch/manual.launch" >
+    	<arg name="scene" value="$(arg scene)"/>
+    	<arg name="load_optitrack_config" value="False"/>
+    </include>
+
+    <include file="$(find human_moveit_config)/launch/human_tracker.launch">
+    	<arg name="use_kinect" value="$(arg use_kinect)"/>
+    </include>
+
+    <node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
+</launch>
