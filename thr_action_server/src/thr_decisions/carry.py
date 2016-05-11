@@ -17,7 +17,6 @@ class CarryDecisionMapper(object):
         object = decision.parameters[0]
         shape = decision.parameters[2]
         type = decision.parameters[1]
-        laterality = decision.parameters[3]
 
         pose = self.get_carry_pose(GetCarryPoseRequest(object=object, method=type, location=shape))
         frame_id = pose.object_pose.header.frame_id
