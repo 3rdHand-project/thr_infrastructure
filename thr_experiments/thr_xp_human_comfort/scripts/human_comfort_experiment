@@ -13,6 +13,8 @@ import actionlib
 from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import GoalStatus
+from recorder.srv import RecordingCommand
+from recorder.srv import RecordingCommandRequest
 
 
 class ComfortExperiment(object):
@@ -24,6 +26,9 @@ class ComfortExperiment(object):
         self.conditions = ['reba', 'fixed', 'relative', 'desired']
         self.config_file = self.pkg_human + '/tmp/user_config.json'
         self.controller = None
+        # create recorder service
+        rospy.wait_for_service('recorder/triggering')
+        self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
@@ -102,7 +107,8 @@ class ComfortExperiment(object):
         id_list.append(id_user)
         with open(id_file, 'w') as outfile:
             json.dump(id_list, outfile)
-        return id_user
+        # return a string for the id
+        return str(id_user)
 
     def get_user_laterality(self):
         if self.new_subject:
@@ -124,7 +130,9 @@ class ComfortExperiment(object):
         # generate new id for the user
         if self.new_subject:
             expe_dict['user_id'] = self.get_user_id()
-        rospy.logwarn('User ID is ' + str(expe_dict['user_id']) +
+        # keep the current user on parameter server
+        rospy.set_param('/human/id', expe_dict['user_id'])
+        rospy.logwarn('User ID is ' + expe_dict['user_id'] +
                       '. Fill limesurvey field and press enter to continue.')
         raw_input()
         # write the shapes permutation
@@ -170,11 +178,19 @@ class ComfortExperiment(object):
         success = False
         # send decision
         while not success:
+            # start recording
+            self.recorder(RecordingCommandRequest(start=True,
+                                                  files_hierarchy=[rospy.get_param('/human/id'), condition, shape],
+                                                  allow_overwriting=True))
             self.controller.run_decision(decision)
+            # TODO: Replace by history event checking
             rospy.loginfo('Action complete? [Y]/n.')
             res = raw_input()
             if res != 'n':
                 success = True
+            # stop recording
+            self.recorder(RecordingCommandRequest(start=False))
+            rospy.sleep(0.5)
         # wait to go home
         rospy.loginfo('Decision sent. Press enter to go home.')
         raw_input()

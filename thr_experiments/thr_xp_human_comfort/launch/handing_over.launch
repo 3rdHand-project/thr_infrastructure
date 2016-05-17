@@ -2,7 +2,9 @@
 <launch>
 	<arg name="new_user" default="True"/>
     <arg name="scene" default="shapeo"/>
-    <arg name="use_kinect" default="False" />
+    <arg name="use_kinect" default="False"/>
+    <arg name="record_head" default="False"/>
+    <arg name="record_path" default="$(find thr_xp_human_comfort)/results/"/>
 
     <include file="$(find thr_interaction_controller)/launch/manual.launch" >
     	<arg name="scene" value="$(arg scene)"/>
@@ -11,6 +13,16 @@
 
     <include file="$(find human_moveit_config)/launch/human_tracker.launch">
     	<arg name="use_kinect" value="$(arg use_kinect)"/>
+    </include>
+
+    <rosparam command="load" file="$(find thr_xp_human_comfort)/config/recorded_frames.yaml" param="recorder/frames"/>
+
+    <include file="$(find recorder)/launch/record.launch">
+        <arg name="load_frames" value="False"/>
+        <arg name="left" value="False"/>
+        <arg name="right" value="False"/>
+        <arg name="head" value="$(arg record_head)"/>
+        <arg name="path" value="$(arg record_path)"/>
     </include>
 
     <node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
