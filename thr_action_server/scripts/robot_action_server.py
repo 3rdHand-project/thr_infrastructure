@@ -38,7 +38,7 @@ class RobotActionServer:
             self.abilities = json.load(f)
 
         # Motion/Grasping attributes
-        self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], ik='robot')
+        self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], ik='trac')
 
         # Home poses are taken when the server starts:
         self.starting_state = self.commander.get_current_state()
