@@ -6,6 +6,7 @@
     <rosparam param="/thr/action_server/stopped" subst_value="True">$(arg stopped)</rosparam>
     <include file="$(find baxter_commander)/launch/commander.launch">
       <arg name="gui" value="$(arg gui)"/>
+      <arg name="output" value="log"/>
     </include>
     <node pkg="thr_action_server" name="decision_server" type="decision_server.py" output="screen"/>
     <node pkg="thr_action_server" name="robot_action_server_right" type="robot_action_server.py" output="screen" args="right"/>
