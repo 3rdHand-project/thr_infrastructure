@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="new_user" default="True" />
+	<arg name="optitrack_calibration_type" default="full" />
+	<arg name="kinect_calibration_type" default="full" />
+
+	<node name="human_comfort_experiment" pkg="thr_xp_human_comfort" type="human_comfort_experiment" output="screen" required="true" args="$(arg new_user) $(arg optitrack_calibration_type)"/>
+</launch>
