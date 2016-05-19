@@ -15,23 +15,32 @@ from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import GoalStatus
 from recorder.srv import RecordingCommand
 from recorder.srv import RecordingCommandRequest
+from os.path import join
+from os.path import exists
+from shutil import copyfile
 
 
 class ComfortExperiment(object):
     def __init__(self, new_subject=True):
         rospack = rospkg.RosPack()
         self.pkg_human = rospack.get_path('human_moveit_config')
+        self.pkg_reba = rospack.get_path('reba_optim')
+        self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
         self.new_subject = new_subject
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative', 'desired']
-        self.config_file = self.pkg_human + '/tmp/user_config.json'
+        self.config_file = join(self.pkg_human, 'tmp', 'user_config.json')
         self.controller = None
         # create recorder service
-        rospy.wait_for_service('recorder/triggering')
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
+        command += args
+        check_call(command)
+
+    def start_node(self, pkg, node, args=[]):
+        command = ['rosrun', pkg, node]
         command += args
         check_call(command)
 
@@ -47,12 +56,11 @@ class ComfortExperiment(object):
             raw_input()
             self.start_launchfile('human_moveit_config', 'generate_model')
 
-    def generate_calibration(self):
+    def generate_calibration(self, type_calibr='full'):
         if self.do_again('optitrack calibration'):
             rospy.loginfo('Generating Human calibrations, press enter when subject is ready')
             raw_input()
-            lat = rospy.get_param('/human/laterality')
-            args = ['sensor:=optitrack', 'reset_pose:=True', 'parameter:=' + lat]
+            args = ['sensor:=opt', 'reset_pose:=True', 'parameter:=' + type_calibr]
             self.start_launchfile('human_moveit_config', 'calibration', args)
 
     def generate_reba_pose(self):
@@ -60,9 +68,15 @@ class ComfortExperiment(object):
             rospy.loginfo('Optimize REBA pose')
             self.start_launchfile('reba_optim', 'optimize_reba_pose')
 
+    def record_desired_pose(self):
+        if self.do_again('record desired pose'):
+            rospy.loginfo('Ready to record desired pose. Press enter when subject has made his choice')
+            raw_input()
+            self.start_node('reba_optim', 'record_pose')
+
     def get_conditions(self):
         # get the list of permutations
-        perm_list_file = self.pkg_human + '/config/permutations.json'
+        perm_list_file = join(self.pkg_human, 'config', 'permutations.json')
         with open(perm_list_file) as data_file:
             perm_list = json.load(data_file)
         # get the number of possible permutations
@@ -92,7 +106,7 @@ class ComfortExperiment(object):
         return perm_dict
 
     def get_user_id(self):
-        id_file = self.pkg_human + '/tmp/id_list.json'
+        id_file = join(self.pkg_human, 'tmp', 'id_list.json')
         if not os.path.exists(id_file):
             id_list = []
         else:
@@ -180,7 +194,10 @@ class ComfortExperiment(object):
         while not success:
             # start recording
             self.recorder(RecordingCommandRequest(start=True,
-                                                  files_hierarchy=[rospy.get_param('/human/id'), condition, shape],
+                                                  files_hierarchy=[rospy.get_param('/human/id'),
+                                                                   'records',
+                                                                   condition,
+                                                                   shape],
                                                   allow_overwriting=True))
             self.controller.run_decision(decision)
             # TODO: Replace by history event checking
@@ -197,6 +214,9 @@ class ComfortExperiment(object):
         self.send_go_home()
 
     def run_experiment(self):
+        # wait for the recorder service in case it is not started
+        rospy.wait_for_service('recorder/triggering')
+        # get the conditions
         conditions = self.experiment_parameters['conditions']
         # get starting index from previous condition in case of crash
         prev_cond = self.experiment_parameters['current_condition']
@@ -231,9 +251,38 @@ class ComfortExperiment(object):
             # increment index
             cond_index += 1
 
+    def collect_results(self):
+        def save_results(directory, files_list, folder=''):
+            for f in files_list:
+                src = join(directory, f)
+                dst_folder = join(save_directory, folder)
+                if not exists(dst_folder):
+                    os.makedirs(dst_folder)
+                dst = join(dst_folder, f)
+                copyfile(src, dst)
+        # user results are stored under his id
+        save_directory = join(self.pkg_expe, 'results', rospy.get_param('/human/id'))
+        # collect the results from human_moveit_config/tmp
+        model_dir = join(self.pkg_human, 'tmp')
+        model_files = []
+        # collect all files related to the model
+        model_files.append('human.urdf')
+        model_files.append('human_length.json')
+        model_files.append('sensor_calibration.json')
+        # collect file of the expe configuration
+        model_files.append('user_config.json')
+        # collect the results from reba_optim/config
+        pose_dir = join(self.pkg_reba, 'config')
+        pose_files = []
+        # collect desired and reba poses
+        pose_files.append('desired_pose.json')
+        pose_files.append('reba_pose.json')
+        # save the files
+        save_results(model_dir, model_files, 'model')
+        save_results(pose_dir, pose_files, 'poses')
+
 
 class InteractionController(object):
-
     def __init__(self):
         self.running = True
         self.current_scene = None
@@ -286,9 +335,11 @@ if __name__ == '__main__':
     # start model generation
     expe.generate_model()
     # start the optitrack calibration
-    expe.generate_calibration()
+    expe.generate_calibration(type_calibr=sys.argv[2])
     # optimize the reba pose of the user
     expe.generate_reba_pose()
+    # ask the user for his desired pose
+    expe.record_desired_pose()
     # tell the user to start the launchfile to run the experiment
     rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
     raw_input()
@@ -299,3 +350,5 @@ if __name__ == '__main__':
     expe.send_go_home()
     # run the experiment
     expe.run_experiment()
+    # collect the results before to close
+    expe.collect_results()
