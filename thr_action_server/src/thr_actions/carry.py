@@ -44,16 +44,18 @@ class Carry(Action):
                 rospy.logerr("Object {} is no longer visible".format(object))
                 return False
 
-            try:
-                success = self.commander.move_to_controlled(world_T_gripper, pause_test=self.pause_test, stop_test=self.stop_test)
-            except ValueError:
+            seed = self.commander.get_current_state()
+            ik = self.commander.get_ik(world_T_gripper, source='trac', seeds=seed, params={'end_tolerance': 0.1, 'num_attempts':10})
+
+            if ik == None:
                 rospy.logerr("Goal not reachable, please move it a little bit...")
                 # We decide to fail immediately in case IK fails because REBA parameters need to be updated (so a new Decision must be executed)
                 return False
                 # rospy.sleep(self.action_params['sleep_step'])
-            else:
-                if success:
-                    break
+
+            ik.joint_state.name = seed.joint_state.name  # TODOOOOOOOOOO REMOVE THIS HACK
+            if self.commander.move_to_controlled(ik, pause_test=self.pause_test, stop_test=self.stop_test):
+                break
 
         rospy.loginfo("[ActionServer] Executed carry{} with {}".format(str(parameters), "failure" if self._should_interrupt() else "success"))
         return True
