@@ -7,7 +7,7 @@ import actionlib
 from actionlib_msgs.msg import GoalStatus
 from thr_decisions import decision_action_mapping
 from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest, StartStopEpisodeResponse
-from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunDecisionGoal, RunDecisionAction, ActionHistoryEvent, Decision
+from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionGoal, RunDecisionGoal, RunDecisionAction, ActionHistoryEvent, Decision, RobotAction
 
 class DecisionServer:
     """
@@ -58,13 +58,16 @@ class DecisionServer:
         """
         if force or not rospy.get_param('/thr/action_server/stopped'):
             robot_goal, client = decision_action_mapping(decision_goal.decision)
-            self.clients[client].send_goal(RunRobotActionGoal(action=robot_goal))
-            self.current_actions[client] = robot_goal
+            instantaneous_action = client == 'instantaneous'
+            if not instantaneous_action:
+                self.clients[client].send_goal(RunRobotActionGoal(action=robot_goal))
+                self.current_actions[client] = robot_goal
 
             # Publish the event to the action history topic
             event = ActionHistoryEvent()
             event.header.stamp = rospy.Time.now()
-            event.type = ActionHistoryEvent.STARTING
+            event.type = ActionHistoryEvent.STARTING if not instantaneous_action else ActionHistoryEvent.INSTANTANEOUS
+
             event.action = robot_goal
             event.side = client
             self.action_history.publish(event)

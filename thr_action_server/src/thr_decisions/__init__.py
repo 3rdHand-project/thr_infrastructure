@@ -31,6 +31,8 @@ def decision_action_mapping(decision):
         return bring.map(decision), 'left'
     elif decision.type=='start_bring_right':
         return bring.map(decision), 'right'
+    elif decision.type=='display':
+        return (RobotAction(type='display', parameters=decision.parameters), 'instantaneous')
     else:
         raise NotImplementedError("Unknown mapping of decision {} to RobotAction, make sure a mapping exists in {}".format(decision.type, __file__))
 

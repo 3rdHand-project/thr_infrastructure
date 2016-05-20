@@ -41,7 +41,7 @@ class ConcurrentActionDisplay(object):
             #STARTING = 0
             #FINISHED_SUCCESS = 1
             #FINISHED_FAILURE = 2
-            return ['starting', 'finished_success', 'finished_failure'][index]
+            return ['starting', 'finished_success', 'finished_failure', 'instantaneous'][index]
 
         try:
             decision = self.text[event.action.type][map_const(event.type)]
