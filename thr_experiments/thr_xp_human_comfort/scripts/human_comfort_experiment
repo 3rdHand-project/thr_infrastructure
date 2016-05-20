@@ -29,7 +29,7 @@ class ComfortExperiment(object):
         self.new_subject = new_subject
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative', 'desired']
-        self.config_file = join(self.pkg_human, 'tmp', 'user_config.json')
+        self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
         self.controller = None
         # create recorder service
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
@@ -72,11 +72,11 @@ class ComfortExperiment(object):
         if self.do_again('record desired pose'):
             rospy.loginfo('Ready to record desired pose. Press enter when subject has made his choice')
             raw_input()
-            self.start_node('reba_optim', 'record_pose')
+            self.start_launchfile('reba_optim', 'record_desired_pose')
 
     def get_conditions(self):
         # get the list of permutations
-        perm_list_file = join(self.pkg_human, 'config', 'permutations.json')
+        perm_list_file = join(self.pkg_expe, 'config', 'permutations.json')
         with open(perm_list_file) as data_file:
             perm_list = json.load(data_file)
         # get the number of possible permutations
@@ -178,12 +178,18 @@ class ComfortExperiment(object):
         decision = Decision(type='start_go_home_right', parameters=[])
         self.controller.run_decision(decision)
 
+    def announce_next_part(self, shape):
+        decision = Decision(type='display', parameters=['Prepare', shape, 'for insertion'])
+        self.controller.run_decision(decision)
+
     def run_condition(self, condition, shape):
         rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
-        rospy.loginfo('Press enter to execute the action.')
-        raw_input()
         # ensure that the robot is ready to receive new command
         self.controller.check_for_previous_decisions()
+        # announce next part
+        self.announce_next_part(shape)
+        rospy.loginfo('Press enter to execute the action.')
+        raw_input()
         # create a decision
         dec_type = 'start_carry'
         parameters = ['/shapeo', condition, shape]
@@ -192,6 +198,8 @@ class ComfortExperiment(object):
         success = False
         # send decision
         while not success:
+            # ensure that the robot is ready to receive new command
+            self.controller.check_for_previous_decisions()
             # start recording
             self.recorder(RecordingCommandRequest(start=True,
                                                   files_hierarchy=[rospy.get_param('/human/id'),
@@ -208,10 +216,11 @@ class ComfortExperiment(object):
             # stop recording
             self.recorder(RecordingCommandRequest(start=False))
             rospy.sleep(0.5)
-        # wait to go home
-        rospy.loginfo('Decision sent. Press enter to go home.')
-        raw_input()
-        self.send_go_home()
+            # ensure that the robot is ready to receive new command
+            self.controller.check_for_previous_decisions()
+            # go home
+            rospy.loginfo('Action finished going home.')
+            self.send_go_home()
 
     def run_experiment(self):
         # wait for the recorder service in case it is not started
@@ -262,23 +271,24 @@ class ComfortExperiment(object):
                 copyfile(src, dst)
         # user results are stored under his id
         save_directory = join(self.pkg_expe, 'results', rospy.get_param('/human/id'))
-        # collect the results from human_moveit_config/tmp
+        # collect all files related to the model
         model_dir = join(self.pkg_human, 'tmp')
         model_files = []
-        # collect all files related to the model
         model_files.append('human.urdf')
         model_files.append('human_length.json')
         model_files.append('sensor_calibration.json')
         # collect file of the expe configuration
-        model_files.append('user_config.json')
-        # collect the results from reba_optim/config
+        config_dir = join(self.pkg_expe, 'tmp')
+        config_files = []
+        config_files.append('user_config.json')
+        # collect desired and reba poses
         pose_dir = join(self.pkg_reba, 'config')
         pose_files = []
-        # collect desired and reba poses
         pose_files.append('desired_pose.json')
         pose_files.append('reba_pose.json')
         # save the files
         save_results(model_dir, model_files, 'model')
+        save_results(config_dir, config_files, '')
         save_results(pose_dir, pose_files, 'poses')
 
 
