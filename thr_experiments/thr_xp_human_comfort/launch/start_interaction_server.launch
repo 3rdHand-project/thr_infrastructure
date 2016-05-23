@@ -14,5 +14,6 @@
     	<arg name="use_kinect" value="$(arg use_kinect)"/>
     </include>
 
+    <node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="screen" required="True"/>
     <node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
 </launch>
