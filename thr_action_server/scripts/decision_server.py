@@ -62,7 +62,7 @@ class DecisionServer:
             try:
                 robot_goal.action.type = self.mapping[decision_goal.decision.type]['type']
                 client = self.mapping[decision_goal.decision.type]['client']
-            except KeyError, k:
+            except KeyError as k:
                 rospy.logerr("No client is capable of action {}{}: KeyError={}".format(decision_goal.decision.type, str(decision_goal.decision.parameters), k.message))
                 if not force:  # Decision goals sent by clients fail only if they are not mapped to robot actions
                     self.server.set_aborted()
@@ -82,6 +82,8 @@ class DecisionServer:
 
                 if not force:  # Decision goals sent by clients always succeed otherwise
                     self.server.set_succeeded()
+        else:
+            rospy.logwarn("Decision server stopped, ignoring goal sent without force mode")
 
     def should_interrupt(self):
         """
