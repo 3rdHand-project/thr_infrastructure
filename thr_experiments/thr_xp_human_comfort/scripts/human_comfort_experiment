@@ -282,7 +282,7 @@ class ComfortExperiment(object):
         config_files = []
         config_files.append('user_config.json')
         # collect desired and reba poses
-        pose_dir = join(self.pkg_reba, 'config')
+        pose_dir = join(self.pkg_reba, 'tmp')
         pose_files = []
         pose_files.append('desired_pose.json')
         pose_files.append('reba_pose.json')
