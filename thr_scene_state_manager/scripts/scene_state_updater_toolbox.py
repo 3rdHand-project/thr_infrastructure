@@ -86,7 +86,6 @@ class ToolBoxSceneStateUpdater(object):
                 cart_dist = transformations.distance(relative, self.poses[master]['constraints'][atp][self.screwdriver])
                 #quat_dist = transformations.distance_quat(relative, self.poses[master]['constraints'][atp][self.screwdriver])
                 # Do not measure orientation, since the screwdriver has to spin to screw
-                print cart_dist
                 return cart_dist < self.config['attached']['tool_position_tolerance']
         return False
 

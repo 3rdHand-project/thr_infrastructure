@@ -21,8 +21,8 @@ class Server(object):
             pass
         elif request.command == StartStopEpisodeRequest.STOP:
             pass
-
         return StartStopEpisodeResponse()
+
     def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
         return len([p for p in predictate_list if
             p.type == 'attached' and obj1 in p.parameters and obj2 in p.parameters and

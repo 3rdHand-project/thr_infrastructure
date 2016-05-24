@@ -94,10 +94,7 @@ class Hold(Action):
                 distance_wrist_gripper = 0
             self.update_scene()
             attached = len([pred for pred in self.scene.predicates if pred.type == 'attached' and pred.parameters[0] == object and int(pred.parameters[2]) == pose]) > 0
-            if distance_wrist_gripper < self.action_params['hold']['sphere_radius'] or attached:
-                # rospy.loginfo("Human is currently working with {}... Move your hands away to stop, distance {}m, threshold {}m".format(object, distance_wrist_gripper, self.action_params['hold']['sphere_radius']))
-                pass
-            else:
+            if distance_wrist_gripper > self.action_params['hold']['sphere_radius'] or attached:
                 break
             rospy.sleep(self.action_params['sleep_step'])
 
