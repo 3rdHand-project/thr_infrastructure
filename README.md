@@ -170,6 +170,11 @@ The scene (i.e. objects to use) can be passed in argument. For example the scene
 roslaunch thr_interaction_controller manual.launch scene:=romeo policy:=hardcoded display:=action ip:=<VRPN IP>
 ```
 
+The interaction via gestures is started by selected the gestures interaction controller as well as the corresponding predictor policy:
+```
+roslaunch thr_interaction_controller autonomous.launch interaction:=gestures policy:=gestures
+```
+
 ## How to implement new...
 ## New actions?
 The action server works with 2 types of actions: **Non-blocking** [`Decision`](thr_infrastructure_msgs/msg/Decision.msg)s like `start_xxxxx` causing the Decision server to trigger a **blocking** [`RobotAction`](thr_action_server/msg/RobotAction.msg) executed by the Robot Action server. The actions themselves are implemented within a [`src/thr_actions/`](thr_action_server/src/thr_actions) subfolder. A new action must then be implemented as:

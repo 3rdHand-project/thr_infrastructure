@@ -10,7 +10,7 @@ from threading import Lock
 from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
-
+from collections import deque
 from kinect2.client import Kinect2Client
 
 class InteractionController(object):
@@ -21,17 +21,21 @@ class InteractionController(object):
         self.last_predicition_confidence = None
         self.last_predicted_decision_str = None
         self.last_human_decision = None
-        self.give_already_tried = False
 
         self.current_scene = None
         self.last_scene = None
 
         self.logs = []
 
+        # Kinect controls
         self.kinect = Kinect2Client('BAXTERFLOWERS.local')
         self.last_skeleton = None
         self.skeleton_id = ''
-        self.hand_state = {}
+        self.hand_state = {'filtered_state': ''}
+        self.speech = deque()
+        self.speech_lock = Lock()
+        self.last_sentence = ''
+        self.last_speak = rospy.Time(0)
 
         # Parameters to be tweaked
         self.interaction_loop_rate = rospy.Rate(1)
@@ -62,6 +66,12 @@ class InteractionController(object):
     # KINECT SERVICES ###############################
     #################################################
 
+    def say(self, sentence, interval=15):
+        if self.last_sentence != sentence or rospy.get_time() - self.last_speak > interval:
+            self.kinect.tts.say(sentence)
+            self.last_sentence = sentence
+            self.last_speak = rospy.get_time()
+
     def cb_skeleton(self, msg):
         num_skeletons = len(msg.keys())
         if self.skeleton_id == '':
@@ -79,6 +89,7 @@ class InteractionController(object):
             except KeyError:
                 # Skeleton ID has changed
                 rospy.logwarn("Skeleton ID has changed")
+                self.say("I'm tracking someone else")
                 self.skeleton_id = ''
                 self.last_skeleton = None
 
@@ -116,10 +127,26 @@ class InteractionController(object):
                 if 'disappeared' in self.hand_state[gesture] and rospy.get_time() - self.hand_state[gesture]['disappeared'] > timeout_duration:
                     del self.hand_state[gesture]['disappeared']
 
+    def cb_speech(self, msg):
+        with self.speech_lock:
+            try:
+                self.speech.append(msg['semantics'])
+            except KeyError as e:
+                rospy.logerr("Malformed speech message: no key {}".format(e.message))
 
     def start_kinect_services(self):
         self.kinect.skeleton.set_callback(self.cb_skeleton)
-        self.kinect.skeleton.start()
+        self.kinect.speech.set_callback(self.cb_speech)
+        with open('{}/config/{}/grammar_en.xml'.format(self.rospack.get_path('thr_scenes'), rospy.get_param('/thr/scene'))) as f:
+            self.kinect.speech.params.set_grammar(f, "Grammar {}".format(rospy.get_param('/thr/scene')))
+        self.kinect.tts.params.set_language('english')
+        self.kinect.speech.params.semantic_on()
+        self.kinect.tts.params.queue_on()
+        msg = self.kinect.skeleton.start()
+        msg += self.kinect.tts.start()
+        msg += self.kinect.speech.start()
+        if len(msg) > 0:
+            rospy.logerr(msg)
 
     #################################################
     # SERVICE CALLERS ###############################
@@ -162,13 +189,18 @@ class InteractionController(object):
     def start_or_stop_episode(self, start=True):
         for node in ['scene_state_manager', 'scene_state_updater', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
-            rospy.logwarn(url)
             rospy.wait_for_service(url)
             rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
                 command=StartStopEpisodeRequest.START if start else
                 StartStopEpisodeRequest.STOP))
 
     ###################################################################################################################
+
+    def process_speech(self):
+        with self.speech_lock:
+            decisions = [Decision(type=speech[0], parameters=speech[1:]) for speech in self.speech]
+            self.speech.clear()
+        return decisions
 
     def run_decision(self, decision):
         if decision.type == 'wait':
@@ -184,6 +216,11 @@ class InteractionController(object):
         return False
 
     def run(self):
+        def decision_to_tts(decision):
+            obj = decision.parameters[0].split('/')[-1].replace('_', ' ')
+            action = decision.type.split('_')[-1]
+            return action, obj
+
         rospy.loginfo('Manual interaction starting from gestures!')
         self.start_or_stop_episode(True)
 
@@ -195,70 +232,62 @@ class InteractionController(object):
             try:
                 while self.running and not rospy.is_shutdown():
                     self.update_scene()
-                    rospy.loginfo("Requesting all_decisions...")
                     all_decisions = self.predict()
-                    #rospy.logwarn("Predicted all_decisions are {}".format(str(all_decisions)))
 
                     go_homes = filter(all_decisions, 'go_home')
                     if len(go_homes) > 0:
-                        #rospy.logwarn("GO_HOME {}".format(go_homes))
                         decision = choice(go_homes)
                     else:
                         gives = filter(all_decisions, 'give')
                         picks = filter(all_decisions, 'pick')
                         holds = filter(all_decisions, 'hold')
                         if len(gives) > 0:
-                            #rospy.logwarn("GIVES {}".format(gives))
-                            if self.give_already_tried:
-                                #last_hand_pose = self.get_gestures(right_hand_id, 'Give me')
-                                self.give_already_tried = False
                             decision = choice(gives)
-                            #flattened_gesture_pose = list_to_raw_list(pose_to_list(last_hand_pose.hand_gesture.pose))
                             decision.parameters = decision.parameters #+ map(str, flattened_gesture_pose) + [
-                            #    last_hand_pose.hand_gesture.header.frame_id, right_hand_id]
-                            self.give_already_tried = True
                         else:
-                            rospy.loginfo("Now show a gesture...")
+                            self.say("Please tell or show me what to do")
                             gesture = self.hand_state['filtered_state']
                             wait = False
-                            if gesture == 'Lasso':
-                                if len(holds) > 0:
-                                    decision = choice(holds)
+
+                            speech_decisions = self.process_speech()
+                            if len(speech_decisions) > 0:
+                                if speech_decisions[0] in holds or speech_decisions[0] in picks:
+                                    decision = speech_decisions[0]
                                 else:
-                                    rospy.logwarn("I cannot fucking do that")
-                                    wait = True
-                            elif gesture == 'Open':
-                                if len(picks) > 0:
-                                    decision = choice(picks)
-                                else:
-                                    rospy.logwarn("I cannot fucking do that")
+                                    action, obj = decision_to_tts(speech_decisions[0])
+                                    self.say("I cannot {} {} now".format(action, obj))
                                     wait = True
                             else:
-                                wait = True
+                                if gesture == 'Lasso':
+                                    if len(holds) > 0:
+                                        decision = choice(holds)
+                                    else:
+                                        self.say("I cannot hold now")
+                                        wait = True
+                                elif gesture == 'Open':
+                                    if len(picks) > 0:
+                                        decision = choice(picks)
+                                    else:
+                                        rospy.logwarn("I cannot pick now")
+                                        wait = True
+                                else:
+                                    wait = True
 
                             if wait:
                                 self.interaction_loop_rate.sleep()
                                 continue
 
                             rospy.logwarn("You showed a {} gesture corresponding to a {} action".format(gesture, decision.type))
-                            ## Adding gesture pose to the list of decision parameters
-                            #flattened_gesture_pose = list_to_raw_list(pose_to_list(gesture.hand_gesture.pose))
-                            #decision.parameters = decision.parameters + map(str, flattened_gesture_pose) + [
-                            #    gesture.hand_gesture.header.frame_id, right_hand_id]
+                            action, obj = decision_to_tts(decision)
+                            self.say("I'm {}ing {}".format(action, obj))
 
                     type, params = decision.type, decision.parameters
                     rospy.logwarn("Choosing decision {}{}".format(type, params))
-
-                    #self.action_postprocessing()  # user gestures are long so update decision state at the last time
 
                     self.logs.append({'timestamp': rospy.get_time(),
                                       'type': type,
                                       'parameters': params})
                     self.run_decision(decision)
-
-                    if decision.type == "start_pick":
-                        self.give_already_tried = False
-
                     self.interaction_loop_rate.sleep()
             finally:
                 logs_name = rospy.get_param('/thr/logs_name')
