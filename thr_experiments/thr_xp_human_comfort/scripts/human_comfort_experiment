@@ -349,7 +349,7 @@ if __name__ == '__main__':
     # optimize the reba pose of the user
     expe.generate_reba_pose()
     # ask the user for his desired pose
-    expe.record_desired_pose()
+    # expe.record_desired_pose()
     # tell the user to start the launchfile to run the experiment
     rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
     raw_input()
