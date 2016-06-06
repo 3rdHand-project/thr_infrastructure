@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 <launch>
-	<arg name="new_user" default="True"/>
     <arg name="scene" default="shapeo"/>
     <arg name="use_kinect" default="False"/>
+    <arg name="use_vrep" default="False"/>
+
+    <param name="/vrep/use" type="bool" value="$(arg use_vrep)" />
 
     <include file="$(find thr_interaction_controller)/launch/manual.launch" >
     	<arg name="scene" value="$(arg scene)"/>
@@ -15,6 +17,7 @@
     </include>
 
     <node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="screen" required="True"/>
+    <node name="vrep_ik_srv" pkg="vrep_ik_bridge" type="vrep_ik_srv" output="log" required="True"/>
 
     <node pkg="tf" type="static_transform_publisher" name="shapeo_broadcaster" args="0.27 0.008 0.066 0.708 0.626 -0.050 -0.323 /right_gripper /shapeo 100" />
 
