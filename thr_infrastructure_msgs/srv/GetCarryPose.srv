@@ -3,4 +3,5 @@ string location
 string method
 ---
 bool success
-geometry_msgs/PoseStamped object_pose
+bool fixed_pose
+geometry_msgs/PoseStamped hand_pose
