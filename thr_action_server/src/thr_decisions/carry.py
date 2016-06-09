@@ -19,10 +19,11 @@ class CarryDecisionMapper(object):
         type = decision.parameters[1]
 
         pose = self.get_carry_pose(GetCarryPoseRequest(object=object, method=type, location=shape))
-        frame_id = pose.object_pose.header.frame_id
+        frame_id = pose.hand_pose.header.frame_id
         success = pose.success  # A Decision always success so possible failure is transmitted to the RobotAction
-        pose = list_to_raw_list(pose_to_list(pose.object_pose))
-        parameters = [object, shape] + map(str, pose) + [frame_id, str(success)]
+        fixed = pose.fixed_pose
+        pose = list_to_raw_list(pose_to_list(pose.hand_pose))
+        parameters = [object, shape] + map(str, pose) + [frame_id, str(success), str(fixed)]
         return RobotAction(type=decision.type.replace('start_', ''), parameters=parameters)
 
     def __new__(cls, *args, **kwargs):
