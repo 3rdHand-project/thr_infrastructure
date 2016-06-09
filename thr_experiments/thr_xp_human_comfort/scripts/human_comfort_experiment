@@ -30,6 +30,7 @@ class ComfortExperiment(object):
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative', 'desired']
         self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
+        self.current_perm_file = join(self.pkg_expe, 'config', 'current_perm.json')
         self.controller = None
         # create recorder service
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
@@ -82,28 +83,37 @@ class ComfortExperiment(object):
         # get the number of possible permutations
         nb_permuts = len(perm_list)
         # if the file does not exist get initial permutation
-        if not os.path.exists(self.config_file):
+        if not os.path.exists(self.current_perm_file):
             # force the new user to be set to True
             self.new_subject = True
             # cretate the config directory
             perm_dict = {}
             perm_dict['id_permutation'] = 0
+            user_dict = {}
         else:
-            with open(self.config_file) as data_file:
+            # load the current permutation
+            with open(self.current_perm_file) as data_file:
                 perm_dict = json.load(data_file)
+            # check current user parameters
+            if not os.path.exists(self.config_file):
+                self.new_subject = True
+                user_dict = {}
+            else:
+                with open(self.config_file) as data_file:
+                    user_dict = json.load(data_file)
             # get next permutation
             if self.new_subject:
                 perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
         # get corresponding permutation values
         permutation = perm_list[perm_dict['id_permutation']]
         rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
-        perm_dict['conditions'] = permutation
+        user_dict['conditions'] = permutation
         # remove conditions that are not in the current experiment
         for c in self.conditions:
-            if c not in perm_dict['conditions']:
+            if c not in user_dict['conditions']:
                 perm_dict.pop(c, None)
         # return current config
-        return perm_dict
+        return perm_dict, user_dict
 
     def get_user_id(self):
         id_file = join(self.pkg_human, 'tmp', 'id_list.json')
@@ -135,7 +145,7 @@ class ComfortExperiment(object):
 
     def generate_experimental_conditions(self, nb_shapes=5):
         # get both conditions
-        expe_dict = self.get_conditions()
+        perm_dict, expe_dict = self.get_conditions()
         # get the user laterality
         if self.new_subject:
             expe_dict['laterality'] = self.get_user_laterality()
@@ -171,6 +181,9 @@ class ComfortExperiment(object):
         # write the config file
         with open(self.config_file, 'w') as outfile:
             json.dump(expe_dict, outfile, sort_keys=True, indent=4)
+        # write the config file
+        with open(self.current_perm_file, 'w') as outfile:
+            json.dump(perm_dict, outfile, sort_keys=True, indent=4)
         # store it for reuse when running the experiment
         self.experiment_parameters = expe_dict
 
@@ -344,10 +357,10 @@ if __name__ == '__main__':
     expe.generate_experimental_conditions()
     # start model generation
     expe.generate_model()
-    # start the optitrack calibration
-    expe.generate_calibration(type_calibr=sys.argv[2])
     # optimize the reba pose of the user
     expe.generate_reba_pose()
+    # start the optitrack calibration
+    expe.generate_calibration(type_calibr=sys.argv[2])
     # ask the user for his desired pose
     # expe.record_desired_pose()
     # tell the user to start the launchfile to run the experiment
