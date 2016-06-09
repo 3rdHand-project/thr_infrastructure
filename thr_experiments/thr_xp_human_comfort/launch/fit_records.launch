@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="id_user"/>
+
+	<include file="$(find human_moveit_config)/launch/demo.launch">
+		<arg name="launch_rviz" value="true"/>
+	</include>
+	
+	<rosparam command="load" file="$(find human_moveit_config)/tmp/human_length.json" param="human/lengths"/>
+
+	<node name="fit_record" pkg="thr_xp_human_comfort" type="fit_record" output="screen" required="True" args="$(arg id_user)"/>
+</launch>
