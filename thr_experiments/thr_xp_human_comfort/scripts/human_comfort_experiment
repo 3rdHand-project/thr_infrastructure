@@ -303,6 +303,10 @@ class ComfortExperiment(object):
         save_results(model_dir, model_files, 'model')
         save_results(config_dir, config_files, '')
         save_results(pose_dir, pose_files, 'poses')
+        # synchronize files between the two computers
+        check_call(['unison', '-batch',
+                    '/home/buschbapti/catkin_ws/src/thr_infrastructure/thr_experiments/thr_xp_human_comfort/results/',
+                    'ssh://perception@3rd-hand-server.local//home/perception/ros_ws/src/thr_infrastructure/thr_experiments/thr_xp_human_comfort/results'])
 
 
 class InteractionController(object):
