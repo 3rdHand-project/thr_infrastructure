@@ -4,133 +4,170 @@ from human_moveit_config.human_model import HumanModel
 import json
 import rospkg
 from os.path import join
+from os.path import exists
 from baxter_commander.persistence import statetodict
 import tf
 import transformations
 from os import listdir
+from os.path import isdir
 import sys
 from subprocess import check_call
+from numpy import zeros
+from sensor_msgs.msg import JointState
 
 
-def fit(dir_results, condition, shape):
-    tfb = tf.TransformBroadcaster()
-    rospy.sleep(1)
+class FitRecord(object):
+    def __init__(self, erase=False):
+        self.erase = erase
+        self.tfb = tf.TransformBroadcaster()
+        # create the human model
+        self.human = HumanModel()
+        self.lookup_list = ['head', 'shoulder_center', 'right_hand',
+                            'right_elbow', 'left_hand', 'left_elbow', 'shapeo']
+        # by default hip and ankles angles are fixed
+        self.fixed_joints = {}
+        self.fixed_joints['right_hip_0'] = 0.
+        self.fixed_joints['right_hip_1'] = 0.
+        self.fixed_joints['right_hip_2'] = 0.
+        self.fixed_joints['right_knee'] = 0.
+        self.fixed_joints['right_ankle_0'] = 0.
+        self.fixed_joints['right_ankle_1'] = 0.
 
-    # create the human model
-    human = HumanModel()
+        self.fixed_joints['left_hip_0'] = 0.
+        self.fixed_joints['left_hip_1'] = 0.
+        self.fixed_joints['left_hip_2'] = 0.
+        self.fixed_joints['left_knee'] = 0.
+        self.fixed_joints['left_ankle_0'] = 0.
+        self.fixed_joints['left_ankle_1'] = 0.
+        self.seed = None
 
-    # put the model in a good initial state for REBA in case frames are missing
-    joint_names = ['right_shoulder_0', 'left_shoulder_0', 'right_elbow_0', 'left_elbow_0']
-    joint_values = [1.40, 1.40, 1.0472, -1.0472]
+    def init_model(self):
+        joint_names = self.human.get_joint_names()
+        joint_values = zeros(len(joint_names))
 
-    for i in range(10):
-        human.send_joint_values(joint_names, joint_values)
+        # put the model in a good initial state for REBA in case frames are missing
+        reba_names = ['right_shoulder_0', 'left_shoulder_0', 'right_elbow_0', 'left_elbow_0']
+        reba_values = [1.40, 1.40, 1.0472, -1.0472]
 
-    rospy.sleep(2)
+        for i in range(len(reba_names)):
+            joint_values[joint_names.index(reba_names[i])] = reba_values[i]
+        # send the state
+        for i in range(10):
+            self.human.send_joint_values(joint_names, joint_values)
 
-    # import file
-    filename = join(dir_results, condition, shape, 'frames.json')
-    with open(filename) as data_file:
-        data = json.load(data_file)
+        self.seed = JointState()
+        self.seed.position = joint_values
+        self.seed.name = joint_names
 
-    lookup_list = ['head', 'shoulder_center', 'right_hand',
-                   'right_elbow', 'left_hand', 'left_elbow', 'shapeo']
-    recorded_poses = []
-    times = []
-    object_poses = []
-    for tr in data['transforms']:
-        rec = {}
-        rec_object = {}
-        # get the transformation of the human base
-        if tr['objects']['/human/tracker/base']['visible']:
-            HumanTBase = transformations.inverse_transform(tr['objects']['/human/tracker/base']['pose'])
-            for trans in lookup_list:
-                if trans == 'shapeo':
-                    if tr['objects']['/' + trans]['visible']:
-                        pose = transformations.multiply_transform(HumanTBase, tr['objects']['/' + trans]['pose'])
-                        rec_object[trans] = pose
-                else:
-                    rec_tf = '/human/tracker/' + trans
-                    if tr['objects'][rec_tf]['visible']:
-                        rec[trans] = transformations.multiply_transform(HumanTBase, tr['objects'][rec_tf]['pose'])
-            # append the dictionnarry to the list only if at least one element is visible
-        if rec or rec_object:
-            times.append(tr['time'])
-            if rec:
-                recorded_poses.append(rec)
-            if rec_object:
-                object_poses.append(rec_object)
+    def fit(self, dir_results, condition, shape, user_id):
+        rospy.loginfo('Fitting user ' + user_id + ' condition ' + condition + ' and shape ' + shape)
+        # init the model to T value
+        self.init_model()
 
-    # by default hip and ankles angles are fixed
-    fixed_joints = {}
-    fixed_joints['right_hip_0'] = 0.
-    fixed_joints['right_hip_1'] = 0.
-    fixed_joints['right_hip_2'] = 0.
-    fixed_joints['right_knee'] = 0.
-    fixed_joints['right_ankle_0'] = 0.
-    fixed_joints['right_ankle_1'] = 0.
+        output_file = join(dir_results, condition, shape, 'replay.json')
 
-    fixed_joints['left_hip_0'] = 0.
-    fixed_joints['left_hip_1'] = 0.
-    fixed_joints['left_hip_2'] = 0.
-    fixed_joints['left_knee'] = 0.
-    fixed_joints['left_ankle_0'] = 0.
-    fixed_joints['left_ankle_1'] = 0.
+        # check if the file already exist
+        if not self.erase:
+            if exists(output_file):
+                return
 
-    # loop through all the recorded data
-    iteration = 0
-    human_states = {}
-    human_states['states'] = []
-    human_states['records'] = []
-    human_states['object_poses'] = []
-    human_states['times'] = []
-    # while iteration < 1 and not rospy.is_shutdown():
-    while iteration < len(recorded_poses) and not rospy.is_shutdown():
-        # publish the transforms
-        for key, value in recorded_poses[iteration].iteritems():
-            tfb.sendTransform(value[0], value[1], rospy.Time.now(), 'rec_' + key, '/human/base')
+        # import file
+        filename = join(dir_results, condition, shape, 'frames.json')
+        with open(filename) as data_file:
+            data = json.load(data_file)
 
-        # calculate ik for head
-        state = human.inverse_kinematic(desired_poses=recorded_poses[iteration],
-                                        fixed_joints=fixed_joints,
-                                        group_names='upper_body')
+        recorded_poses = []
+        times = []
+        object_poses = []
+        for tr in data['transforms']:
+            rec = {}
+            rec_object = {}
+            # get the transformation of the human base
+            if tr['objects']['/human/tracker/base']['visible']:
+                HumanTBase = transformations.inverse_transform(tr['objects']['/human/tracker/base']['pose'])
+                for trans in self.lookup_list:
+                    if trans == 'shapeo':
+                        if tr['objects']['/' + trans]['visible']:
+                            pose = transformations.multiply_transform(HumanTBase, tr['objects']['/' + trans]['pose'])
+                            rec_object[trans] = pose
+                    else:
+                        rec_tf = '/human/tracker/' + trans
+                        if tr['objects'][rec_tf]['visible']:
+                            rec[trans] = transformations.multiply_transform(HumanTBase, tr['objects'][rec_tf]['pose'])
+                # append the dictionnarry to the list only if at least one element is visible
+            if rec or rec_object:
+                times.append(tr['time'])
+                if rec:
+                    recorded_poses.append(rec)
+                if rec_object:
+                    object_poses.append(rec_object)
 
-        # move the human to the new state
-        human.send_state(state)
-        # record the robot state
-        human_states['object_poses'].append(object_poses[iteration])
-        human_states['records'].append(recorded_poses[iteration])
-        human_states['states'].append(statetodict(state))
-        human_states['times'].append(times[iteration])
-        iteration += 1
-        print iteration
+        # loop through all the recorded data
+        iteration = 0
+        human_states = {}
+        human_states['states'] = []
+        human_states['records'] = []
+        human_states['object_poses'] = []
+        human_states['times'] = []
+        # while iteration < 1 and not rospy.is_shutdown():
+        while iteration < len(recorded_poses) and not rospy.is_shutdown():
+            # publish the transforms
+            for key, value in recorded_poses[iteration].iteritems():
+                self.tfb.sendTransform(value[0], value[1], rospy.Time.now(), 'rec_' + key, '/human/base')
 
-    # dump the json file
-    output_file = join(dir_results, condition, shape, 'replay.json')
-    with open(output_file, 'w') as outfile:
-        json.dump(human_states, outfile, indent=4, sort_keys=True)
+            # calculate ik for head
+            state = self.human.inverse_kinematic(desired_poses=recorded_poses[iteration],
+                                                 fixed_joints=self.fixed_joints,
+                                                 group_names='upper_body',
+                                                 seed=self.seed)
 
+            # move the human to the new state
+            self.human.send_state(state)
+            # get new seed for next ik
+            self.seed = state
+            # record the robot state
+            human_states['object_poses'].append(object_poses[iteration])
+            human_states['records'].append(recorded_poses[iteration])
+            human_states['states'].append(statetodict(state))
+            human_states['times'].append(times[iteration])
+            iteration += 1
+            print iteration
 
-def start_node(pkg, node, args=[]):
-        command = ['rosrun', pkg, node]
-        command += args
-        check_call(command)
+        # dump the json file
+        with open(output_file, 'w') as outfile:
+            json.dump(human_states, outfile, indent=4, sort_keys=True)
+
+    def start_node(self, pkg, node, args=[]):
+            command = ['rosrun', pkg, node]
+            command += args
+            check_call(command)
 
 
 if __name__ == '__main__':
     rospy.init_node('fit_record')
     rospack = rospkg.RosPack()
-
+    directory = join(rospack.get_path("thr_xp_human_comfort"), 'results')
     id_user = sys.argv[1]
+    erase = (sys.argv[2] == 'True')
 
-    # load model from the user
-    start_node('thr_xp_human_comfort', 'load_user', [id_user])
+    fit = FitRecord(erase)
 
-    # get dictionnary for results
-    dir_results = join(rospack.get_path("thr_xp_human_comfort"), 'results', id_user, 'records')
-    conditions = listdir(dir_results)
-    shapes = ['star', 'hexagon', 'ellipse', 'slice', 'trapezium']
+    # if id_user have the default value -1 we want to recompile all the results
+    if id_user == '-1':
+        user_list = [name for name in listdir(directory) if isdir(join(directory, name))]
+    else:
+        user_list = [id_user]
 
-    for c in conditions:
-        for s in shapes:
-            fit(dir_results, c, s)
+    # loop through all the users
+    for user in user_list:
+        # load model from the user
+        fit.start_node('thr_xp_human_comfort', 'load_user', [user])
+
+        # get dictionnary for results
+        dir_results = join(directory, user, 'records')
+        conditions = [name for name in listdir(dir_results) if isdir(join(dir_results, name))]
+        shapes = ['star', 'hexagon', 'ellipse', 'slice', 'trapezium']
+
+        for c in conditions:
+            for s in shapes:
+                fit.fit(dir_results, c, s, user)
