@@ -3,6 +3,7 @@
     <arg name="scene" default="shapeo"/>
     <arg name="use_kinect" default="False"/>
     <arg name="use_vrep" default="False"/>
+    <arg name="gui" default="False"/>
 
     <param name="/vrep/use" type="bool" value="$(arg use_vrep)" />
 
@@ -10,6 +11,7 @@
     	<arg name="scene" value="$(arg scene)"/>
     	<arg name="load_optitrack_config" value="False"/>
         <arg name="display" value="action"/>
+        <arg name="gui" value="$(arg gui)"/>
     </include>
 
     <include file="$(find human_moveit_config)/launch/human_tracker.launch">
