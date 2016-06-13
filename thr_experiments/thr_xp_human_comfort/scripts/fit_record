@@ -9,6 +9,7 @@ import tf
 import transformations
 from os import listdir
 import sys
+from subprocess import check_call
 
 
 def fit(dir_results, condition, shape):
@@ -17,6 +18,15 @@ def fit(dir_results, condition, shape):
 
     # create the human model
     human = HumanModel()
+
+    # put the model in a good initial state for REBA in case frames are missing
+    joint_names = ['right_shoulder_0', 'left_shoulder_0', 'right_elbow_0', 'left_elbow_0']
+    joint_values = [1.40, 1.40, 1.0472, -1.0472]
+
+    for i in range(10):
+        human.send_joint_values(joint_names, joint_values)
+
+    rospy.sleep(2)
 
     # import file
     filename = join(dir_results, condition, shape, 'frames.json')
@@ -82,7 +92,9 @@ def fit(dir_results, condition, shape):
 
         # calculate ik for head
         state = human.inverse_kinematic(desired_poses=recorded_poses[iteration],
-                                        fixed_joints=fixed_joints)
+                                        fixed_joints=fixed_joints,
+                                        group_names='upper_body')
+
         # move the human to the new state
         human.send_state(state)
         # record the robot state
@@ -98,12 +110,23 @@ def fit(dir_results, condition, shape):
     with open(output_file, 'w') as outfile:
         json.dump(human_states, outfile, indent=4, sort_keys=True)
 
+
+def start_node(pkg, node, args=[]):
+        command = ['rosrun', pkg, node]
+        command += args
+        check_call(command)
+
+
 if __name__ == '__main__':
     rospy.init_node('fit_record')
     rospack = rospkg.RosPack()
 
     id_user = sys.argv[1]
 
+    # load model from the user
+    start_node('thr_xp_human_comfort', 'load_user', [id_user])
+
+    # get dictionnary for results
     dir_results = join(rospack.get_path("thr_xp_human_comfort"), 'results', id_user, 'records')
     conditions = listdir(dir_results)
     shapes = ['star', 'hexagon', 'ellipse', 'slice', 'trapezium']
