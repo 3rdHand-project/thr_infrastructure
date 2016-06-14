@@ -2,7 +2,7 @@
 
 import rospy, rospkg
 from thr_infrastructure_msgs.msg import ActionHistoryEvent
-from tf import LookupException
+from tf import LookupException, ExtrapolationException
 import json, cv2, cv_bridge
 from numpy import zeros, uint8
 from sensor_msgs.msg import Image
@@ -34,6 +34,7 @@ class ConcurrentActionDisplay(object):
     def react_to_event(self, event):
         """
         React to the specified event
+        In display.json 'look_at' defines the index in the Action parameters pointing to the tf to look at, -1 to reset neutral
         :param event:
         :return: False in case no reaction is needed, True otherwise
         """
@@ -50,13 +51,16 @@ class ConcurrentActionDisplay(object):
         else:
             self.display_text(decision['text'], event.action.parameters,
                               self.font, self.scale, self.thickness, self.color, self.interline)
-            if isinstance(decision['look_at'], int):
+            if 'look_at' in decision:
                 try:
-                    if decision['look_at'] >= 0:
-                        self.face.look_at(event.action.parameters[decision['look_at']])
-                    else:
-                        self.face.look_at(None)  # Reset gaze at neutral position
-                except LookupException:
+                    if isinstance(decision['look_at'], int):
+                        if decision['look_at'] >= 0:
+                            self.face.look_at(event.action.parameters[decision['look_at']])
+                        else:
+                            self.face.look_at(None)  # Reset gaze at neutral position
+                    elif isinstance(decision['look_at'], str):
+                        self.face.look_at(decision['look_at'])
+                except (LookupException, ExtrapolationException):
                     # Given object not found, ignore
                     pass
             return True
