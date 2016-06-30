@@ -82,10 +82,10 @@ class Server(object):
         # tree_q_user = self.domain.learnRegressor(input_list, target_list, os.path.join(self.tmp_dir_name,
         #                                          "tree_q{}".format(self.i_tree)), maxdepth=6)
         with self.lock:
-            self.learner = bagger.Bagger(self.domain, self.bagger_params, self.task_q_fun, None,
+            self.learner = bagger.Bagger(self.domain, self.bagger_params, self.task_q_fun,
                                          os.path.join(self.tmp_dir_name, "tree_q{}".format(self.i_tree)))
 
-            self.learner.train(self.dataset)
+            self.learner.train(self.dataset, None)
         # shutil.rmtree(os.path.join(tmp_dir_name, "tree_q{}".format(i_tree)))
         # human_q_fun_pfull = lambda s, a: tree_q_user((s, a))
         # self.learned_q_fun = lambda s, a: self.task_q_fun(s, a) + 0.1 * human_q_fun_pfull(s, a)
