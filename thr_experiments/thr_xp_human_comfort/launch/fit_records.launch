@@ -9,5 +9,5 @@
 	
 	<rosparam command="load" file="$(find human_moveit_config)/tmp/human_length.json" param="human/lengths"/>
 
-	<node name="fit_record" pkg="thr_xp_human_comfort" type="fit_record" output="screen" required="True" args="$(arg id_user) $(arg erase_results"/>
+	<node name="fit_record" pkg="thr_xp_human_comfort" type="fit_record" output="screen" required="True" args="$(arg id_user) $(arg erase_results)"/>
 </launch>
