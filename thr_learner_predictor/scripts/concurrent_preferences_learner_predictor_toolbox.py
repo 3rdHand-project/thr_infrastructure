@@ -43,7 +43,7 @@ class Server(object):
         self.learned_q_fun = self.task_q_fun
 
         self.learner = None
-        self.threshold_ask = 0.005
+        self.threshold_ask = 0.05
 
         self.bagger_params = {
             "name": "bagger",

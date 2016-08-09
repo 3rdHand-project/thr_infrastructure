@@ -8,7 +8,7 @@ from numpy import zeros, uint8
 from sensor_msgs.msg import Image
 
 class ConcurrentDebugDisplay(object):
-    def __init__(self, width, height, rate, maximum_confidence=0.01, face=cv2.FONT_HERSHEY_SIMPLEX):
+    def __init__(self, width, height, rate, maximum_confidence=0.1, face=cv2.FONT_HERSHEY_SIMPLEX):
         self.rospack = rospkg.RosPack()
         self.face = face
         self.rate = rospy.Rate(rate)

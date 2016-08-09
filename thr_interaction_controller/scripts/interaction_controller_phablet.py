@@ -501,7 +501,7 @@ class InteractionController(object):
         self.last_predicition_confidence = prediction.confidence
 
         if len(self.filter_robot_decisions([predicted_decision])) > 0:
-            if prediction.confidence > 0.005:
+            if prediction.confidence > 0.05:
                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str, str_action_list, self.current_scene,
                                                         prediction.confidence, head=self.head)
             else:
