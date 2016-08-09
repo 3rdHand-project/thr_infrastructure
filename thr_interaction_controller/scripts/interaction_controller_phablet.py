@@ -259,6 +259,7 @@ class InteractionController(object):
             rospy.wait_for_service(service)
 
         self.rospack = rospkg.RosPack()
+        self.web_asker = None
         self.init_webasker()
         rospy.Subscriber(self.action_history_name, ActionHistoryEvent, self.cb_action_event_received)
 
@@ -271,12 +272,13 @@ class InteractionController(object):
         for adress in adress_list:
             try:
                 self.web_asker = web_asker.WebAsker(adress)
-            except Exception, e:
+            except Exception as e:
                 rospy.loginfo(e)
                 rospy.loginfo("Cannot reach {}.".format(adress))
                 rospy.loginfo("Trying next adress...")
             else:
                 break
+
 
         if self.web_asker is None:
             rospy.logerr("Cannot reach any adress.")
@@ -320,7 +322,7 @@ class InteractionController(object):
         try:
             reward = rospy.ServiceProxy(self.reward_service, SetNewTrainingExample)
             reward(request)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logerr("Cannot set training example: {}".format(e.message))
 
     def update_scene(self):
@@ -329,7 +331,7 @@ class InteractionController(object):
             getscene = rospy.ServiceProxy(self.scene_state_service, GetSceneState)
             self.last_scene = self.current_scene
             self.current_scene = getscene(request).state
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logerr("Cannot update scene {}:".format(e.message))
 
     def predict(self):
@@ -338,10 +340,10 @@ class InteractionController(object):
         try:
             predict = rospy.ServiceProxy(self.predictor_service, GetNextDecision)
             return predict(request)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logerr("Cannot call predictor:".format(e.message))
             decision = Decision(type='wait')
-            return GetNextActionResponse(decisions=[decision], probas=[1.])
+            return GetNextDecisionResponse(decisions=[decision], probas=[1.])
 
     def start_or_stop_episode(self, start=True):
         self.head.reset_signal()
@@ -536,7 +538,7 @@ class InteractionController(object):
 
     def run(self):
         try:
-            print 'Interaction starting!'
+            print('Interaction starting!')
 
             is_running = False
             start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30, color="grey")
