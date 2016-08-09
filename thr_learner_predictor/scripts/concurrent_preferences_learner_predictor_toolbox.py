@@ -37,7 +37,7 @@ class Server(object):
         self.last_state = None
 
         self.domain = domain_dict["multi_agent_box_coop"].Domain({"random_start": False}, "/tmp")
-        self.reward = self.domain.rewards["reward_built"]
+        self.reward = self.domain.rewards["reward_random"]
 
         self.task_q_fun = self.reward.get_task_q_fun_gen()
         self.learned_q_fun = self.task_q_fun
@@ -52,8 +52,10 @@ class Server(object):
             "sample_ratio": 0.75,
             "only_one_action": True,
             "learner": {
-                "name": "rbpl",
-                "maxdepth": 10
+                "name": "gbpl",
+                "nb_trees": 4,
+                "beta": 10,
+                "maxdepth": 5
             }
         }
 
