@@ -15,6 +15,7 @@ from numpy.random import uniform
 from numpy.linalg import norm
 from os.path import exists
 from os import makedirs
+import sys
 
 
 class WeldingTask(object):
@@ -135,6 +136,8 @@ class WeldingTask(object):
 
 if __name__ == '__main__':
     rospy.init_node('welding_analysis')
+    nb_eval = int(sys.argv[1])
+    nb_points = int(sys.argv[2])
 
     # cretate analyzer object
     task = WeldingTask()
