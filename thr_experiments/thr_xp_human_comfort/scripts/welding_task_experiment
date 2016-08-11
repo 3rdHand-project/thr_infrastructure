@@ -107,6 +107,8 @@ class WeldingTask(object):
         return [[x, y, z], q.tolist()]
 
     def run(self, nb_eval=10, nb_points=10):
+        # set laterality as default right-handed
+        rospy.set_param('/human/laterality', 'right')
         i = 0
         while i < nb_eval and not rospy.is_shutdown():
             id_list = glob.glob(self.save_directory)
