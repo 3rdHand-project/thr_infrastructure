@@ -7,8 +7,9 @@ import cv2, cv_bridge
 from numpy import zeros, uint8
 from sensor_msgs.msg import Image
 
+
 class ConcurrentDebugDisplay(object):
-    def __init__(self, width, height, rate, maximum_confidence=0.1, face=cv2.FONT_HERSHEY_SIMPLEX):
+    def __init__(self, width, height, rate, maximum_confidence=0.05, face=cv2.FONT_HERSHEY_SIMPLEX):
         self.rospack = rospkg.RosPack()
         self.face = face
         self.rate = rospy.Rate(rate)
@@ -82,10 +83,10 @@ class ConcurrentDebugDisplay(object):
         cv2.putText(img, '# PREDICTED PLAN ['+str(len(self.predicted_plan.decisions))+']', (self.width/2, self.height/5), self.face, 0.55, [255]*3)
         line = 1
         for i, decision in enumerate(self.predicted_plan.decisions):
-            if decision.type != 'wait':
-                confidence = self.predicted_plan.confidences[i]
-                cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/5 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
-                line += 1
+            # if decision.type != 'wait':
+            confidence = self.predicted_plan.confidences[i]
+            cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/5 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
+            line += 1
 
         #cv2.imshow("Predicates", img)
         #cv2.waitKey(1)

@@ -4,7 +4,7 @@ import rospy
 import rospkg
 import os
 import json
-import termcolor
+import numpy as np
 
 from threading import Lock
 
@@ -47,8 +47,8 @@ class Server(object):
 
         self.bagger_params = {
             "name": "bagger",
-            "nb_learner": 50,
-            "nb_process": 50,
+            "nb_learner": 25,
+            "nb_process": 25,
             "sample_ratio": 0.75,
             "only_one_action": True,
             "learner": {
@@ -159,29 +159,38 @@ class Server(object):
         state = ("state", frozenset(pred_domain_list))
         return state
 
+    def predict(self, state):
+        memory_list = [a for s, a, ns in self.dataset if s == state]
+        if len(memory_list):
+            best_decision = memory_list[-1]
+            error = 0
+            decision = self.domain.int_to_action(best_decision)
+        else:
+            with self.lock:
+                action_list = self.domain.get_actions(state)
+                best_decision, error = self.learner.get_best_actions(state, action_list)
+                best_decision = best_decision[0]
+                decision = self.domain.int_to_action(best_decision)
+            if self.i_episode == 0:
+                error = self.threshold_ask * 2
+                decision = "wait"
+        return decision, error
+
     def predictor_handler(self, get_next_action_req):
         """
         This handler is called when a request of prediction is received. It is based on a hardcoded policy
         :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
         :return: an object of type GetNextDecisionResponse
         """
+
         state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
+        self.domain.print_state(state)
         self.last_state = state
-        action_list = self.domain.get_actions(state)
+
+        best_action, error = self.predict(state)
+        decision = self.relational_action_to_Decision(best_action)
 
         resp = GetNextDecisionResponse()
-        with self.lock:
-            best_decision, error = self.learner.get_best_actions(state, action_list)
-        best_decision = best_decision[0]
-        if self.i_episode == 0:
-            error = self.threshold_ask * 2
-
-        # print "error:", error
-        # print self.domain.int_to_action(best_decision)
-        # print self.domain.filter_robot_actions([best_decision])
-
-        decision = self.relational_action_to_Decision(self.domain.int_to_action(best_decision))
-
         if error > self.threshold_ask:
             resp.mode = resp.CONFIRM
         else:
@@ -189,6 +198,10 @@ class Server(object):
         resp.confidence = error
 
         resp.probas = []
+
+        print decision
+
+        action_list = self.domain.get_actions(state)
         for candidate_action in action_list:
             resp.decisions.append(self.relational_action_to_Decision(
                 self.domain.int_to_action(candidate_action)))
@@ -198,9 +211,12 @@ class Server(object):
             else:
                 resp.probas.append(0.)
 
-        if sum(resp.probas) != 1:
+        if np.sum(resp.probas) == 0:
+            resp.decisions.append(decision)
+            resp.probas.append(1.)
+            print "###################################################"
             print decision
-            print resp.decisions
+            print "###################################################"
 
         return resp
 
@@ -218,7 +234,18 @@ class Server(object):
         predicted_decision = self.domain.action_to_int(
             self.Decision_to_relational_action(new_training_ex.predicted_decision))
 
-        self.dataset.append((state, correct_decision, None))
+        if correct_decision not in self.domain.get_actions(state):
+            print "###################################################"
+            print self.domain.int_to_action(correct_decision)
+            print self.domain.int_to_state(state)
+            print "###################################################"
+            return SetNewTrainingExampleResponse()
+
+        if (state, correct_decision, None) in self.dataset:
+            memory = True
+        else:
+            memory = False
+            self.dataset.append((state, correct_decision, None))
 
         if len(self.domain.filter_robot_actions([predicted_decision])) > 0:
             if predicted_decision == correct_decision:
@@ -249,8 +276,9 @@ class Server(object):
                              len(self.dataset),
                              0.,
                              bool(new_training_ex.prediction_confidence > self.threshold_ask),
-                             bool(correct_decision != predicted_decision),
-                             0.))
+                             bool(feedback != "correction"),
+                             0.,
+                             memory))
 
         return SetNewTrainingExampleResponse()
 
@@ -270,27 +298,14 @@ class Server(object):
                 predicted_plan = PredictedPlan()
 
                 for _ in range(20):
-                    with self.lock:
-                        best_decision, error = self.learner.get_best_actions(
-                            w.state, self.domain.get_actions(w.state))
-
-                    best_decision = best_decision[0]
-                    if self.i_episode == 0:
-                        error = self.threshold_ask * 2
+                    best_decision, error = self.predict(w.state)
 
                     predicted_plan_list[-1][0].append((best_decision, error))
 
-                    # if error < self.threshold_ask:
-                    #     color = "green"
-                    # else:
-                    #     color = "red"
-                    # print termcolor.colored("{}({})".format(self.domain.int_to_action(best_decision), error), color)
-
-                    predicted_plan.decisions.append(self.relational_action_to_Decision(
-                        self.domain.int_to_action(best_decision)))
+                    predicted_plan.decisions.append(self.relational_action_to_Decision(best_decision))
                     predicted_plan.confidences.append(error)
 
-                    w.apply_action(best_decision)
+                    w.apply_action(self.domain.action_to_int(best_decision))
                 self.predicted_plan_publisher.publish(predicted_plan)
 
             self.main_loop_rate.sleep()

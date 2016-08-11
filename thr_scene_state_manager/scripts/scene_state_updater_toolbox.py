@@ -164,7 +164,7 @@ class ToolBoxSceneStateUpdater(object):
                 # Human has no action server so he can't publish its action history, we do this now
                 event = ActionHistoryEvent()
                 event.header.stamp = rospy.Time.now()
-                event.type = ActionHistoryEvent.FINISHED_SUCCESS
+                event.type = ActionHistoryEvent.STARTING
                 event.action = Decision(type="start_" + self.running_human_activity.type,
                                         parameters=self.running_human_activity.parameters[:-1])
                 event.side = 'human'

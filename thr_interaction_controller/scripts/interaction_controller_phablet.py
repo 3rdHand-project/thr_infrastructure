@@ -36,6 +36,9 @@ def relational_action_to_Decision(action):
                         parameters=[])
 
 
+def to_uf(string):
+    return string.replace("start_", "").replace("/toolbox/", "").replace("0", "left").replace("1", "right")
+
 class HeadSignal():
     def __init__(self):
         self.head = Head()
@@ -63,13 +66,15 @@ class ConfirmQuestion(object):
     def __init__(self, web_asker, action_str, decision_str_list, state, confidence, head):
         self.web_asker = web_asker
         self.decision_str = action_str
+        self.decision_str_uf = to_uf(action_str)
         self.decision_str_list = decision_str_list
+        self.decision_str_uf_list = [to_uf(d) for d in self.decision_str_list]
         self.state = state
         self.confidence = confidence
         self.head = head
         self.head.request_attention(True)
 
-        self.first = self.web_asker.ask("I think i should do {} :".format(self.decision_str),
+        self.first = self.web_asker.ask("I think i should do {} :".format(self.decision_str_uf),
                                         ["Do it!", "Don't do that"], priority=10, color="red")
         self.second = None
         self.correct_decision = None
@@ -80,8 +85,8 @@ class ConfirmQuestion(object):
             if self.first.get_answer() == "Do it!":
                 self.correct_decision = self.decision_str
             else:
-                self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.decision_str),
-                                                 self.decision_str_list + ["something else/nothing"],
+                self.second = self.web_asker.ask("I wanted to do {}, What should I do?".format(self.decision_str_uf),
+                                                 self.decision_str_uf_list + ["something else/nothing"],
                                                  priority=10, color="red")
                 self.first = None
 
@@ -90,7 +95,7 @@ class ConfirmQuestion(object):
             if answer == "something else/nothing":
                 self.correct_decision = "wait()"
             else:
-                self.correct_decision = answer
+                self.correct_decision = self.decision_str_list[self.decision_str_uf_list.index(answer)]
 
     def is_answered(self):
         return self.correct_decision is not None
@@ -119,7 +124,9 @@ class InfoQuestion(object):
     def __init__(self, web_asker, action_str, decision_str_list, state, confidence):
         self.web_asker = web_asker
         self.decision_str = action_str
+        self.decision_str_uf = to_uf(action_str)
         self.decision_str_list = decision_str_list
+        self.decision_str_uf_list = [to_uf(d) for d in self.decision_str_list]
         self.state = state
         self.confidence = confidence
 
@@ -130,8 +137,8 @@ class InfoQuestion(object):
 
     def update(self):
         if self.first is not None and self.first.answered():
-            self.second = self.web_asker.ask("What should I do?".format(self.decision_str),
-                                             self.decision_str_list + ["something else/nothing"],
+            self.second = self.web_asker.ask("What should I do?".format(self.decision_str_uf),
+                                             self.decision_str_uf_list + ["something else/nothing"],
                                              priority=10, color="blue")
             self.first.remove()
             self.first = None
@@ -141,7 +148,7 @@ class InfoQuestion(object):
             if answer == "something else/nothing":
                 self.correct_decision = "wait()"
             else:
-                self.correct_decision = answer
+                self.correct_decision = self.decision_str_list[self.decision_str_uf_list.index(answer)]
 
     def is_answered(self):
         return self.correct_decision is not None
@@ -170,7 +177,9 @@ class FeedbackQuestion(object):
     def __init__(self, web_asker, decision_str, decision_str_list, state, confidence, delete_key):
         self.web_asker = web_asker
         self.decision_str = decision_str
+        self.decision_str_uf = to_uf(decision_str)
         self.decision_str_list = decision_str_list
+        self.decision_str_uf_list = [to_uf(d) for d in self.decision_str_list]
         self.state = state
         self.confidence = confidence
         self.delete_key = delete_key
@@ -182,8 +191,8 @@ class FeedbackQuestion(object):
 
     def update(self):
         if self.first is not None and self.first.answered():
-            self.second = self.web_asker.ask("I did {}, What should have I done?".format(self.decision_str),
-                                             self.decision_str_list + ["something else/nothing"], color="green")
+            self.second = self.web_asker.ask("I did {}, What should have I done?".format(self.decision_str_uf),
+                                             self.decision_str_uf_list + ["something else/nothing"], color="green")
             self.first.remove()
             self.first = None
 
@@ -192,7 +201,7 @@ class FeedbackQuestion(object):
             if answer == "something else/nothing":
                 self.correct_decision = "wait()"
             else:
-                self.correct_decision = answer
+                self.correct_decision = self.decision_str_list[self.decision_str_uf_list.index(answer)]
 
     def is_answered(self):
         return self.correct_decision is not None
@@ -278,7 +287,6 @@ class InteractionController(object):
                 rospy.loginfo("Trying next adress...")
             else:
                 break
-
 
         if self.web_asker is None:
             rospy.logerr("Cannot reach any adress.")
@@ -412,7 +420,7 @@ class InteractionController(object):
                 self.set_new_training_example(question.get_state(), correct_decision,
                                               question.confidence, predicted_decision, True)
                 del self.feedback_question_list[i]
-                question.remove()
+                # question.remove()
 
         if self.confirm_question is not None:
             self.confirm_question.update()
@@ -496,6 +504,11 @@ class InteractionController(object):
     def get_prediction(self):
         prediction = self.predict()
         str_action_list = [self.Decision_to_str(a) for a in self.filter_robot_decisions(prediction.decisions)]
+        if np.sum(prediction.probas) != 1:
+            print prediction.decisions
+            print prediction.probas
+            assert False
+
         predicted_decision = np.random.choice(prediction.decisions, p=prediction.probas)
         action_str = self.Decision_to_str(predicted_decision)
 
@@ -503,7 +516,7 @@ class InteractionController(object):
         self.last_predicition_confidence = prediction.confidence
 
         if len(self.filter_robot_decisions([predicted_decision])) > 0:
-            if prediction.confidence > 0.05:
+            if prediction.confidence > 0.01:
                 self.confirm_question = ConfirmQuestion(self.web_asker, action_str, str_action_list, self.current_scene,
                                                         prediction.confidence, head=self.head)
             else:
@@ -541,7 +554,7 @@ class InteractionController(object):
             print('Interaction starting!')
 
             is_running = False
-            start_stop_question = self.web_asker.ask("Start ?", ["Start !"], priority=30, color="grey")
+            start_stop_question = self.web_asker.ask("Start assembly?", ["Let's go!"], priority=30, color="grey")
 
             rospy.set_param("/thr/paused", False)
 
@@ -552,7 +565,7 @@ class InteractionController(object):
                             start_stop_question.remove()
                             is_running = True
                             self.start_or_stop_episode(True)
-                            start_stop_question = self.web_asker.ask("Stop ?", ["Stop !"], priority=30, color="grey")
+                            start_stop_question = self.web_asker.ask("Assembly finished?", ["It's finished!"], priority=30, color="grey")
 
                             rospy.set_param("/thr/paused", False)
                             self.pause_unpause_question = self.web_asker.ask("Pause ?", ["Pause !"], priority=20,
@@ -576,7 +589,7 @@ class InteractionController(object):
                         learning_prompt = self.web_asker.ask("Learning...", [], color="grey")
                         self.start_or_stop_episode(False)
                         learning_prompt.remove()
-                        start_stop_question = self.web_asker.ask("Restart ?", ["Restart !"], priority=30, color="grey")
+                        start_stop_question = self.web_asker.ask("Restart assembly?", ["Restart!"], priority=30, color="grey")
 
                     else:
 
