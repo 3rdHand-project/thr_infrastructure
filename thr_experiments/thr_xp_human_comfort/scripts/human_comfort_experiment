@@ -283,7 +283,8 @@ class ComfortExperiment(object):
                 dst = join(dst_folder, f)
                 copyfile(src, dst)
         # user results are stored under his id
-        save_directory = join(self.pkg_expe, 'results', rospy.get_param('/human/id'))
+        save_directory = join(self.pkg_expe, 'results', 'user_study',
+                              rospy.get_param('/human/id'))
         # collect all files related to the model
         model_dir = join(self.pkg_human, 'tmp')
         model_files = []
