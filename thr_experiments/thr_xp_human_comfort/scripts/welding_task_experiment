@@ -136,4 +136,4 @@ if __name__ == '__main__':
 
     # cretate analyzer object
     task = WeldingTask()
-    task.run(nb_points=2)
+    task.run(nb_eval=10, nb_points=2)
