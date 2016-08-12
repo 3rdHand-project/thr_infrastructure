@@ -85,7 +85,7 @@ class WeldingTask(object):
             label.set_linewidth(1.5)  # the legend line width
 
         ax.set_ylabel('Average REBA Score')
-        ax.set_ylim([0, 5])
+        ax.set_ylim([0, 8])
 
         ax.set_xlim([0, 2.5])
 
