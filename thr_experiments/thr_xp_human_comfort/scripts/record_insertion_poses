@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+import rospy
+import json
+import yaml
+from os.path import join
+import tf
+import rospkg
+
+
+class PoseRecorder(object):
+    def __init__(self):
+        self.tfl = tf.TransformListener()
+        rospy.sleep(1)
+        # initialize file parameters
+        rospack = rospkg.RosPack()
+        pkg_scene = rospack.get_path('thr_scenes')
+        self.pose_file = join(pkg_scene, 'config', 'shapeo', 'poses.json')
+        # open the file to write the pose
+        with open(self.pose_file) as datafile:
+            self.pose_data = json.load(datafile)
+        # open file to read the shapes list
+        pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        shape_file = join(pkg_expe, 'config', 'shapes.yaml')
+        with open(shape_file) as datafile:
+            self.shape_list = yaml.load(datafile)
+        self.laterality = ['right', 'left']
+
+    def record_pose(self, shape, laterality, orientation):
+        # ask tf for the transformation
+        while not self.tfl.canTransform('/shapeo_calibr', '/human/tracker' + laterality + '_hand',
+                                        rospy.Time(0)) and not rospy.is_shutdown():
+            rospy.logwarn('Frames not visible, move a little bit')
+            rospy.sleep(1)
+        if rospy.is_shutdown():
+            return 1
+        # record pose
+        pose = self.tfl.lookupTransform('/shapeo_calibr', '/human/tracker' + laterality + '_hand',
+                                        rospy.Time(0))
+        # update pose value
+        self.pose_data['/shapeo'][laterality][shape][orientation] = pose
+        # rewrite file
+        with open(self.pose_file, 'w') as outfile:
+            json.dump(self.pose_data, outfile, sort_keys=True, indent=4)
+
+    def record_all_poses(self):
+        for l in self.laterality:
+            if rospy.is_shutdown():
+                break
+            for s in self.shape_list:
+                if rospy.is_shutdown():
+                    break
+                for o in range(4):
+                    if rospy.is_shutdown():
+                        break
+                    rospy.loginfo('Recording ' + l + ' ' + s + ' with orientation ' + str(o))
+                    rospy.loginfo('Press enter when ready')
+                    raw_input()
+                    # record corresponding pose
+                    self.record_pose(s, l, o)
+
+if __name__ == '__main__':
+    rospy.init_node('pose_recorder')
+    rec = PoseRecorder()
+    rec.record_all_poses()
