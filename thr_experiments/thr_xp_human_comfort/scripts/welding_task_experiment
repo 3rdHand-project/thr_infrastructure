@@ -130,7 +130,7 @@ class WeldingTask(object):
                     resfiles.append(self.start_simulation(c, run_id, nb_points))
                 # check that the file was correctly created
                 if not exists(resfiles[-1]):
-                    rospy.signal_shutdown('Error with simulation ' + run_id + ' ' + c)
+                    rospy.signal_shutdown('Error with simulation ' + run_id + ' ' + c[0])
             # analyze results when all conditions are finished
             if not rospy.is_shutdown():
                 resdir = join(self.save_directory, run_id)
