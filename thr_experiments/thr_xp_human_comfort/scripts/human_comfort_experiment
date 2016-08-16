@@ -28,7 +28,7 @@ class ComfortExperiment(object):
         self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
         self.new_subject = new_subject
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
-        self.conditions = ['reba', 'fixed', 'relative', 'desired']
+        self.conditions = ['reba', 'fixed', 'relative']
         self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
         self.current_perm_file = join(self.pkg_expe, 'config', 'current_perm.json')
         self.controller = None
