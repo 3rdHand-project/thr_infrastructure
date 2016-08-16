@@ -36,10 +36,10 @@ class WeldingTask(object):
         if not exists(res_dir):
             makedirs(res_dir)
         savefile = join(res_dir, condition[0] + '.json')
-        command = ['roslaunch', 'reba_optim', 'optimize_reba_pose.launch']
+        command = ['roslaunch', 'reba_optim', 'optimize_task.launch']
         args = ['task:=welding', 'object_dof:=' + str(condition[1]),
                 'number_of_points:=' + str(nb_points), 'savefile:=' + savefile,
-                'launch_rviz:=false']
+                'launch_rviz:=false', 'optimizer:=evolution']
         command += args
         check_call(command)
         return savefile

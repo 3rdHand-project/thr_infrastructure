@@ -67,7 +67,7 @@ class ComfortExperiment(object):
     def generate_reba_pose(self):
         if self.do_again('reba calculation'):
             rospy.loginfo('Optimize REBA pose')
-            self.start_launchfile('reba_optim', 'optimize_reba_pose')
+            self.start_launchfile('reba_optim', 'optimize_task')
 
     def record_desired_pose(self):
         if self.do_again('record desired pose'):
