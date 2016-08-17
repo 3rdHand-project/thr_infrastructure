@@ -39,7 +39,7 @@ class WeldingTask(object):
         command = ['roslaunch', 'reba_optim', 'optimize_task.launch']
         args = ['task:=welding', 'object_dof:=' + str(condition[1]),
                 'number_of_points:=' + str(nb_points), 'savefile:=' + savefile,
-                'launch_rviz:=false', 'optimizer:=evolution']
+                'launch_rviz:=false', 'optimizer:=evolution', 'wait:=false']
         command += args
         check_call(command)
         return savefile
