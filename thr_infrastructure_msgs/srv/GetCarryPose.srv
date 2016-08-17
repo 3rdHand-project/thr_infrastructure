@@ -1,5 +1,4 @@
 string object
-string location
 string method
 ---
 bool success

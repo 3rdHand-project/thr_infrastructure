@@ -18,7 +18,7 @@ class CarryDecisionMapper(object):
         shape = decision.parameters[2]
         type = decision.parameters[1]
 
-        pose = self.get_carry_pose(GetCarryPoseRequest(object=object, method=type, location=shape))
+        pose = self.get_carry_pose(GetCarryPoseRequest(object=object, method=type))
         frame_id = pose.hand_pose.header.frame_id
         success = pose.success  # A Decision always success so possible failure is transmitted to the RobotAction
         fixed = pose.fixed_pose
