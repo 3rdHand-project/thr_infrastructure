@@ -37,7 +37,7 @@ class PoseRecorder(object):
         pose = self.tfl.lookupTransform('/shapeo_calibr', '/human/tracker' + laterality + '_hand',
                                         rospy.Time(0))
         # update pose value
-        self.pose_data['/shapeo'][laterality][shape][orientation] = pose
+        self.pose_data['/shapeo']['carry'][laterality][shape][orientation] = pose
         # rewrite file
         with open(self.pose_file, 'w') as outfile:
             json.dump(self.pose_data, outfile, sort_keys=True, indent=4)
