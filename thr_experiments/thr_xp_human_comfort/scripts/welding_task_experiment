@@ -87,7 +87,6 @@ class WeldingTask(object):
 
         ax.set_ylabel('Average REBA Score')
         ax.set_ylim([0, 8])
-
         ax.set_xlim([0, 2.5])
 
         # save svg file
@@ -101,7 +100,7 @@ class WeldingTask(object):
             json.dump(output_dict, outfile, sort_keys=True, indent=4)
 
     def get_random_pose(self):
-        x = uniform(0.25, 1.5)
+        x = uniform(0.25, 1.25)
         y = uniform(-1., 1.)
         z = uniform(-0.5, 1.)
         q = uniform(-1., 1., 4)
@@ -126,12 +125,16 @@ class WeldingTask(object):
             rospy.set_param('/object/pose', obj_pose)
             # loop trough all conditions
             resfiles = []
-            for c in self.conditions:
-                if not rospy.is_shutdown():
-                    resfiles.append(self.start_simulation(c, run_id, nb_points))
+            j = 0
+            while j < len(self.conditions) and not rospy.is_shutdown():
+                resfiles.append(self.start_simulation(self.conditions[j], run_id, nb_points))
                 # check that the file was correctly created
                 if not exists(resfiles[-1]):
-                    rospy.signal_shutdown('Error with simulation ' + run_id + ' ' + c[0])
+                    rospy.logwarn('Error with simulation ' + run_id + ' ' + self.conditions[j][0])
+                    rospy.logwarn('Retry simulation')
+                    del resfiles[-1]
+                else:
+                    j += 1
             # analyze results when all conditions are finished
             if not rospy.is_shutdown():
                 resdir = join(self.save_directory, run_id)
