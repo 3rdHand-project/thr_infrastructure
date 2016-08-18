@@ -86,7 +86,7 @@ class Carry(Action):
             req.target = pose
             return self.ik_srv(req).trajectory_to_handover
         except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+            print "Service call failed: %s" % e
 
     def distance_to_seed(self, joint_state, seed):
         return np.linalg.norm(np.array(joint_state) - np.array(seed))
@@ -97,7 +97,8 @@ class Carry(Action):
         best_ik = None
         min_dist = float('inf')
         for p in pose_list:
-                ik = self.commander.get_ik(p, source='trac', seeds=seed, params={'end_tolerance': 0.1, 'num_attempts':10})
+                ik = self.commander.get_ik(p, source='trac', seeds=seed,
+                                           params={'end_tolerance': 0.1, 'num_attempts': 10})
                 if ik is not None:
                     dist = self.distance_to_seed(ik.joint_state.position, seed.joint_state.position)
                     if dist < min_dist:
