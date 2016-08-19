@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find human_moveit_config)/launch/human_tracker.launch">
+    	<arg name="use_kinect" value="False"/>
+	</include>
+
+	<node name="insertion_recorder" pkg="thr_xp_human_comfort" type="record_insertion_poses" output="screen" required="true"/>
+</launch>
