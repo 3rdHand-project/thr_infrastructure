@@ -21,7 +21,7 @@
     <node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="screen" required="True"/>
     <node name="vrep_ik_srv" pkg="vrep_ik_bridge" type="vrep_ik_srv" output="log" required="True"/>
 
-    <node pkg="tf" type="static_transform_publisher" name="shapeo_broadcaster" args="0.036 -0.005 0.067 0.691 0.620 -0.033 -0.370 /right_gripper /shapeo 100" />
+    <node name="shapeo_publisher" pkg="thr_xp_human_comfort" type="shapeo_publisher" output="screen" required="True"/>
 
     <node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
 </launch>
