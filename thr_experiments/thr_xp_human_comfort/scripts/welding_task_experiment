@@ -62,7 +62,7 @@ class WeldingTask(object):
             for state in data['state']:
                 rs = dicttostate(state)
                 # assess the state
-                score.append(self.reba.assess_posture(rs))
+                score.append(self.reba.assess_posture(rs, method='neural_network'))
 
             ax.bar((i + 1) / 2.0 - width / 2, mean(score),
                    width, color=self.colors[i], label=self.labels[i])
