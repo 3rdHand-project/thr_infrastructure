@@ -27,14 +27,14 @@ class PoseRecorder(object):
 
     def record_pose(self, shape, laterality, orientation):
         # ask tf for the transformation
-        while not self.tfl.canTransform('/shapeo_calibr', '/human/tracker' + laterality + '_hand',
+        while not self.tfl.canTransform('/shapeo_calibr', '/human/tracker/' + laterality + '_hand',
                                         rospy.Time(0)) and not rospy.is_shutdown():
             rospy.logwarn('Frames not visible, move a little bit')
             rospy.sleep(1)
         if rospy.is_shutdown():
             return 1
         # record pose
-        pose = self.tfl.lookupTransform('/shapeo_calibr', '/human/tracker' + laterality + '_hand',
+        pose = self.tfl.lookupTransform('/shapeo_calibr', '/human/tracker/' + laterality + '_hand',
                                         rospy.Time(0))
         # update pose value
         self.pose_data['/shapeo']['carry'][laterality][shape][orientation] = pose
@@ -57,6 +57,7 @@ class PoseRecorder(object):
                     raw_input()
                     # record corresponding pose
                     self.record_pose(s, l, o)
+        rospy.loginfo('Recording is finished')
 
 if __name__ == '__main__':
     rospy.init_node('pose_recorder')
