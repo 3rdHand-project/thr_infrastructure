@@ -31,7 +31,7 @@ class WeldingTask(object):
         self.labels = ['fixed', 'position only', 'orientation only', 'position \nand orientation']
         self.colors = ['tomato', 'darkseagreen', 'cornflowerblue', 'slategray']
 
-    def start_simulation(self, condition, run_id, nb_points=10):
+    def start_simulation(self, optimizer, method, condition, run_id, nb_points=10):
         res_dir = join(self.save_directory, run_id)
         if not exists(res_dir):
             makedirs(res_dir)
@@ -39,8 +39,8 @@ class WeldingTask(object):
         command = ['roslaunch', 'reba_optim', 'optimize_task.launch']
         args = ['task:=welding', 'object_dof:=' + str(condition[1]),
                 'number_of_points:=' + str(nb_points), 'savefile:=' + savefile,
-                'launch_rviz:=false', 'optimizer:=evolution', 'wait:=false',
-                'assessment_method:=neural_network']
+                'launch_rviz:=false', 'optimizer:=' + optimizer, 'wait:=false',
+                'assessment_method:=' + method]
         command += args
         check_call(command)
         return savefile
@@ -107,7 +107,7 @@ class WeldingTask(object):
         q /= norm(q)
         return [[x, y, z], q.tolist()]
 
-    def run(self, nb_eval=10, nb_points=10):
+    def run(self, optimizer, method, nb_eval=10, nb_points=10):
         # set laterality as default right-handed
         rospy.set_param('/human/laterality', 'right')
         i = 0
@@ -127,7 +127,9 @@ class WeldingTask(object):
             resfiles = []
             j = 0
             while j < len(self.conditions) and not rospy.is_shutdown():
-                resfiles.append(self.start_simulation(self.conditions[j], run_id, nb_points))
+                resfiles.append(self.start_simulation(optimizer, method,
+                                                      self.conditions[j],
+                                                      run_id, nb_points))
                 # check that the file was correctly created
                 if not exists(resfiles[-1]):
                     rospy.logwarn('Error with simulation ' + run_id + ' ' + self.conditions[j][0])
@@ -145,7 +147,9 @@ if __name__ == '__main__':
     rospy.init_node('welding_analysis')
     nb_eval = int(sys.argv[1])
     nb_points = int(sys.argv[2])
+    optimizer = sys.argv[3]
+    method = sys.argv[4]
 
     # cretate analyzer object
     task = WeldingTask()
-    task.run(nb_eval=nb_eval, nb_points=2)
+    task.run(optimizer=optimizer, method=method, nb_eval=nb_eval, nb_points=2)
