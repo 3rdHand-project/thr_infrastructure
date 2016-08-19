@@ -1,0 +1,155 @@
+#!/usr/bin/env python
+import rospy
+import tf
+import json
+import yaml
+from os.path import join
+import rospkg
+import transformations
+from thr_infrastructure_msgs.srv import GetCarryPose, GetCarryPoseRequest
+from baxter_commander import ArmCommander
+
+
+class GridRecorder(object):
+    def __init__(self):
+        self.tfl = tf.TransformListener()
+        rospy.sleep(1)
+        # initialize baxter
+        self.commander = ArmCommander('right')
+        # open file of poses for shapeo object
+        rospack = rospkg.RosPack()
+        pkg_dir = rospack.get_path("thr_scenes")
+        shape_frames_file = join(pkg_dir, 'config', 'shapeo', 'poses.json')
+        with open(shape_frames_file) as datafile:
+            self.shape_poses = json.load(datafile)['/shapeo']['carry']
+        # get fixed frames
+        self.VrepTBase = self.tfl.lookupTransform('vrep_frame', 'base', rospy.Time(0))
+        self.GripperTVrepEEF = self.tfl.lookupTransform('right_gripper', 'vrep_tip', rospy.Time(0))
+        self.ObjectTGripper = self.tfl.lookupTransform('/shapeo', '/right_gripper', rospy.Time(0))
+        # initialize carry pose srv
+        rospy.wait_for_service('/thr/get_carry_pose')
+        self.carry_pose_srv = rospy.ServiceProxy('/thr/get_carry_pose', GetCarryPose)
+        # initialize shape config
+        pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        shape_file = join(pkg_expe, 'config', 'shapes.yaml')
+        with open(shape_file) as datafile:
+            self.shapes = yaml.load(datafile)
+        # initialize grid dict
+        self.lateralities = ['left', 'right']
+        self.methods = ['reba']
+
+    def is_acceptable(self, point):
+        seed = self.commander.get_current_state()
+        ik = self.commander.get_ik(point, source='trac', seeds=seed,
+                                   params={'end_tolerance': 0.1, 'num_attempts': 10})
+        return (ik is not None)
+
+    def get_poses(self, BaseTHand, laterality, shape, pose_dict):
+        # get the supposed pose of the hand
+        ObjTHand_list = self.shape_poses[laterality][shape]
+        shapeo_poses = []
+        eef_poses = []
+        acceptable = False
+        for p in ObjTHand_list:
+            if rospy.is_shutdown():
+                break
+            HandTObject = transformations.inverse_transform(p)
+            BaseTObject = transformations.multiply_transform(BaseTHand, HandTObject)
+            BaseTGripper = transformations.multiply_transform(BaseTObject, self.ObjectTGripper)
+            # transform them in Vrep
+            VrepTObject = transformations.multiply_transform(self.VrepTBase, BaseTObject)
+            VrepTGripper = transformations.multiply_transform(self.VrepTBase, BaseTGripper)
+            VrepTVrepEEF = transformations.multiply_transform(VrepTGripper, self.GripperTVrepEEF)
+            # append the transformations
+            shapeo_poses.append(VrepTObject)
+            eef_poses.append(VrepTVrepEEF)
+            # check that at least one of the poses is accessible
+            acceptable = acceptable or self.is_acceptable(BaseTGripper)
+        pose_dict[shape]['shapeo'] = shapeo_poses
+        pose_dict[shape]['eef'] = eef_poses
+        return acceptable
+
+    def get_grid_point(self, method, laterality):
+        carry_pose = self.carry_pose_srv(GetCarryPoseRequest(object='shapeo', method=method)).hand_pose
+        BaseTHand = transformations.pose_to_list(carry_pose)
+        VrepTHand = transformations.multiply_transform(self.VrepTBase, BaseTHand)
+        pose_dict = {}
+        acceptable = True
+        # loop through all the shapes
+        for s in self.shapes:
+            if rospy.is_shutdown():
+                break
+            pose_dict[s] = {}
+            acceptable = acceptable and self.get_poses(VrepTHand, laterality, s, pose_dict)
+            pose_dict[s]['human_hand'] = VrepTHand
+        # if the point is acceptable return the dict
+        if acceptable:
+            return pose_dict
+        else:
+            return {}
+
+    def save_grid(self, grid):
+        with open(join('/tmp', 'grid.json'), 'w') as outfile:
+            json.dump(grid, outfile, sort_keys=True, indent=4)
+
+    def load_grid(self):
+        with open(join('/tmp', 'grid.json')) as datafile:
+            grid = json.load(datafile)
+        return grid
+
+    def convert_grid_to_txt(self):
+        def pose_to_str(pose):
+            pose_str = ''
+            for coordinates in pose:
+                for value in coordinates:
+                    pose_str += str(value) + '\t'
+            return pose_str
+
+        grid = self.load_grid()
+        for l in self.lateralities:
+            for m in self.methods:
+                grid_str = ''
+                grid_file = 'grid_' + m + '_' + l + '.txt'
+                for point in grid[l][m]:
+                    for s in self.shapes:
+                        for i in range(4):
+                            grid_str += pose_to_str(point[s]['human_hand'])
+                            grid_str += pose_to_str(point[s]['shapeo'][i])
+                            grid_str += pose_to_str(point[s]['eef'][i])
+                            grid_str += '\n'
+                with open(join('/tmp', grid_file), 'w') as f:
+                    f.write(grid_str)
+
+    def calculate_grid(self, nb_points=4):
+        grid = {}
+        for l in self.lateralities:
+            if rospy.is_shutdown():
+                break
+            rospy.logwarn('Recording grid for ' + l + ' side')
+            grid[l] = {}
+            for m in self.methods:
+                grid[l][m] = []
+            i = 0
+            while i < nb_points and not rospy.is_shutdown():
+                rospy.loginfo('Creating new grid point')
+                rospy.loginfo('Press enter when ready')
+                raw_input()
+                for m in self.methods:
+                    if rospy.is_shutdown():
+                        break
+                    point_dict = self.get_grid_point(m, l)
+                    if point_dict:
+                        grid[l][m].append(point_dict)
+                        i += 1
+                    else:
+                        rospy.logwarn('This point is not reachable please move a bit')
+        self.save_grid(grid)
+
+if __name__ == '__main__':
+    rospy.init_node('grid_recorder')
+    rec = GridRecorder()
+    rospy.sleep(2)
+    rospy.logwarn('Ready to record the grid')
+    rec.calculate_grid()
+    # convert the grid to text file
+    rec.convert_grid_to_txt()
