@@ -142,7 +142,7 @@ class GridRecorder(object):
                         grid[l][m].append(point_dict)
                         i += 1
                     else:
-                        rospy.logwarn('This point is not reachable please move a bit')
+                        rospy.logerr('This point is not reachable please move a bit')
         self.save_grid(grid)
 
 if __name__ == '__main__':
