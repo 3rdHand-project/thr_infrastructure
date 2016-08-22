@@ -132,8 +132,8 @@ class WeldingTask(object):
                                                       run_id, nb_points))
                 # check that the file was correctly created
                 if not exists(resfiles[-1]):
-                    rospy.logwarn('Error with simulation ' + run_id + ' ' + self.conditions[j][0])
-                    rospy.logwarn('Retry simulation')
+                    rospy.logerr('Error with simulation ' + run_id + ' ' + self.conditions[j][0])
+                    rospy.logerr('Retry simulation')
                     del resfiles[-1]
                 else:
                     j += 1
