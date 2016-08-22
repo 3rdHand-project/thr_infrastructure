@@ -4,5 +4,5 @@
     	<arg name="use_kinect" value="False"/>
 	</include>
 
-	<node name="insertion_recorder" pkg="thr_xp_human_comfort" type="record_insertion_poses" output="screen" required="true"/>
+	<node name="insertion_recorder" pkg="thr_xp_human_comfort" type="record_shapeo_calibration" output="screen" required="true"/>
 </launch>
