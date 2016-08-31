@@ -298,8 +298,8 @@ class ComfortExperiment(object):
         # collect desired and reba poses
         pose_dir = join(self.pkg_reba, 'tmp')
         pose_files = []
-        pose_files.append('desired_pose.json')
-        pose_files.append('reba_pose.json')
+        laterality = rospy.get_param('/human/laterality')
+        pose_files.append(laterality + '_reba_receive_pose.json')
         # save the files
         save_results(model_dir, model_files, 'model')
         save_results(config_dir, config_files, '')
