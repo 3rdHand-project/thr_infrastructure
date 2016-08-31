@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import rospy
+import json
+import tf
+import rospkg
+from os.path import join
+import yaml
+import sys
+
+
+class GridVizualizer(object):
+    def __init__(self):
+        rospack = rospkg.RosPack()
+        self.tfb = tf.TransformBroadcaster()
+        pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        # open grid file
+        with open(join(pkg_expe, 'tmp', 'grid.json')) as datafile:
+            self.grid_data = json.load(datafile)
+        shape_file = join(pkg_expe, 'config', 'shapes.yaml')
+        with open(shape_file) as datafile:
+            self.shapes = yaml.load(datafile)
+        self.rate = rospy.Rate(10)
+
+    def vizualize_grid(self, laterality, method, shape):
+        data = self.grid_data[laterality][method]
+        while not rospy.is_shutdown():
+            for i, point in enumerate(data):
+                if rospy.is_shutdown():
+                    break
+                hand_pose = point[shape]['human_hand']
+                shapeo_poses = point[shape]['shapeo']
+                self.tfb.sendTransform(hand_pose[0], hand_pose[1], rospy.Time.now(),
+                                       laterality + '_hand_' + str(i), 'vrep_frame')
+                self.tfb.sendTransform(shapeo_poses[0][0], shapeo_poses[0][1], rospy.Time.now(),
+                                       'shapeo_' + str(i), 'vrep_frame')
+            self.rate.sleep()
+
+if __name__ == '__main__':
+    laterality = sys.argv[1]
+    method = sys.argv[2]
+    shape = sys.argv[3]
+
+    rospy.init_node('grid_vizualizer')
+
+    vizu = GridVizualizer()
+    vizu.vizualize_grid(laterality, method, shape)
