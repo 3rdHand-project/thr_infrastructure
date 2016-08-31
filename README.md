@@ -93,7 +93,15 @@ Since interesting predicates are different fr each scene, a decicated scene stat
 ### Interaction controller (package `thr_interaction_controller`)
 The Interaction controller is the conductor of the worflow, it orchestrates the other nodes above to create a specific mode of interaction. The default interaction controller requests the current scene state, asks the predictor to return the next action, pass the order to the decision server, it can be for instance replaced by other interaction controllers, like the keyboard interaction controllers which do not call the planners but wait for the user to type commands in a Wizard-Of-Oz mode.
 
-The type of interaction controller is changed by choosing the right launchfile (autonomous.launch or manual.launch for the WoZ mode).
+The type of interaction controller is changed by choosing the right launchfile:
+- `manual.launch` for a WoZ mode
+- `autonomous.launch` for an autonomous robot, with an optional argument:
+ - `interaction:=phablet` uses the web asker for interaction, learning and prediction (default)*
+ - `interaction:=independent` always asks the predictor and executes the most probable action in loop
+ - `interaction:=gestures` uses the gesture detection of the Kinect 2**
+
+* Requires valid mongodb credentials in non-versioned file `thr_interaction_controller/config/mongo_adress_list.json`
+** Requires [the Kinect 2 server](https://github.com/baxter-flowers/kinect_2_server/)
 
 ### Display manager (package `thr_display`)
 The display managers are in charge of printing useful information on Baxter's display. Current display managers are:
@@ -159,15 +167,20 @@ roslaunch thr_interaction_controller autonomous.launch policy:=hardcoded display
  *  The display can be `debug` (default), `action` (displays the actions)
  *  IP is the IP address of the Windows machine running the Optitrack VRPN server (Arena or Motive), the port can also be set (`port:=`).
 
-To start the manual mode (robot receives individual commands from command line):
+To start the manual mode (robot receives individual commands from command line) with a nice action display:
 ```
-roslaunch thr_interaction_controller manual.launch policy:=hardcoded display:=action ip:=<VRPN IP>
+roslaunch thr_interaction_controller manual.launch display:=action ip:=<VRPN IP>
 ```
 Commands are, for instance: `hh0` (Hold the handle, on its left), `hr1` (Hold the piece 'side_right' on its right), `l`, (Send the left arm in home pose), `r` (Send the right arm in home pose), `pb` (Pick the back piece), `gl` (Handover the side_left to the human).
 
 The scene (i.e. objects to use) can be passed in argument. For example the scene `romeo` has been conceived to handle cooking tools, its manual setup uses different letters (see the code of the Keyboard IC to know them):
 ```
-roslaunch thr_interaction_controller manual.launch scene:=romeo policy:=hardcoded display:=action ip:=<VRPN IP>
+roslaunch thr_interaction_controller manual.launch scene:=romeo display:=action ip:=<VRPN IP>
+```
+
+A hardcoded (aka scripted) setup is started like this:
+```
+roslaunch thr_interaction_controller autonomous.launch policy:=hardcoded interaction:=independent ip:=<VRPN IP>
 ```
 
 The interaction via gestures is started by selected the gestures interaction controller as well as the corresponding predictor policy:
