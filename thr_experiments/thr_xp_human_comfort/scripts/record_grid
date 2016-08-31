@@ -23,15 +23,15 @@ class GridRecorder(object):
         with open(shape_frames_file) as datafile:
             self.shape_poses = json.load(datafile)['/shapeo']['carry']
         # get fixed frames
-        self.VrepTBase = self.tfl.lookupTransform('vrep_frame', 'base', rospy.Time(0))
-        self.GripperTVrepEEF = self.tfl.lookupTransform('right_gripper', 'vrep_tip', rospy.Time(0))
+        self.VrepTBase = self.tfl.lookupTransform('/vrep_frame', '/base', rospy.Time(0))
+        self.GripperTVrepEEF = self.tfl.lookupTransform('/right_gripper', '/vrep_tip', rospy.Time(0))
         self.ObjectTGripper = self.tfl.lookupTransform('/shapeo', '/right_gripper', rospy.Time(0))
         # initialize carry pose srv
         rospy.wait_for_service('/thr/get_carry_pose')
         self.carry_pose_srv = rospy.ServiceProxy('/thr/get_carry_pose', GetCarryPose)
         # initialize shape config
-        pkg_expe = rospack.get_path('thr_xp_human_comfort')
-        shape_file = join(pkg_expe, 'config', 'shapes.yaml')
+        self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        shape_file = join(self.pkg_expe, 'config', 'shapes.yaml')
         with open(shape_file) as datafile:
             self.shapes = yaml.load(datafile)
         # initialize grid dict
@@ -80,7 +80,7 @@ class GridRecorder(object):
             if rospy.is_shutdown():
                 break
             pose_dict[s] = {}
-            acceptable = acceptable and self.get_poses(VrepTHand, laterality, s, pose_dict)
+            acceptable = acceptable and self.get_poses(BaseTHand, laterality, s, pose_dict)
             pose_dict[s]['human_hand'] = VrepTHand
         # if the point is acceptable return the dict
         if acceptable:
@@ -89,11 +89,11 @@ class GridRecorder(object):
             return {}
 
     def save_grid(self, grid):
-        with open(join('/tmp', 'grid.json'), 'w') as outfile:
+        with open(join(self.pkg_expe, 'tmp', 'grid.json'), 'w') as outfile:
             json.dump(grid, outfile, sort_keys=True, indent=4)
 
     def load_grid(self):
-        with open(join('/tmp', 'grid.json')) as datafile:
+        with open(join(self.pkg_expe, 'tmp', 'grid.json')) as datafile:
             grid = json.load(datafile)
         return grid
 
@@ -117,12 +117,14 @@ class GridRecorder(object):
                             grid_str += pose_to_str(point[s]['shapeo'][i])
                             grid_str += pose_to_str(point[s]['eef'][i])
                             grid_str += '\n'
-                with open(join('/tmp', grid_file), 'w') as f:
+                with open(join(self.pkg_expe, 'tmp', grid_file), 'w') as f:
                     f.write(grid_str)
 
     def calculate_grid(self, nb_points=4):
         grid = {}
         for l in self.lateralities:
+            # set laterality on param server
+            rospy.set_param('/human/laterality', l)
             if rospy.is_shutdown():
                 break
             rospy.logwarn('Recording grid for ' + l + ' side')
