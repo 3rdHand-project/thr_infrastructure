@@ -6,9 +6,10 @@ import tf
 import sys
 import actionlib
 import transformations
-from thr_actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place, Turn, Carry
+from thr_actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place, Turn, Carry, GoToJS
 from baxter_commander import ArmCommander
 from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionActionResult
+
 
 class RobotActionServer:
     """
@@ -39,12 +40,7 @@ class RobotActionServer:
 
         # Motion/Grasping attributes
         self.commander = ArmCommander(side, default_kv_max=self.action_params['limits']['kv'], default_ka_max=self.action_params['limits']['ka'], ik='trac')
-
-        # Home poses are taken when the server starts:
-        self.starting_state = self.commander.get_current_state()
-        self.tfl.waitForTransform(self.world, self.gripper_name, rospy.Time(0), rospy.Duration(10))
-        self.starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, self.gripper_name, rospy.Time(0)))
-
+            
         # Action server attributes
         rospy.loginfo("Starting server "+side)
         self.server = actionlib.SimpleActionServer('/thr/robot_run_action/'+side, RunRobotActionAction, self.execute, False)
@@ -54,6 +50,7 @@ class RobotActionServer:
         self.actions = {
             'give': Give(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'go_home_'+self.side: GoHome(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
+            'go_to_js_'+self.side: GoToJS(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'hold': Hold(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'pick': Pick(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),
             'turn': Turn(self.commander, self.tfl, self.action_params, self.poses, self.seeds, self.server.is_preempt_requested),

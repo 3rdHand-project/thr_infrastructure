@@ -9,6 +9,8 @@
     "grasp": "right",
     "bring_left": "left",
     "bring_right": "right",
-    "place_left" : "left",
-    "place_right" : "right"
+    "place_left": "left",
+    "place_right": "right",
+    "go_to_js_right": "right",
+    "go_to_js_left": "left"
 }

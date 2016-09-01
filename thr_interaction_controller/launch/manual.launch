@@ -8,6 +8,8 @@
     <arg name="display" default="debug" /> <!-- debug or face display -->
     <arg name="gui" default="false" /> <!-- RViz visualisation and motion preview -->
     <arg name="load_optitrack_config" default="true"/> <!-- Load optitrack node and objects, if False another script must load them instead -->
+    <arg name="right_home_pose" default="default"/>
+    <arg name="left_home_pose" default="default"/>
     
     <rosparam param="/thr/logs_name" subst_value="True">$(arg name)</rosparam>
     <rosparam param="/thr/display" subst_value="True">$(arg display)</rosparam>
@@ -26,5 +28,5 @@
     </include>
 
     <node pkg="thr_display" name="concurrent_$(arg display)_display" type="concurrent_$(arg display)_display.py" output="log"/>
-    <node pkg="thr_interaction_controller" name="keyboard_interaction_controller_concurrent_$(arg scene)" type="keyboard_interaction_controller_concurrent_$(arg scene).py" output="screen"/>
+    <node pkg="thr_interaction_controller" name="keyboard_interaction_controller_concurrent_$(arg scene)" type="keyboard_interaction_controller_concurrent_$(arg scene).py" args="$(arg right_home_pose) $(arg left_home_pose)" output="screen"/>
 </launch>

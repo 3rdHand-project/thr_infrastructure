@@ -4,6 +4,7 @@
     <arg name="use_kinect" default="False"/>
     <arg name="use_vrep" default="False"/>
     <arg name="gui" default="False"/>
+    <arg name="right_home_pose" default="$(find thr_xp_human_comfort)/config/shapeo_home_pose.json" /> <!-- Path to the home pose file-->
 
     <param name="/vrep/use" type="bool" value="$(arg use_vrep)" />
 
@@ -12,6 +13,7 @@
     	<arg name="load_optitrack_config" value="False"/>
         <arg name="display" value="action"/>
         <arg name="gui" value="$(arg gui)"/>
+        <arg name="right_home_pose" value="$(arg right_home_pose)" />
     </include>
 
     <include file="$(find human_moveit_config)/launch/human_tracker.launch">

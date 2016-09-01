@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+import sys
 import rospy
 import json
 import actionlib
@@ -11,13 +11,15 @@ from actionlib_msgs.msg import GoalStatus
 
 class InteractionController(object):
 
-    def __init__(self):
+    def __init__(self, right_home_pose, left_home_pose):
         self.running = True
         self.current_scene = None
         self.previous_decision = Decision(type='wait')
         self.scene_before_decision = None
         self.run_decision_name = '/thr/run_decision'
         self.scene_state_service = '/thr/scene_state'
+        self.right_home_pose_file = right_home_pose
+        self.left_home_pose_file = left_home_pose
 
         self.logs = []
 
@@ -58,9 +60,9 @@ class InteractionController(object):
                 rospy.logerr("Invalid command {} (1a)".format(command))
                 continue
             elif command[0] == 'l':
-                type = 'start_go_home_left'
+                type = 'start_go_to_js_left'
             elif command[0] == 'r':
-                type = 'start_go_home_right'
+                type = 'start_go_to_js_right'
             elif command[0] == 'a':
                 type = 'start_grasp'
             elif command[0] == 'c':
@@ -69,6 +71,10 @@ class InteractionController(object):
                 rospy.logerr("Invalid command {} (1b)".format(command))
                 continue
 
+            if type in ['start_go_to_js_right']:
+                parameters.append(self.right_home_pose_file)
+            if type in ['start_go_to_js_left']:
+                parameters.append(self.left_home_pose_file)
             if type in ['start_grasp', 'start_carry']:
                 if len(command)<2:
                     rospy.logerr("Invalid command {} (2a)".format(command))
@@ -168,4 +174,4 @@ class InteractionController(object):
 
 if __name__=='__main__':
     rospy.init_node("interaction_controller")
-    InteractionController().run()
+    InteractionController(sys.argv[1], sys.argv[2]).run()

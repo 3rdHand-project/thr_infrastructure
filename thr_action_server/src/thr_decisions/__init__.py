@@ -1,4 +1,4 @@
-from . import pick, give, hold, grasp, go_home, place, bring, turn, carry
+from . import pick, give, hold, grasp, go_home, place, bring, turn, carry, go_to_js
 from thr_infrastructure_msgs.msg import Decision, RobotAction
 
 def decision_action_mapping(decision):
@@ -31,6 +31,10 @@ def decision_action_mapping(decision):
         return bring.map(decision), 'left'
     elif decision.type=='start_bring_right':
         return bring.map(decision), 'right'
+    elif decision.type=='start_go_to_js_right':
+        return go_to_js.map(decision), 'right'
+    elif decision.type=='start_go_to_js_left':
+        return go_to_js.map(decision), 'left'
     elif decision.type=='display':
         return (RobotAction(type='display', parameters=decision.parameters), 'instantaneous')
     else:

@@ -7,3 +7,4 @@ from . pick import Pick
 from . place import Place
 from . turn import Turn
 from . carry import Carry
+from . go_to_js import GoToJS
