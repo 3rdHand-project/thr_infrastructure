@@ -1,9 +1,6 @@
 from . action import Action
 import rospy
 import transformations
-from os.path import join
-from os.path import exists
-from os import makedirs
 from vrep_ik_bridge.srv import VrepIK, VrepIKRequest
 import json
 import numpy as np
@@ -62,21 +59,6 @@ class Carry(Action):
         robot_pose = transformations.multiply_transform(VrepTBase, BaseTGripper)
         robot_pose = transformations.multiply_transform(robot_pose, GripperTVrep)
         return robot_pose
-
-    def write_to_txt(self, joint_state):
-        method = rospy.get_param('/thr_experiment/current_method')
-        # create the string of the pose to write in the textfile
-        state_str = ''
-        for value in joint_state:
-            state_str += str(value) + '\t'
-        state_str += '\n'
-        # write the string to the file
-        directory = join('/tmp', 'grid_reba')
-        if not exists(directory):
-            makedirs(directory)
-        index = rospy.get_param('/thr_experiment/current_index')
-        with open(directory + '/joints_' + method + '_' + index + '.txt', 'w') as f:
-            f.write(state_str)
 
     def get_trajectory(self, pose):
         # get the trajectory to handover
@@ -145,10 +127,6 @@ class Carry(Action):
                     # We decide to fail immediately in case IK fails because REBA parameters need to be updated (so a new Decision must be executed)
                     return False
                 rospy.sleep(self.action_params['sleep_step'])
-
-                # write the ik to a text file
-                if debug:
-                    self.write_to_txt(best_ik.joint_state.position)
 
                 success = self.commander.move_to_controlled(best_ik, pause_test=self.pause_test, stop_test=self.stop_test)
 
