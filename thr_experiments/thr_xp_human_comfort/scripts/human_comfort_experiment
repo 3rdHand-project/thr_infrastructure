@@ -6,6 +6,7 @@ from copy import deepcopy
 import itertools
 import rospkg
 import json
+import yaml
 import rospy
 import os
 import sys
@@ -23,7 +24,7 @@ from os import system
 
 
 class ComfortExperiment(object):
-    def __init__(self, new_subject=True, recording=True, autonomous=False):
+    def __init__(self, new_subject=True, recording=True, autonomous=False, forced_conditions=False):
         rospack = rospkg.RosPack()
         self.pkg_human = rospack.get_path('human_moveit_config')
         self.pkg_reba = rospack.get_path('reba_optim')
@@ -31,6 +32,7 @@ class ComfortExperiment(object):
         self.new_subject = new_subject
         self.recording = recording
         self.autonomous = autonomous
+        self.forced_conditions = forced_conditions
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative']
         self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
@@ -40,6 +42,10 @@ class ComfortExperiment(object):
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
         self.rate = rospy.Rate(20)
         self.home_pose = join(self.pkg_expe, 'config', 'shapeo_home_pose.json')
+        if forced_conditions:
+            with open(join(self.pkg_expe, 'config', 'forced_conditions.yaml')) as datafile:
+                conditions = yaml.load(datafile)
+            rospy.set_param('/thr_experiments/human_comfort/conditions', conditions)
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
@@ -111,9 +117,12 @@ class ComfortExperiment(object):
             if self.new_subject:
                 perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
         # get corresponding permutation values
-        permutation = perm_list[perm_dict['id_permutation']]
-        rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
-        user_dict['conditions'] = permutation
+        if not self.forced_conditions:
+            permutation = perm_list[perm_dict['id_permutation']]
+            rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
+            user_dict['conditions'] = permutation
+        else:
+            user_dict['conditions'] = rospy.get_param('/thr_experiments/human_comfort/conditions')
         # remove conditions that are not in the current experiment
         for c in self.conditions:
             if c not in user_dict['conditions']:
@@ -195,6 +204,7 @@ class ComfortExperiment(object):
 
     def send_go_home(self):
         decision = Decision(type='start_go_to_js_right', parameters=[self.home_pose])
+        # decision = Decision(type='start_go_to_js_right', parameters=['default'])
         self.controller.run_decision(decision)
 
     def announce_next_part(self, shape):
@@ -261,6 +271,7 @@ class ComfortExperiment(object):
             # ensure that the robot is ready to receive new command
             self.controller.check_for_previous_decisions()
             # go home
+            rospy.sleep(2)
             rospy.loginfo('Action finished going home.')
             self.send_go_home()
 
@@ -398,7 +409,8 @@ if __name__ == '__main__':
     new_subject = (sys.argv[1] == 'True')
     recording = (sys.argv[2] == 'True')
     autonomous = (sys.argv[3] == 'True')
-    expe = ComfortExperiment(new_subject, recording, autonomous)
+    forced_conditions = (sys.argv[5] == 'True')
+    expe = ComfortExperiment(new_subject, recording, autonomous, forced_conditions)
     # start expe configuration
     expe.generate_experimental_conditions()
     # start model generation
