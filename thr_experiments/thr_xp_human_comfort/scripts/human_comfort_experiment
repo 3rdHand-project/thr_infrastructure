@@ -18,15 +18,19 @@ from recorder.srv import RecordingCommandRequest
 from os.path import join
 from os.path import exists
 from shutil import copyfile
+from threading import Lock
+from os import system
 
 
 class ComfortExperiment(object):
-    def __init__(self, new_subject=True):
+    def __init__(self, new_subject=True, recording=True, autonomous=False):
         rospack = rospkg.RosPack()
         self.pkg_human = rospack.get_path('human_moveit_config')
         self.pkg_reba = rospack.get_path('reba_optim')
         self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
         self.new_subject = new_subject
+        self.recording = recording
+        self.autonomous = autonomous
         self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
         self.conditions = ['reba', 'fixed', 'relative']
         self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
@@ -34,6 +38,8 @@ class ComfortExperiment(object):
         self.controller = None
         # create recorder service
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
+        self.rate = rospy.Rate(20)
+        self.home_pose = join(self.pkg_expe, 'config', 'shapeo_home_pose.json')
 
     def start_launchfile(self, pkg, launchfile, args=[]):
         command = ['roslaunch', pkg, launchfile + '.launch']
@@ -188,7 +194,7 @@ class ComfortExperiment(object):
         self.experiment_parameters = expe_dict
 
     def send_go_home(self):
-        decision = Decision(type='start_go_home_right', parameters=[])
+        decision = Decision(type='start_go_to_js_right', parameters=[self.home_pose])
         self.controller.run_decision(decision)
 
     def announce_next_part(self, shape):
@@ -201,8 +207,12 @@ class ComfortExperiment(object):
         self.controller.check_for_previous_decisions()
         # announce next part
         self.announce_next_part(shape)
-        rospy.loginfo('Press enter to execute the action.')
-        raw_input()
+        if self.autonomous:
+            rospy.sleep(2)
+            system('beep')
+        else:
+            rospy.loginfo('Press enter to execute the action.')
+            raw_input()
         # create a decision
         dec_type = 'start_carry'
         parameters = ['/shapeo', condition, shape]
@@ -210,24 +220,43 @@ class ComfortExperiment(object):
         # loop till decision is successed
         success = False
         # send decision
-        while not success:
+        while not success and not rospy.is_shutdown():
+            with self.controller.lock:
+                self.controller.action_finished = False
+                self.controller.action_success = False
             # ensure that the robot is ready to receive new command
             self.controller.check_for_previous_decisions()
             # start recording
-            self.recorder(RecordingCommandRequest(start=True,
-                                                  files_hierarchy=[rospy.get_param('/human/id'),
-                                                                   'records',
-                                                                   condition,
-                                                                   shape],
-                                                  allow_overwriting=True))
+            if self.recording:
+                self.recorder(RecordingCommandRequest(start=True,
+                                                      files_hierarchy=[rospy.get_param('/human/id'),
+                                                                       'records',
+                                                                       condition,
+                                                                       shape],
+                                                      allow_overwriting=True))
             self.controller.run_decision(decision)
-            # TODO: Replace by history event checking
-            rospy.loginfo('Action complete? [Y]/n.')
-            res = raw_input()
-            if res != 'n':
-                success = True
+            if self.autonomous:
+                rospy.loginfo('Waiting for action to finish.')
+                while not self.controller.action_finished and not rospy.is_shutdown():
+                    self.rate.sleep()
+                success = self.controller.action_success
+                if success:
+                    rospy.loginfo('Action finished succesfully.')
+                    system('beep')
+                else:
+                    rospy.loginfo('Problem with action. Retry.')
+                    system('beep')
+                    rospy.sleep(0.5)
+                    system('beep')
+                    rospy.sleep(2)
+                    system('beep')
+            else:
+                rospy.loginfo('Action complete? [Y]/n.')
+                res = raw_input()
+                success = (res != 'n')
             # stop recording
-            self.recorder(RecordingCommandRequest(start=False))
+            if self.recording:
+                self.recorder(RecordingCommandRequest(start=False))
             rospy.sleep(0.5)
             # ensure that the robot is ready to receive new command
             self.controller.check_for_previous_decisions()
@@ -236,8 +265,9 @@ class ComfortExperiment(object):
             self.send_go_home()
 
     def run_experiment(self):
-        # wait for the recorder service in case it is not started
-        rospy.wait_for_service('recorder/triggering')
+        if self.recording:
+            # wait for the recorder service in case it is not started
+            rospy.wait_for_service('recorder/triggering')
         # get the conditions
         conditions = self.experiment_parameters['conditions']
         # get starting index from previous condition in case of crash
@@ -318,7 +348,7 @@ class InteractionController(object):
         self.run_decision_name = '/thr/run_decision'
         self.scene_state_service = '/thr/scene_state'
         self.rate = rospy.Rate(20)
-
+        self.lock = Lock()
         self.logs = []
         # Initiating topics ands links to services/actions
         self.run_decision_client = actionlib.SimpleActionClient(self.run_decision_name, RunDecisionAction)
@@ -328,8 +358,18 @@ class InteractionController(object):
         for service in self.services:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
-
+        rospy.Subscriber('/thr/action_history', ActionHistoryEvent, self.cb_action_event_received)
         self.start_or_stop_episode(True)  # Start a new (and unique) episode
+
+    def cb_action_event_received(self, event):
+        if event.type == ActionHistoryEvent.FINISHED_SUCCESS and event.action.type == 'carry':
+            with self.lock:
+                self.action_finished = True
+                self.action_success = True
+        elif event.type == ActionHistoryEvent.FINISHED_FAILURE and event.action.type == 'carry':
+            with self.lock:
+                self.action_finished = True
+                self.action_success = False
 
     def start_or_stop_episode(self, start=True):
         for node in ['scene_state_manager', 'action_server']:
@@ -356,7 +396,9 @@ class InteractionController(object):
 if __name__ == '__main__':
     rospy.init_node('human_comfort_experiment')
     new_subject = (sys.argv[1] == 'True')
-    expe = ComfortExperiment(new_subject)
+    recording = (sys.argv[2] == 'True')
+    autonomous = (sys.argv[3] == 'True')
+    expe = ComfortExperiment(new_subject, recording, autonomous)
     # start expe configuration
     expe.generate_experimental_conditions()
     # start model generation
@@ -364,12 +406,20 @@ if __name__ == '__main__':
     # optimize the reba pose of the user
     expe.generate_reba_pose()
     # start the optitrack calibration
-    expe.generate_calibration(type_calibr=sys.argv[2])
+    expe.generate_calibration(type_calibr=sys.argv[4])
     # ask the user for his desired pose
     # expe.record_desired_pose()
     # tell the user to start the launchfile to run the experiment
     rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
-    raw_input()
+    if autonomous:
+        rospy.sleep(5)
+        system('beep')
+        rospy.sleep(0.5)
+        system('beep')
+        rospy.sleep(0.5)
+        system('beep')
+    else:
+        raw_input()
     # create interaction controller
     ic = InteractionController()
     expe.controller = ic
@@ -378,6 +428,7 @@ if __name__ == '__main__':
     # run the experiment
     expe.run_experiment()
     # collect the results before to close
-    expe.collect_results()
-    # synchronize result folder
-    expe.sync_results()
+    if recording:
+        expe.collect_results()
+        # synchronize result folder
+        expe.sync_results()
