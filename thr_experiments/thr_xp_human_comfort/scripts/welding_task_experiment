@@ -132,14 +132,8 @@ class WeldingTask(object):
         with open(savefile + '.json', 'w') as outfile:
             json.dump(output_dict, outfile, sort_keys=True, indent=4)
 
-    def get_random_pose(self):
-        # x = uniform(0.25, 1.25)
-        # y = uniform(-1., 1.)
-        # z = uniform(-0.5, 1.)
-        # q = uniform(-1., 1., 4)
-        # q /= norm(q)
-        # pose = [[x, y, z], q.tolist()]
-        pose = [[0.5, 0.0, 0.2], [0.0, 0.0, 0.0, 1.0]]
+    def get_object_pose(self):
+        pose = [[0.5, 0.0, 0.3], [0.0, 0.0, 0.0, 1.0]]
         return pose
 
     def run(self, optimizer, method, nb_eval=10, nb_points=10, reset=True):
@@ -155,7 +149,7 @@ class WeldingTask(object):
             # set current run id
             run_id = str(id_simulation)
             # create random object pose
-            obj_pose = self.get_random_pose()
+            obj_pose = self.get_object_pose()
             # set parameter
             rospy.set_param('/object/pose', obj_pose)
             # loop trough all conditions
