@@ -49,7 +49,7 @@ class Server(object):
             "name": "bagger",
             "nb_learner": 25,
             "nb_process": 25,
-            "sample_ratio": 0.75,
+            "sample_ratio": 0.4,
             "only_one_action": True,
             "learner": {
                 "name": "gbpl",
