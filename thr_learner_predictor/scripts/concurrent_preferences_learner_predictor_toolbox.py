@@ -310,13 +310,15 @@ class Server(object):
 
             self.main_loop_rate.sleep()
 
-        resfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
-            "/thr/logs_name") + "/results.json"
+        resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
+        if not os.path.exists(resdir):
+            os.makedirs(resdir)
+
+        resfile = resdir + "results.json"
         with open(resfile, "w") as f:
             json.dump(self.results, f)
 
-        planfile = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param(
-            "/thr/logs_name") + "/plans.json"
+        planfile = resdir + "/plans.json"
         with open(planfile, "w") as f:
             json.dump(predicted_plan_list, f)
 
