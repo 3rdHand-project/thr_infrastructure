@@ -289,8 +289,19 @@ class Server(object):
 
         last_state_plan_computed = None
         predicted_plan_list = []
+
+        resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
+        if not os.path.exists(resdir):
+            os.makedirs(resdir)
+
+        logfile = resdir + "logs.json"
+
         while not rospy.is_shutdown():
             if self.last_state is not None and last_state_plan_computed != self.last_state:
+                with open(logfile, "w") as f:
+                    json.dump(self.last_state, f)
+
+
                 predicted_plan_list.append(([], rospy.Time.now().to_sec()))
                 last_state_plan_computed = self.last_state
                 w = world.World(last_state_plan_computed, self.domain)
@@ -310,7 +321,6 @@ class Server(object):
 
             self.main_loop_rate.sleep()
 
-        resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
         if not os.path.exists(resdir):
             os.makedirs(resdir)
 
