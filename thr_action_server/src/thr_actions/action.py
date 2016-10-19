@@ -13,6 +13,7 @@ class Action(object):
         self.action_params = action_params
         self.poses = poses
         self.seeds = seeds
+        self.starting_state = self.commander.get_current_state()  # Here bcz might be used by other actions than GO-HOMEs
 
     def pause_test(self):
         return get_param('/thr/paused')

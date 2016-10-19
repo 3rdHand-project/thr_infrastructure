@@ -27,6 +27,8 @@ class Hold(Action):
         object = parameters[0]
         pose = int(parameters[1])
 
+        init_joints = self.commander.get_current_state()
+
         cart_dist = float('inf')
         angular_dist = float('inf')
         while cart_dist > self.action_params['hold']['approach_cartesian_dist'] or angular_dist>self.action_params['hold']['approach_angular_dist']:
@@ -100,9 +102,8 @@ class Hold(Action):
 
         # 6. Release object
         rospy.loginfo("Human has stopped working with {}, now releasing".format(object))
-        if not self._should_interrupt():
-            rospy.loginfo("Releasing {}".format(object))
-            self.commander.open()
+        rospy.loginfo("Releasing {}".format(object))
+        self.commander.open()
 
         # 7. Go to approach pose again (to avoid touching the fingers)
         if self._should_interrupt():
@@ -110,8 +111,11 @@ class Hold(Action):
 
         rospy.loginfo("Leaving {}".format(object))
         rising = list(-array(descent))
-        if not self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test, stop_test=self.stop_test):
-            return False
+        try:
+            self.commander.translate_to_cartesian(rising, object, 1., pause_test=self.pause_test, stop_test=self.stop_test)
+        except RuntimeError:
+            rospy.logwarn("Unable to generate hold rising, trying interpolation")
+            self.commander.move_to_controlled(init_joints)
 
         rospy.loginfo("[ActionServer] Executed hold{} with success".format(str(parameters)))
         return True

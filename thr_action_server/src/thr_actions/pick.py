@@ -14,8 +14,6 @@ class Pick(Action):
         rospy.loginfo("[ActionServer] Executing pick{}".format(str(parameters)))
         object = parameters[0]
 
-        init_joints = self.commander.get_current_state()
-
         # 1. Go to approach pose
         try:
             world_approach_pose = self._object_grasp_pose_to_world(self.poses[object]["pick"][0]['approach'], object)
@@ -75,9 +73,8 @@ class Pick(Action):
         try:
             self.commander.translate_to_cartesian(self.poses[object]["pick"][0]['rise'], self.world, 1., pause_test=self.pause_test, stop_test=self.stop_test)
         except RuntimeError:
-            rospy.logerr("Unable to generate picking rising")
-            self.commander.open()
-            self.commander.move_to_controlled(init_joints)
+            rospy.logwarn("Unable to generate picking rising, trying interpolation")
+            self.commander.move_to_controlled(self.starting_state)
             return False
 
         rospy.loginfo("[ActionServer] Executed pick{} with {}".format(str(parameters), "success" if self.commander.gripping() else "failure"))
