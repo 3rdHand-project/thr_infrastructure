@@ -2,9 +2,15 @@
     "sleep_step": 0.1,
     "short_sleep_step": 0.01,
     "give": {
-        "sphere_radius": 0.33,
+        "release_radius": 0.3,
+        "threshold_radius": 0.3,
+        "give_radius": 0.5,
         "releasing_disturbance": 0.025,
-        "inter_goal_sleep": 0.4
+        "inter_goal_sleep": 0.4,
+        "default": {
+            "joints": {"position": [-0.3831117017743821, -0.585980660972228, -0.9644904203829539, 1.3851846514605286, 0.3984515096532362, 0.851742832473376, -1.7602429540985123], "name": ["left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"]},
+            "eef": [[0.730, -0.020, 0.136], [-0.592, 0.768, -0.204, -0.134]]
+        }
     },
     "bring": {
         "sphere_radius": 0.3,
