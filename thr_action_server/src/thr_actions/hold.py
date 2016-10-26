@@ -83,7 +83,7 @@ class Hold(Action):
             return False
 
         rospy.loginfo("Forcing down on {}".format(object))
-        force_vector = self.poses[object]["hold"][pose]['force'] * array(descent)
+        force_vector = self.poses[object]["hold"][pose]['force'] * array(descent)/np.linalg.norm(descent)
         if not self.commander.translate_to_cartesian(force_vector, object, 1, pause_test=self.pause_test, stop_test=self.stop_test):
             return False
 
