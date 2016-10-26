@@ -9,6 +9,7 @@ import transformations
 from thr_actions import Give, GoHome, Hold, Pick, Grasp, Bring, Place
 from baxter_commander import ArmCommander
 from thr_infrastructure_msgs.msg import RunRobotActionAction, RunRobotActionActionResult
+from time import time
 
 class RobotActionServer:
     """
@@ -44,6 +45,14 @@ class RobotActionServer:
         self.starting_state = self.commander.get_current_state()
         self.tfl.waitForTransform(self.world, self.gripper_name, rospy.Time(0), rospy.Duration(10))
         self.starting_pose = transformations.list_to_pose(self.tfl.lookupTransform(self.world, self.gripper_name, rospy.Time(0)))
+
+        # Checking that the workstation has an acceptable time offset with the robot
+        robot_current_time = self.tfl.getLatestCommonTime('base', self.gripper_name).to_sec()
+        local_current_time = time()
+        diff = int(abs(local_current_time - robot_current_time)*1000)
+        if diff > 250:
+            raise ValueError("Your workstation's time has an offset of {} ms with the robot,"
+                             "please synchronize them to prevent using outdated transforms (sudo ntpdate)".format(diff))
 
         # Action server attributes
         rospy.loginfo("Starting server "+side)
