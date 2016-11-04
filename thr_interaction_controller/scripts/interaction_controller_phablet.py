@@ -37,7 +37,7 @@ def relational_action_to_Decision(action):
 
 
 def to_uf(string):
-    return string.replace("start_", "").replace("/toolbox/", "").replace("0", "left").replace("1", "right")
+    return string.replace("start_", "").replace("/toolbox/", "").replace("0", "triangle").replace("1", "square").replace("handle", "yellow").replace("side_right", "red").replace("side_left", "green").replace("side_front", "blue").replace("side_back", "black")
 
 class HeadSignal():
     def __init__(self):
