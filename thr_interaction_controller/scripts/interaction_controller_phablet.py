@@ -486,7 +486,10 @@ class InteractionController(object):
             return True
 
         if self.waiting:
-            if self.current_scene.predicates == self.last_scene.predicates:
+            if self.current_scene.predicates == self.last_scene.predicates and (
+                len(self.feedback_question_list) > 0 or self.confirm_question is not None or
+                    self.info_question is not None):
+
                 return True
             else:
                 self.waiting = False
