@@ -320,7 +320,7 @@ class Server(object):
 
         res_file = resdir + "results.json"
         with open(res_file, "w") as f:
-            json.dump(self.results, f)
+            json.dump({"type": "preferences", "results": self.results}, f)
 
         # planfile = resdir + "/plans.json"
         # with open(planfile, "w") as f:

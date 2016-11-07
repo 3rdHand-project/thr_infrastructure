@@ -365,9 +365,10 @@ class InteractionController(object):
             rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
                 command=StartStopEpisodeRequest.START if start else
                 StartStopEpisodeRequest.STOP))
-            self.logs.append({"start" if start else "stop": rospy.Time.now().to_sec()})
-            logs_name = rospy.get_param('/thr/logs_name')
-            self.record(logs_name, start)
+        logs_name = rospy.get_param('/thr/logs_name')
+        self.record(logs_name, start)
+        self.logs.append({"type": "start" if start else "stop", "stamp": rospy.Time.now().to_sec()})
+
 
     def record(self, name, start):
         request = RecordingCommandRequest(allow_overwriting=True, start=start)
@@ -402,6 +403,7 @@ class InteractionController(object):
         goal = RunDecisionGoal()
         goal.decision = decision
         self.run_decision_client.send_goal(goal)
+        self.logs.append({"type": goal.decision.type, "parameters": goal.decision.parameters, "stamp": rospy.Time.now().to_sec()})
         while self.run_decision_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and not rospy.is_shutdown():
             self.interaction_loop_rate.sleep()
         self.current_decision = decision
@@ -637,10 +639,11 @@ class InteractionController(object):
 
                     self.interaction_loop_rate.sleep()
         finally:
-            resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
-            if not os.path.exists(resdir):
-                os.makedirs(resdir)
+            logs_name = rospy.get_param("/thr/logs_name", "none")
             if logs_name != "none":
+                resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + logs_name + "/"
+                if not os.path.exists(resdir):
+                    os.makedirs(resdir)
                 with open(resdir + 'action_decisions.json', 'w') as f:
                     json.dump(self.logs, f)
 

@@ -312,7 +312,7 @@ class Server(object):
 
         resfile = resdir + "results.json"
         with open(resfile, "w") as f:
-            json.dump(self.results, f)
+            json.dump({"type": "teleoperated", "results": self.results}, f)
 
         planfile = resdir + "/plans.json"
         with open(planfile, "w") as f:

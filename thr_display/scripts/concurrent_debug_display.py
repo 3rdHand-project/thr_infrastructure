@@ -43,6 +43,12 @@ class ConcurrentDebugDisplay(object):
             self.old_state = self.state
             self.state = scene
 
+    @staticmethod
+    def to_uf(string):
+        return string.replace("start_", "").replace("/toolbox/", "").replace(" 0", " triangle").\
+            replace(" 1", " square").replace("handle", "yellow").replace("side_right", "red").\
+            replace("side_left", "green").replace("side_front", "blue").replace("side_back", "black")
+
     def display_image(self):
         img = zeros((self.height, self.width, 3), uint8)
         preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "at_home": [], "activity": []}
@@ -70,14 +76,14 @@ class ConcurrentDebugDisplay(object):
             cv2.putText(img, '#'+i_pred.upper()+' ['+str(len(pred))+']', (10, 20*line), self.face, 0.55, [255]*3)
             line+=1
             for i, p in enumerate(pred):
-                cv2.putText(img, str(p.parameters), (50, 20*line), self.face, 0.5, [180]*3)
+                cv2.putText(img, str(map(self.to_uf, p.parameters)), (50, 20*line), self.face, 0.5, [180]*3)
                 line += 1
 
         # Column 2: activities
         cv2.putText(img, '# ACTIVITIES ['+str(len(preds['activity']))+']', (self.width/2, 20), self.face, 0.55, [255]*3)
         line = 2
         for i, p in enumerate(preds['activity']):
-            cv2.putText(img, p.type+str(p.parameters), (self.width/2, 20*line), self.face, 0.5, [180]*3)
+            cv2.putText(img, p.type+str(map(self.to_uf, p.parameters)), (self.width/2, 20*line), self.face, 0.5, [180]*3)
             line += 1
 
         cv2.putText(img, '# PREDICTED PLAN ['+str(len(self.predicted_plan.decisions))+']', (self.width/2, self.height/5), self.face, 0.55, [255]*3)
@@ -85,7 +91,7 @@ class ConcurrentDebugDisplay(object):
         for i, decision in enumerate(self.predicted_plan.decisions):
             # if decision.type != 'wait':
             confidence = self.predicted_plan.confidences[i]
-            cv2.putText(img, decision.type + str(decision.parameters), (self.width/2, self.height/5 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
+            cv2.putText(img, decision.type + str(map(self.to_uf, decision.parameters)), (self.width/2, self.height/5 + 20*line), self.face, 0.5, self.confidence_to_bgr(confidence))
             line += 1
 
         #cv2.imshow("Predicates", img)
