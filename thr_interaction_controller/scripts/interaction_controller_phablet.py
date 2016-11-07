@@ -10,6 +10,7 @@ from threading import Lock
 
 import web_asker
 
+from recorder.srv import RecordingCommand, RecordingCommandRequest
 from thr_infrastructure_msgs.msg import *
 from thr_infrastructure_msgs.srv import *
 from actionlib_msgs.msg import *
@@ -249,6 +250,7 @@ class InteractionController(object):
         self.last_scene = None
 
         self.logs = []
+        self.assembly_id = 0
         self.head = HeadSignal()
 
         # Parameters to be tweaked
@@ -258,12 +260,13 @@ class InteractionController(object):
         self.scene_state_service = '/thr/scene_state'
         self.run_decision_name = '/thr/run_decision'
         self.action_history_name = '/thr/action_history'
+        self.recording_name = '/recorder/triggering'
 
         # Initiating topics ands links to services/actions
         self.run_decision_client = actionlib.SimpleActionClient(self.run_decision_name, RunDecisionAction)
         rospy.loginfo("Waiting action client {}...".format(self.run_decision_name))
         self.run_decision_client.wait_for_server()
-        for service in [self.reward_service, self.predictor_service, self.scene_state_service]:
+        for service in [self.reward_service, self.predictor_service, self.scene_state_service, self.recording_name]:
             rospy.loginfo("Waiting service {}...".format(service))
             rospy.wait_for_service(service)
 
@@ -354,13 +357,27 @@ class InteractionController(object):
             return GetNextDecisionResponse(decisions=[decision], probas=[1.])
 
     def start_or_stop_episode(self, start=True):
-        self.head.reset_signal()
+        if start:
+            self.assembly_id += 1
         for node in ['scene_state_manager', 'scene_state_updater', 'action_server', 'learner_predictor']:
             url = '/thr/{}/start_stop'.format(node)
             rospy.wait_for_service(url)
             rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
                 command=StartStopEpisodeRequest.START if start else
                 StartStopEpisodeRequest.STOP))
+            self.logs.append({"start" if start else "stop": rospy.Time.now().to_sec()})
+            logs_name = rospy.get_param('/thr/logs_name')
+            self.record(logs_name, start)
+
+    def record(self, name, start):
+        request = RecordingCommandRequest(allow_overwriting=True, start=start)
+        request.files_hierarchy.append(name)
+        request.files_hierarchy.append(str(self.assembly_id))
+        try:
+            record = rospy.ServiceProxy(self.recording_name, RecordingCommand)
+            return record(request)
+        except rospy.ServiceException as e:
+            rospy.logerr("Cannot call recorder:".format(e.message))
 
     ###################################################################################################################
 
@@ -617,9 +634,11 @@ class InteractionController(object):
 
                     self.interaction_loop_rate.sleep()
         finally:
-            logs_name = rospy.get_param('/thr/logs_name')
+            resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
+            if not os.path.exists(resdir):
+                os.makedirs(resdir)
             if logs_name != "none":
-                with open('action_decisions_'+logs_name+'.json', 'w') as f:
+                with open(resdir + 'action_decisions.json', 'w') as f:
                     json.dump(self.logs, f)
 
 if __name__ == '__main__':

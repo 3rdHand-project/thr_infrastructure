@@ -6,7 +6,7 @@ import os
 import json
 import numpy as np
 
-from threading import Lock
+from threading import RLock
 
 from RBLT.domains import domain_dict
 from RBLT.learning import bagger
@@ -26,7 +26,8 @@ class Server(object):
         self.rospack = rospkg.RosPack()
         self.main_loop_rate = rospy.Rate(20)
 
-        self.lock = Lock()
+        self.lock = RLock()
+        self.cpp_lock = RLock()
 
         self.tmp_dir_name = "/tmp/"
         self.i_tree = 0
@@ -95,6 +96,66 @@ class Server(object):
 
         self.i_tree += 1
         rospy.loginfo("Learning done")
+
+    def learner_handler(self, new_training_ex):
+        """
+        This handler is called when a request of learning is received, it must return an empty message
+        :param snter: an object of type SetNewTrainingExampleRequest
+        :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
+        """
+        with self.cpp_lock:
+
+            rospy.loginfo("I'm learning that decision {}{} was good".format(new_training_ex.decision.type,
+                                                                            str(new_training_ex.decision.parameters)))
+
+            state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
+            correct_decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.decision))
+            predicted_decision = self.domain.action_to_int(
+                self.Decision_to_relational_action(new_training_ex.predicted_decision))
+
+            if correct_decision not in self.domain.get_actions(state):
+                return SetNewTrainingExampleResponse()
+
+            if (state, correct_decision, None) in self.dataset:
+                memory = True
+            else:
+                memory = False
+                self.dataset.append((state, correct_decision, None))
+
+            if len(self.domain.filter_robot_actions([predicted_decision])) > 0:
+                if predicted_decision == correct_decision:
+                    feedback = "validation"
+                else:
+                    if new_training_ex.prediction_confidence > self.threshold_ask:
+                        feedback = "modification"
+                    else:
+                        feedback = "correction"
+            else:
+                if predicted_decision == correct_decision:
+                    feedback = "validation"
+                else:
+                    feedback = "modification"
+
+            is_predicted_robot = bool(len(self.domain.filter_robot_actions([predicted_decision])) > 0)
+            is_correct_robot = bool(len(self.domain.filter_robot_actions([correct_decision])) > 0)
+
+            self.results.append((self.i_episode,
+                                 new_training_ex.prediction_confidence,
+                                 1,
+                                 len(self.domain.get_actions(state)),
+                                 bool(new_training_ex.corrected),
+                                 feedback,
+                                 is_predicted_robot,
+                                 is_correct_robot,
+                                 is_predicted_robot and (not feedback == "modification" or is_correct_robot),
+                                 len(self.dataset),
+                                 0.,
+                                 bool(new_training_ex.prediction_confidence > self.threshold_ask),
+                                 bool(feedback != "correction"),
+                                 0.,
+                                 memory))
+
+            return SetNewTrainingExampleResponse()
 
     def relational_action_to_Decision(self, action):
         if isinstance(action, tuple):
@@ -182,113 +243,46 @@ class Server(object):
         :param get_next_action_req: an object of type GetNextDecisionRequest (scene state)
         :return: an object of type GetNextDecisionResponse
         """
+        with self.cpp_lock:
+            state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
+            self.domain.print_state(state)
+            self.last_state = state
 
-        state = self.domain.state_to_int(self.scene_state_to_state(get_next_action_req.scene_state))
-        self.domain.print_state(state)
-        self.last_state = state
+            best_action, error = self.predict(state)
+            decision = self.relational_action_to_Decision(best_action)
 
-        best_action, error = self.predict(state)
-        decision = self.relational_action_to_Decision(best_action)
-
-        resp = GetNextDecisionResponse()
-        if error > self.threshold_ask:
-            resp.mode = resp.CONFIRM
-        else:
-            resp.mode = resp.SURE
-        resp.confidence = error
-
-        resp.probas = []
-
-        print decision
-
-        action_list = self.domain.get_actions(state)
-        for candidate_action in action_list:
-            resp.decisions.append(self.relational_action_to_Decision(
-                self.domain.int_to_action(candidate_action)))
-
-            if decision.type == resp.decisions[-1].type and decision.parameters == resp.decisions[-1].parameters:
-                resp.probas.append(1.)
+            resp = GetNextDecisionResponse()
+            if error > self.threshold_ask:
+                resp.mode = resp.CONFIRM
             else:
-                resp.probas.append(0.)
+                resp.mode = resp.SURE
+            resp.confidence = error
 
-        if np.sum(resp.probas) == 0:
-            resp.decisions.append(decision)
-            resp.probas.append(1.)
-            print "###################################################"
-            print decision
-            print "###################################################"
+            resp.probas = []
 
-        return resp
+            action_list = self.domain.get_actions(state)
+            for candidate_action in action_list:
+                resp.decisions.append(self.relational_action_to_Decision(
+                    self.domain.int_to_action(candidate_action)))
 
-    def learner_handler(self, new_training_ex):
-        """
-        This handler is called when a request of learning is received, it must return an empty message
-        :param snter: an object of type SetNewTrainingExampleRequest
-        :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
-        """
-        rospy.loginfo("I'm learning that decision {}{} was good".format(new_training_ex.decision.type,
-                                                                        str(new_training_ex.decision.parameters)))
-
-        state = self.domain.state_to_int(self.scene_state_to_state(new_training_ex.scene_state))
-        correct_decision = self.domain.action_to_int(self.Decision_to_relational_action(new_training_ex.decision))
-        predicted_decision = self.domain.action_to_int(
-            self.Decision_to_relational_action(new_training_ex.predicted_decision))
-
-        if correct_decision not in self.domain.get_actions(state):
-            print "###################################################"
-            print self.domain.int_to_action(correct_decision)
-            print self.domain.int_to_state(state)
-            print "###################################################"
-            return SetNewTrainingExampleResponse()
-
-        if (state, correct_decision, None) in self.dataset:
-            memory = True
-        else:
-            memory = False
-            self.dataset.append((state, correct_decision, None))
-
-        if len(self.domain.filter_robot_actions([predicted_decision])) > 0:
-            if predicted_decision == correct_decision:
-                feedback = "validation"
-            else:
-                if new_training_ex.prediction_confidence > self.threshold_ask:
-                    feedback = "modification"
+                if decision.type == resp.decisions[-1].type and decision.parameters == resp.decisions[-1].parameters:
+                    resp.probas.append(1.)
                 else:
-                    feedback = "correction"
-        else:
-            if predicted_decision == correct_decision:
-                feedback = "validation"
-            else:
-                feedback = "modification"
+                    resp.probas.append(0.)
 
-        is_predicted_robot = bool(len(self.domain.filter_robot_actions([predicted_decision])) > 0)
-        is_correct_robot = bool(len(self.domain.filter_robot_actions([correct_decision])) > 0)
+            if np.sum(resp.probas) == 0:
+                resp.decisions.append(decision)
+                resp.probas.append(1.)
 
-        self.results.append((self.i_episode,
-                             new_training_ex.prediction_confidence,
-                             1,
-                             len(self.domain.get_actions(state)),
-                             bool(new_training_ex.corrected),
-                             feedback,
-                             is_predicted_robot,
-                             is_correct_robot,
-                             is_predicted_robot and (not feedback == "modification" or is_correct_robot),
-                             len(self.dataset),
-                             0.,
-                             bool(new_training_ex.prediction_confidence > self.threshold_ask),
-                             bool(feedback != "correction"),
-                             0.,
-                             memory))
-
-        return SetNewTrainingExampleResponse()
+            return resp
 
     def run(self):
         rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
 
-        last_state_plan_computed = None
-        predicted_plan_list = []
+        #last_state_plan_computed = None
+        #predicted_plan_list = []
 
         resdir = self.rospack.get_path("thr_learner_predictor") + "/config/" + rospy.get_param("/thr/logs_name") + "/"
         if not os.path.exists(resdir):
@@ -297,40 +291,40 @@ class Server(object):
         logfile = resdir + "logs.json"
 
         while not rospy.is_shutdown():
-            if self.last_state is not None and last_state_plan_computed != self.last_state:
-                with open(logfile, "w") as f:
-                    json.dump(self.last_state, f)
-
-
-                predicted_plan_list.append(([], rospy.Time.now().to_sec()))
-                last_state_plan_computed = self.last_state
-                w = world.World(last_state_plan_computed, self.domain)
-
-                predicted_plan = PredictedPlan()
-
-                for _ in range(20):
-                    best_decision, error = self.predict(w.state)
-
-                    predicted_plan_list[-1][0].append((best_decision, error))
-
-                    predicted_plan.decisions.append(self.relational_action_to_Decision(best_decision))
-                    predicted_plan.confidences.append(error)
-
-                    w.apply_action(self.domain.action_to_int(best_decision))
-                self.predicted_plan_publisher.publish(predicted_plan)
+            #if self.last_state is not None and last_state_plan_computed != self.last_state:
+            #    print('start predict plan')
+            #    with open(logfile, "w") as f:
+            #        json.dump(self.last_state, f)
+            #
+            #
+            #     predicted_plan_list.append(([], rospy.Time.now().to_sec()))
+            #     last_state_plan_computed = self.last_state
+            #     with self.cpp_lock:
+            #         w = world.World(last_state_plan_computed, self.domain)
+            #
+            #         predicted_plan = PredictedPlan()
+            #
+            #         for _ in range(20):
+            #             best_decision, error = self.predict(w.state)
+            #
+            #             predicted_plan_list[-1][0].append((best_decision, error))
+            #
+            #             predicted_plan.decisions.append(self.relational_action_to_Decision(best_decision))
+            #             predicted_plan.confidences.append(error)
+            #
+            #             w.apply_action(self.domain.action_to_int(best_decision))
+            #     self.predicted_plan_publisher.publish(predicted_plan)
+            #     print('end predict plan')
 
             self.main_loop_rate.sleep()
 
-        if not os.path.exists(resdir):
-            os.makedirs(resdir)
-
-        resfile = resdir + "results.json"
-        with open(resfile, "w") as f:
+        res_file = resdir + "results.json"
+        with open(res_file, "w") as f:
             json.dump(self.results, f)
 
-        planfile = resdir + "/plans.json"
-        with open(planfile, "w") as f:
-            json.dump(predicted_plan_list, f)
+        # planfile = resdir + "/plans.json"
+        # with open(planfile, "w") as f:
+        #     json.dump(predicted_plan_list, f)
 
 if __name__ == "__main__":
     rospy.init_node('learner_and_predictor')
