@@ -28,28 +28,31 @@ class Give(Action):
                 break
 
             can_release = False
+            distance_wrist_gripper = float('inf')
+            world_T_wrist = None
             try:
                 distance_wrist_gripper = transformations.norm(self.tfl.lookupTransform(self.gripper_name, "/human/wrist", rospy.Time(0)))
                 world_T_wrist = self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0))
             except:
-                rospy.logwarn("Human wrist not found")
-                rospy.sleep(self.action_params['sleep_step'])
-                continue
+                pass
 
             # The function below returns True if human as moved enough so that we need to replan the trajectory
             def needs_update():
-                p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
-                if self.init_p_wrist is None:
-                    self.init_p_wrist = p_wrist
-                distance = transformations.distance(self.init_p_wrist, p_wrist)
-                requires_update = distance > self.action_params['give']['threshold_radius']
-                if requires_update:
-                    self.init_p_wrist = p_wrist
-                return requires_update
+                if not self.tfl.frameExists("/human/wrist"):
+                    return False
+                else:
+                    p_wrist = transformations.list_to_pose(self.tfl.lookupTransform(self.world, "/human/wrist", rospy.Time(0)))
+                    if self.init_p_wrist is None:
+                        self.init_p_wrist = p_wrist
+                    distance = transformations.distance(self.init_p_wrist, p_wrist)
+                    requires_update = distance > self.action_params['give']['threshold_radius']
+                    if requires_update:
+                        self.init_p_wrist = p_wrist
+                    return requires_update
 
             if distance_wrist_gripper < self.action_params['give']['release_radius']:
                 can_release = True
-            elif transformations.distance(world_T_wrist, self.action_params['give']['default']['eef']) < self.action_params['give']['give_radius']:
+            elif world_T_wrist is not None and transformations.distance(world_T_wrist, self.action_params['give']['default']['eef']) < self.action_params['give']['give_radius']:
                 # Give to the wrist
                 obj_gripper = [self.poses[object]['pick'][0]['contact'], self.poses[object]['pick'][0]['approach'][1]]  # TODO: ugly
                 wrist_gripper = transformations.multiply_transform(self.poses[object]['give']["/human/wrist"], obj_gripper)
@@ -62,8 +65,8 @@ class Give(Action):
                     continue
             else:
                 # Give to default arm pose
-                world_give_pose = self.action_params['give']['default']['eef']
                 self.commander.move_to_controlled(self.default_give_pose, stop_test=lambda: needs_update() or self.stop_test(), pause_test=self.pause_test)
+                can_release = True
 
             # 5. Wait for position disturbance of the gripper and open it to release object
             if can_release:
