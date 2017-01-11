@@ -377,10 +377,11 @@ class InteractionController(object):
         return decision
 
     def run_decision(self, decision):
-        os.system('beep')
         if decision.type == 'wait':
             self.waiting = True
             return
+        
+        os.system('beep')
         self.head.reset_signal()
         goal = RunDecisionGoal()
         goal.decision = decision
