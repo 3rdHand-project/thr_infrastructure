@@ -24,7 +24,6 @@
         "approach_cartesian_dist": 0.0125
     },
     "hold": {
-        "sphere_radius": 0.8,
         "approach_cartesian_dist": 0.01,
         "approach_angular_dist": 0.09 
     },

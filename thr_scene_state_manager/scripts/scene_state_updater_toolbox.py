@@ -24,8 +24,8 @@ class ToolBoxSceneStateUpdater(object):
         self.old_predicates = []
         self.attaching_stamps = {}
         self.attaching_started = []
-        self.attached = [] # Pairs of attached objects on the form o1_o2 with o1<o2
-        self.screwed = [] # Pairs of screwed objects (screwdriver 7 seconds => screwed ; screw + wrist > 0.6 m => attached)
+        self.attached = []  # Pairs of attached objects on the form o1_o2 with o1<o2
+        self.screwed = []   # Pairs of screwed objects (screwdriver 7 seconds => screwed + screw > 0.6 m => attached)
 
         self.scene = rospy.get_param('/thr/scene')
         self.screwdriver = '/tools/screwdriver'
@@ -104,7 +104,7 @@ class ToolBoxSceneStateUpdater(object):
             # WARNING: Do not ask the relative tf directly, it is outdated!
             tf_slave = self.tfl.lookupTransform(self.world, slave, rospy.Time(0))
             tf_master = self.tfl.lookupTransform(self.world, master, rospy.Time(0))
-        except Exception, e:
+        except Exception as e:
             pass
         else:
             relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
