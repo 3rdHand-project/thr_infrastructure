@@ -65,7 +65,7 @@ class Carry(Action):
         try:
             req = VrepIKRequest()
             req.use_viapoint = False
-            req.target = pose
+            req.target = transformations.list_to_pose(pose)
             return self.ik_srv(req).trajectory_to_handover
         except rospy.ServiceException, e:
             print "Service call failed: %s" % e
