@@ -21,6 +21,7 @@ from os.path import exists
 from shutil import copyfile
 from threading import Lock
 from os import system
+from shapeo_verification.msg import VerifyInsertionAction, VerifyInsertionGoal
 
 
 class ComfortExperiment(object):
@@ -211,18 +212,31 @@ class ComfortExperiment(object):
         decision = Decision(type='display', parameters=['Prepare', shape, 'for insertion'])
         self.controller.run_decision(decision)
 
+    def check_insertion(self, shape):
+        decision = Decision(type='display', parameters=['Insertion', 'is being', 'checked'])
+        self.controller.run_decision(decision)
+        verify_client = actionlib.SimpleActionClient('verify_insertion', VerifyInsertionAction)
+        verify_client.wait_for_server()
+        verify_goal = VerifyInsertionGoal()
+        verify_goal.shape = shape
+        verify_client.send_goal(verify_goal)
+        verify_client.wait_for_result()
+        inserted = verify_client.get_result().is_inserted
+        if inserted:
+            decision = Decision(type='display', parameters=['Insertion', 'correct', ''])
+            self.controller.run_decision(decision)
+        else:
+            decision = Decision(type='display', parameters=['Wrong', 'insertion', ''])
+            self.controller.run_decision(decision)
+        rospy.sleep(2)
+        return inserted
+
     def run_condition(self, condition, shape):
         rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
         # ensure that the robot is ready to receive new command
         self.controller.check_for_previous_decisions()
         # announce next part
         self.announce_next_part(shape)
-        if self.autonomous:
-            rospy.sleep(2)
-            system('beep')
-        else:
-            rospy.loginfo('Press enter to execute the action.')
-            raw_input()
         # create a decision
         dec_type = 'start_carry'
         parameters = ['/shapeo', condition, shape]
@@ -231,6 +245,12 @@ class ComfortExperiment(object):
         success = False
         # send decision
         while not success and not rospy.is_shutdown():
+            if self.autonomous:
+                rospy.sleep(1)
+                system('beep')
+            else:
+                rospy.loginfo('Press enter to execute the action.')
+                raw_input()
             with self.controller.lock:
                 self.controller.action_finished = False
                 self.controller.action_success = False
@@ -268,12 +288,22 @@ class ComfortExperiment(object):
             if self.recording:
                 self.recorder(RecordingCommandRequest(start=False))
             rospy.sleep(0.5)
+            # check the insertion
+            if success:
+                try:
+                    success = self.check_insertion(shape)
+                except:
+                    rospy.logerr('Problem with the insertion checking server')
+                    success = False
             # ensure that the robot is ready to receive new command
             self.controller.check_for_previous_decisions()
             # go home
-            rospy.sleep(2)
+            if self.autonomous:
+                rospy.sleep(4)
             rospy.loginfo('Action finished going home.')
             self.send_go_home()
+            if self.autonomous:
+                rospy.sleep(1)
 
     def run_experiment(self):
         if self.recording:
@@ -313,6 +343,8 @@ class ComfortExperiment(object):
             prev_shape = ''
             # increment index
             cond_index += 1
+            rospy.logwarn('Starting new condition. Please empty the shapeo and press enter to start.')
+            raw_input()
 
     def collect_results(self):
         def save_results(directory, files_list, folder=''):
@@ -404,6 +436,7 @@ class InteractionController(object):
                not rospy.is_shutdown()):
             self.rate.sleep()
 
+
 if __name__ == '__main__':
     rospy.init_node('human_comfort_experiment')
     new_subject = (sys.argv[1] == 'True')
@@ -423,15 +456,7 @@ if __name__ == '__main__':
     # expe.record_desired_pose()
     # tell the user to start the launchfile to run the experiment
     rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
-    if autonomous:
-        rospy.sleep(5)
-        system('beep')
-        rospy.sleep(0.5)
-        system('beep')
-        rospy.sleep(0.5)
-        system('beep')
-    else:
-        raw_input()
+    raw_input()
     # create interaction controller
     ic = InteractionController()
     expe.controller = ic

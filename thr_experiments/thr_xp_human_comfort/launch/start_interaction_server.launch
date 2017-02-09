@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="scene" default="shapeo"/>
-    <arg name="use_kinect" default="False"/>
-    <arg name="use_vrep" default="False"/>
-    <arg name="gui" default="False"/>
+    <arg name="use_kinect" default="false"/>
+    <arg name="use_vrep" default="false"/>
+    <arg name="gui" default="false"/>
     <arg name="right_home_pose" default="$(find thr_xp_human_comfort)/config/shapeo_home_pose.json" /> <!-- Path to the home pose file-->
 
     <param name="/vrep/use" type="bool" value="$(arg use_vrep)" />

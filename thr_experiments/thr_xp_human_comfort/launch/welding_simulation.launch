@@ -3,7 +3,7 @@
 	<arg name="number_of_evaluation" default="10"/>
 	<arg name="number_of_points" default="10"/>
 	<arg name="optimizer" default="evolution"/>
-    <arg name="method" default="neural_network"/>
+    <arg name="method" default="polynomial"/>
 	
 	<node name="welding_simulation" pkg="thr_xp_human_comfort" type="welding_task_experiment" output="screen" required="True" args="$(arg number_of_evaluation) $(arg number_of_points) $(arg optimizer) $(arg method)"/>
 </launch>
