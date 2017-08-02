@@ -24,6 +24,5 @@
     </include>
 
     <node pkg="thr_display" name="concurrent_$(arg display)_display" type="concurrent_$(arg display)_display.py" output="log"/>
-    <node pkg="thr_learner_predictor" name="concurrent_learner_predictor" type="concurrent_$(arg policy)_learner_predictor_$(arg scene).py" output="screen"/>
     <node pkg="thr_interaction_controller" name="interaction_controller" type="interaction_controller_$(arg interaction).py" output="screen"/>
 </launch>

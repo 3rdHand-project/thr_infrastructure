@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+<node pkg="geo_logic_planner" name="planner_proxy_srv" type="planner_proxy_srv" output="screen"/>
+<node pkg="thr_learner_predictor" name="geo_logic_learner_predictor" type="geo_logic_learner_predictor.py" output="screen"/>
+
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+</launch>

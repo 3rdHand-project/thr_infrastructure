@@ -69,10 +69,13 @@ class Server(object):
 
     def get_next_action(self):
         self.current_action_idx += 1
-        self.slide_pub.publish(ShowSlide(self.current_action_idx))
-        literals = self.planned_actions[self.current_action_idx].literals
-        self.current_action = literals[0][9:]
-        self.current_action_param = literals[2:]
+        if self.current_action_idx < len(self.planned_actions):
+            self.slide_pub.publish(ShowSlide(self.current_action_idx))
+            literals = self.planned_actions[self.current_action_idx].literals
+            self.current_action = literals[0][9:]
+            self.current_action_param = literals[2:]
+        else:
+            self.current_action = "finished"
 
     def predictor_handler(self, get_next_decision_req):
         """
@@ -145,7 +148,7 @@ class Server(object):
 
         elif self.current_action == "screwing":
             if self.check_attached_pred(pred_list, self.current_action_param[1],
-                                        self.current_action_param[0])
+                                        self.current_action_param[0]):
                 if not self.check_at_home_pred(pred_list, "right"):
                     decision.type = 'start_go_home_right'
                 else:
@@ -153,3 +156,80 @@ class Server(object):
                     decision.type = 'wait'
             else:
                 decision.type = 'wait'
+
+        elif self.current_action == "finished":
+            decision.type = 'wait'
+
+        else:
+            rospy.logerr("Action not defined")
+
+        decision_response = GetNextDecisionResponse()
+        decision_response.mode = decision_response.SURE
+
+        obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
+
+        decision_response.probas = []
+
+        decision_response.decisions.append(Decision(type="wait", parameters=[]))
+        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+            decision_response.probas.append(1.)
+        else:
+            decision_response.probas.append(0.)
+
+        decision_response.decisions.append(Decision(type="start_go_home_left", parameters=[]))
+        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+            decision_response.probas.append(1.)
+        else:
+            decision_response.probas.append(0.)
+
+        decision_response.decisions.append(Decision(type="start_go_home_right", parameters=[]))
+        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+            decision_response.probas.append(1.)
+        else:
+            decision_response.probas.append(0.)
+
+        for obj in obj_list:
+            decision_response.decisions.append(Decision(type="start_give", parameters=[obj]))
+            if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+                decision_response.probas.append(1.)
+            else:
+                decision_response.probas.append(0.)
+
+        for obj in obj_list:
+            for pose in ["0", "1"]:
+                decision_response.decisions.append(Decision(type="start_hold", parameters=[obj, pose]))
+                if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+                    decision_response.probas.append(1.)
+                else:
+                    decision_response.probas.append(0.)
+
+        for obj in obj_list:
+            decision_response.decisions.append(Decision(type="start_pick", parameters=[obj]))
+            if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
+                decision_response.probas.append(1.)
+            else:
+                decision_response.probas.append(0.)
+
+        self.sequence += 1
+        return decision_response
+
+    def learner_handler(self, new_training_ex):
+        """
+        This handler is called when a request of learning is received, it must return an empty message
+        :param snter: an object of type SetNewTrainingExampleRequest
+        :return: an object of type SetNewTrainingExampleResponse (not to be filled, this message is empty)
+        """
+        return SetNewTrainingExampleResponse()
+
+    def run(self):
+        rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
+        rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
+        rospy.loginfo('[LearnerPredictor] server ready...')
+
+        print len(self.planned_actions)
+        rospy.spin()
+
+
+if __name__ == "__main__":
+    rospy.init_node('learner_and_predictor')
+    Server().run() # Blocking spinning call until shutdown!
