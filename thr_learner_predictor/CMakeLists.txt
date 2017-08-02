@@ -4,7 +4,7 @@ project(thr_learner_predictor)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED thr_scenes thr_infrastructure_msgs)
+find_package(catkin REQUIRED thr_scenes thr_infrastructure_msgs geo_logic_planner)
 
 ###################################
 ## catkin specific configuration ##

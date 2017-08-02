@@ -12,6 +12,8 @@
   <run_depend>thr_scenes</run_depend>
   <build_depend>thr_infrastructure_msgs</build_depend>
   <run_depend>thr_infrastructure_msgs</run_depend>
+  <build_depend>geo_logic_planner</build_depend>
+  <run_depend>geo_logic_planner</run_depend>
   <run_depend>message_runtime</run_depend>
   <buildtool_depend>catkin</buildtool_depend>
  
