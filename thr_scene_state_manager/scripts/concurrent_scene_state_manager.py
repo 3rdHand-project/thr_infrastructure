@@ -29,6 +29,7 @@ class ConcurrentSceneStateManager(object):
         # Stores some info about previously executed actions, useful to produce the predicates AT_HOME, BUSY, HELD, PICKED
         self.at_home = {'left': True, 'right': True}
         self.busy = {'left': False, 'right': False}
+        self.held = []
         self.picked = []
         self.activity = {'left': None, 'right': None}
 
@@ -65,6 +66,7 @@ class ConcurrentSceneStateManager(object):
                 self.at_home['right'] = True
                 self.busy['left'] = False
                 self.busy['right'] = False
+                self.held = []
                 self.running = True
 
         elif request.command == StartStopEpisodeRequest.STOP:
@@ -101,6 +103,10 @@ class ConcurrentSceneStateManager(object):
                         self.at_home['right'] = False
                     elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
                         self.at_home['left'] = False
+                    elif msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
+                        self.held = msg.action.parameters
+                    elif msg.type in [ActionHistoryEvent.FINISHED_SUCCESS, ActionHistoryEvent.FINISHED_FAILURE] and msg.action.type=='hold':
+                        self.held = []
 
                     # Listening action events for predicate BUSY
                     if self.abilities[msg.action.type]=='left':
@@ -130,6 +136,9 @@ class ConcurrentSceneStateManager(object):
 
     def pred_busy(self, side):
         return self.busy[side]
+
+    def pred_held(self, obj):
+        return obj in self.held
 
     def record_state(self):
         with self.state_lock:
@@ -169,6 +178,11 @@ class ConcurrentSceneStateManager(object):
                             p.type = 'picked'
                             p.parameters = [o]
                             self.state.predicates.append(p)
+                        elif self.pred_held(o):
+                            p = Predicate()
+                            p.type = 'held'
+                            p.parameters = [o]
+                            self.state.predicates.append(p)
                     with self.history_lock:
                         for side in ['left', 'right']:
                             if self.pred_busy(side):
@@ -187,6 +201,7 @@ class ConcurrentSceneStateManager(object):
                                 p.parameters = deepcopy(self.activity[side].parameters)
                                 p.parameters.append('eq2' if p.type=='hold' else 'eq1')
                                 self.state.predicates.append(p)
+
 
                 self.record_state()
             self.rate.sleep()
