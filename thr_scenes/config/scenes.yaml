@@ -4,6 +4,7 @@ toolbox:
   - /toolbox/side_back
   - /toolbox/side_left
   - /toolbox/side_right
+  - tableC
 romeo:
   - /romeo/pan
   - /romeo/hot_plate
