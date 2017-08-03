@@ -65,7 +65,7 @@ class Server(object):
 
     def check_is_holding(self, predicate_list, obj):
         return len([p for p in predicate_list if 
-            p.type == 'hold' and obj in p.parameters]) == 1
+            p.type == 'held' and obj in p.parameters]) == 1
 
     def get_current_action(self):
         if self.current_action_idx < len(self.planned_actions):
@@ -88,11 +88,6 @@ class Server(object):
         :return: an object of type GetNextDecisionResponse
         """
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
-        attachable_dict = {}
-        attachable_dict['/toolbox/handle'] = ['/toolbox/side_right', '/toolbox/side_left']
-        attachable_dict['/toolbox/side_right'] = ['/toolbox/side_front', '/toolbox/side_back']
-        attachable_dict['/toolbox/side_left'] = ['/toolbox/side_front', '/toolbox/side_back']
-
         pred_list = get_next_decision_req.scene_state.predicates
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
