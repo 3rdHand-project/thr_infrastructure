@@ -12,7 +12,6 @@ from geo_logic_planner.msg import ShowSlide
 
 class Server(object):
     def __init__(self):
-        self.sequence = 1  # ID of output actions
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
         self.start_stop_service_name = '/thr/learner_predictor/start_stop'
@@ -64,11 +63,11 @@ class Server(object):
         return len([p for p in predictate_list if
             p.type == 'busy' and arm in p.parameters]) == 1
 
-    def check_is_holding(self, predicate_list):
-        return len([p for p in predicate_list if p.type=="hold"])==1
+    def check_is_holding(self, predicate_list, obj):
+        return len([p for p in predicate_list if 
+            p.type == 'hold' and obj in p.parameters]) == 1
 
-    def get_next_action(self):
-        self.current_action_idx += 1
+    def get_current_action(self):
         if self.current_action_idx < len(self.planned_actions):
             self.slide_pub.publish(ShowSlide(self.current_action_idx))
             literals = self.planned_actions[self.current_action_idx].literals
@@ -76,6 +75,11 @@ class Server(object):
             self.current_action_param = literals[2:]
         else:
             self.current_action = "finished"
+            self.current_action_param = []
+
+    def get_next_action(self):
+        self.current_action_idx += 1
+        self.get_current_action()
 
     def predictor_handler(self, get_next_decision_req):
         """
@@ -83,8 +87,12 @@ class Server(object):
         :param get_next_decision_req: an object of type GetNextDecisionRequest (scene state)
         :return: an object of type GetNextDecisionResponse
         """
-        decision_response = GetNextDecisionResponse()
         obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
+        attachable_dict = {}
+        attachable_dict['/toolbox/handle'] = ['/toolbox/side_right', '/toolbox/side_left']
+        attachable_dict['/toolbox/side_right'] = ['/toolbox/side_front', '/toolbox/side_back']
+        attachable_dict['/toolbox/side_left'] = ['/toolbox/side_front', '/toolbox/side_back']
+
         pred_list = get_next_decision_req.scene_state.predicates
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
@@ -134,83 +142,40 @@ class Server(object):
 
         elif self.current_action == "holding":
             if not self.check_busy_pred(pred_list, "right"):
-                if self.check_positioned_pred(pred_list, self.current_action_param[1],
-                                              self.current_action_param[0],
-                                              self.current_action_param[2]):
-                    decision.parameters = [self.current_action_param[1], self.current_action_param[2]] 
-                    decision.type = 'start_hold'
-                    # this action do not terminate here so go to next action
-                    self.get_next_action()
-                else:
-                    decision.type = 'wait'
+                decision.parameters = [self.current_action_param[0], '0']
+                decision.type = 'start_hold'
+                # this action do not terminate here so go to next action
+                self.get_next_action()
             else:
                 decision.type = 'wait'
 
         elif self.current_action == "screwing":
             if self.check_attached_pred(pred_list, self.current_action_param[1],
                                         self.current_action_param[0]):
-                if not self.check_at_home_pred(pred_list, "right"):
-                    decision.type = 'start_go_home_right'
-                else:
-                    self.get_next_action()
-                    decision.type = 'wait'
+                self.get_next_action()
+                decision.type = 'wait'
+            elif not self.check_is_holding(pred_list, self.current_action_param[1]):
+                decision.parameters = [self.current_action_param[0], '0']
+                decision.type = 'start_hold'
             else:
                 decision.type = 'wait'
 
         elif self.current_action == "finished":
-            decision.type = 'wait'
+            if not self.check_at_home_pred(pred_list, "right"):
+                decision.type = 'start_go_home_right'
+            elif not self.check_at_home_pred(pred_list, "left"):
+                decision.type = 'start_go_home_left'
+            else:
+                decision.type = 'wait'
 
         else:
             rospy.logerr("Action not defined")
 
         decision_response = GetNextDecisionResponse()
         decision_response.mode = decision_response.SURE
+        decision_response.decisions.append(decision)
+        decision_response.probas.append(1)
 
-        obj_list = ['/toolbox/handle', '/toolbox/side_right', '/toolbox/side_left', '/toolbox/side_front', '/toolbox/side_back']
-
-        decision_response.probas = []
-
-        decision_response.decisions.append(Decision(type="wait", parameters=[]))
-        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-            decision_response.probas.append(1.)
-        else:
-            decision_response.probas.append(0.)
-
-        decision_response.decisions.append(Decision(type="start_go_home_left", parameters=[]))
-        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-            decision_response.probas.append(1.)
-        else:
-            decision_response.probas.append(0.)
-
-        decision_response.decisions.append(Decision(type="start_go_home_right", parameters=[]))
-        if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-            decision_response.probas.append(1.)
-        else:
-            decision_response.probas.append(0.)
-
-        for obj in obj_list:
-            decision_response.decisions.append(Decision(type="start_give", parameters=[obj]))
-            if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-                decision_response.probas.append(1.)
-            else:
-                decision_response.probas.append(0.)
-
-        for obj in obj_list:
-            for pose in ["0", "1"]:
-                decision_response.decisions.append(Decision(type="start_hold", parameters=[obj, pose]))
-                if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-                    decision_response.probas.append(1.)
-                else:
-                    decision_response.probas.append(0.)
-
-        for obj in obj_list:
-            decision_response.decisions.append(Decision(type="start_pick", parameters=[obj]))
-            if decision.type == decision_response.decisions[-1].type and decision.parameters == decision_response.decisions[-1].parameters:
-                decision_response.probas.append(1.)
-            else:
-                decision_response.probas.append(0.)
-
-        self.sequence += 1
         return decision_response
 
     def learner_handler(self, new_training_ex):
@@ -225,8 +190,6 @@ class Server(object):
         rospy.Service(self.predictor_name, GetNextDecision, self.predictor_handler)
         rospy.Service(self.learner_name, SetNewTrainingExample, self.learner_handler)
         rospy.loginfo('[LearnerPredictor] server ready...')
-
-        print len(self.planned_actions)
         rospy.spin()
 
 
