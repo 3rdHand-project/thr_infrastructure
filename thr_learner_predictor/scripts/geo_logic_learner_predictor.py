@@ -111,16 +111,16 @@ class Server(object):
             if not self.check_busy_pred(pred_list, "left"):
                 if self.check_picked_pred(pred_list, self.current_action_param[0]):
                     decision.parameters = self.current_action_param
-                    decision.type = 'start_place'
-                elif self.check_in_hws_pred(pred_list, self.current_action_param[0]):
-                    self.get_next_action()
-                    decision.type = 'wait'
-                else:
+                    decision.type = 'start_place_left'
+                elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
                     if not self.check_at_home_pred(pred_list, "left"):
                         decision.type = 'start_go_home_left'
                     else:
                         decision.parameters = [self.current_action_param[0]]
                         decision.type = 'start_pick'
+                else:
+                    self.get_next_action()
+                    decision.type = 'wait' 
             else:
                 decision.type = 'wait'
 
@@ -137,22 +137,24 @@ class Server(object):
 
         elif self.current_action == "holding":
             if not self.check_busy_pred(pred_list, "right"):
-                decision.parameters = [self.current_action_param[0], '0']
-                decision.type = 'start_hold'
-                # this action do not terminate here so go to next action
-                self.get_next_action()
+                if not self.check_is_holding(pred_list, self.current_action_param[0]):
+                    decision.parameters = [self.current_action_param[0], '0']
+                    decision.type = 'start_hold'
+                else:
+                    self.get_next_action()
+                    descision.type = 'wait'
             else:
                 decision.type = 'wait'
 
         elif self.current_action == "screwing":
-            if self.check_attached_pred(pred_list, self.current_action_param[1],
-                                        self.current_action_param[0]):
-                self.get_next_action()
-                decision.type = 'wait'
-            elif not self.check_is_holding(pred_list, self.current_action_param[1]):
-                decision.parameters = [self.current_action_param[0], '0']
+            if not self.check_is_holding(pred_list, self.current_action_param[1]):
+                decision.parameters = [self.current_action_param[1], '0']
                 decision.type = 'start_hold'
+            elif not self.check_attached_pred(pred_list, self.current_action_param[1],
+                                        self.current_action_param[0]):
+                decision.type = 'wait'
             else:
+                self.get_next_action()
                 decision.type = 'wait'
 
         elif self.current_action == "finished":
