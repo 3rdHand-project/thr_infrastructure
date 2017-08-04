@@ -106,7 +106,7 @@ class InteractionController(object):
     def run_decision(self, decision):
         if decision.type == 'wait':
             return
-        os.system('beep')
+        #os.system('beep')
         goal = RunDecisionGoal()
         goal.decision = decision
         self.run_decision_client.send_goal(goal)
