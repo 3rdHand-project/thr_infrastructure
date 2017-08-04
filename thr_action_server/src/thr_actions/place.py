@@ -48,7 +48,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test, stop_test=self.stop_test)
+                    success = self.commander.move_to_controlled(world_T_gripper, pause_test=self.pause_test, stop_test=self.stop_test)
                 except ValueError:
                     rospy.logwarn("Viapoint of location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
@@ -79,7 +79,7 @@ class Place(Action):
                     return False
 
                 try:
-                    success = self.commander.move_to_controlled(world_T_gripper, rpy=[1, 1, 0], pause_test=self.pause_test, stop_test=self.stop_test)
+                    success = self.commander.move_to_controlled(world_T_gripper, pause_test=self.pause_test, stop_test=self.stop_test)
                 except ValueError:
                     rospy.logwarn("Location {} found but not reachable, please move it a little bit...".format(location))
                     rospy.sleep(self.action_params['sleep_step'])
