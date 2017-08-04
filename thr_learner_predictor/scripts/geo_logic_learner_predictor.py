@@ -126,7 +126,13 @@ class Server(object):
 
         elif self.current_action == "handing":
             if not self.check_busy_pred(pred_list, "left"):
-                if self.check_picked_pred(pred_list, self.current_action_param[0]):
+                if not self.check_picked_pred(pred_list, self.current_action_param[0]):
+                    if not self.check_at_home_pred(pred_list, "left"):
+                        decision.type = 'start_go_home_left'
+                    else:
+                        decision.parameters = self.current_action_param
+                        decision.type = 'start_pick' 
+                elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
                     decision.parameters = self.current_action_param
                     decision.type = 'start_give'
                 else:
@@ -151,7 +157,7 @@ class Server(object):
                 decision.parameters = [self.current_action_param[1], '0']
                 decision.type = 'start_hold'
             elif not self.check_attached_pred(pred_list, self.current_action_param[1],
-                                        self.current_action_param[0]):
+                                              self.current_action_param[0]):
                 decision.type = 'wait'
             else:
                 self.get_next_action()
