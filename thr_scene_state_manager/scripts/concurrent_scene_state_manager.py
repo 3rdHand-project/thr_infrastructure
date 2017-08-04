@@ -99,14 +99,15 @@ class ConcurrentSceneStateManager(object):
                         self.at_home['left'] = True
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
                         self.at_home['right'] = True
-                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
-                        self.at_home['right'] = False
-                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
-                        self.at_home['left'] = False
                     elif msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
                         self.held = msg.action.parameters
                     elif msg.type in [ActionHistoryEvent.FINISHED_SUCCESS, ActionHistoryEvent.FINISHED_FAILURE] and msg.action.type=='hold':
                         self.held = []
+                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
+                        self.at_home['right'] = False
+                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
+                        self.at_home['left'] = False
+
 
                     # Listening action events for predicate BUSY
                     if self.abilities[msg.action.type]=='left':
@@ -168,6 +169,11 @@ class ConcurrentSceneStateManager(object):
                     self.state.predicates = [] + self.persistent_predicates
                     self.state.header.stamp = rospy.Time.now()
                     for o in self.objects:
+                        if self.pred_held(o):
+                            p = Predicate()
+                            p.type = 'held'
+                            p.parameters = [o]
+                            self.state.predicates.append(p)
                         if self.pred_in_human_ws(o):
                             p = Predicate()
                             p.type = 'in_human_ws'
@@ -176,11 +182,6 @@ class ConcurrentSceneStateManager(object):
                         elif self.pred_picked(o):
                             p = Predicate()
                             p.type = 'picked'
-                            p.parameters = [o]
-                            self.state.predicates.append(p)
-                        elif self.pred_held(o):
-                            p = Predicate()
-                            p.type = 'held'
                             p.parameters = [o]
                             self.state.predicates.append(p)
                     with self.history_lock:
