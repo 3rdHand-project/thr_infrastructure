@@ -45,7 +45,7 @@ class ConcurrentDebugDisplay(object):
 
     def display_image(self):
         img = zeros((self.height, self.width, 3), uint8)
-        preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "at_home": [], "activity": []}
+        preds = {"attached": [], "in_hws": [], "positioned": [], "busy": [], "picked": [], "held": [], "at_home": [], "activity": []}
         for p in self.state.predicates:
             if p.type=='in_human_ws':
                 preds["in_hws"].append(p)
@@ -55,6 +55,8 @@ class ConcurrentDebugDisplay(object):
                 preds["attached"].append(p)
             elif p.type=='picked':
                 preds["picked"].append(p)
+            elif p.type=='held':
+                preds["held"].append(p)
             elif p.type=='busy':
                 preds["busy"].append(p)
             elif p.type=='at_home':
