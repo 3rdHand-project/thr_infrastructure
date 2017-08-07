@@ -22,7 +22,7 @@ class Server(object):
         try:
             proxy_plan = rospy.ServiceProxy('/geo_logic_planner/proxy_plan', Plan)
             res = proxy_plan('no_reba', 'exp_baxter', True, 4, False)
-            self.planned_actions = res.logic_sequence
+            self.planned_actions = res.geo_logic_sequence
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
         self.slide_pub = rospy.Publisher('/geo_logic_planner/show_slide', ShowSlide, queue_size=10)
