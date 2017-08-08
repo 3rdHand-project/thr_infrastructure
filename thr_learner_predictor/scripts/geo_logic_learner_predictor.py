@@ -7,6 +7,8 @@ from thr_infrastructure_msgs.msg import Decision, Predicate
 
 from geo_logic_planner.srv import Plan
 from geo_logic_planner.msg import ShowSlide
+from baxter_commander.persistence import statetodict
+import json
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>" and complete the pre-filled request message before <ENTER>
 
@@ -73,6 +75,9 @@ class Server(object):
             literals = self.planned_actions[self.current_action_idx].literals
             self.current_action = literals[0][9:]
             self.current_action_param = literals[2:]
+            # add the agent pose as param
+            str_state = json.dumps(statetodict(self.planned_actions[self.current_action_idx].agents_states[0]))
+            self.current_action_param.append(str_state)
         else:
             self.current_action = "finished"
             self.current_action_param = []
@@ -107,34 +112,44 @@ class Server(object):
             else:
                 decision.type = 'wait'
 
+        # elif self.current_action == "placing":
+        #     if not self.check_busy_pred(pred_list, "left"):
+        #         if self.check_picked_pred(pred_list, self.current_action_param[0]):
+        #             decision.parameters = self.current_action_param
+        #             decision.type = 'start_place_left'
+        #         elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
+        #             if not self.check_at_home_pred(pred_list, "left"):
+        #                 decision.type = 'start_go_home_left'
+        #             else:
+        #                 decision.parameters = [self.current_action_param[0]]
+        #                 decision.type = 'start_pick'
+        #         else:
+        #             self.get_next_action()
+        #             decision.type = 'wait' 
+        #     else:
+        #         decision.type = 'wait'
+
         elif self.current_action == "placing":
+            if not self.check_busy_pred(pred_list, "left"):
+                if not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
+                    decision.type = 'wait'
+                else:
+                    self.get_next_action()
+                    decision.type = 'wait'
+            else:
+                decision.type = 'wait'
+
+        elif self.current_action == "handing":
             if not self.check_busy_pred(pred_list, "left"):
                 if self.check_picked_pred(pred_list, self.current_action_param[0]):
                     decision.parameters = self.current_action_param
-                    decision.type = 'start_place_left'
+                    decision.type = 'start_give'
                 elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
                     if not self.check_at_home_pred(pred_list, "left"):
                         decision.type = 'start_go_home_left'
                     else:
                         decision.parameters = [self.current_action_param[0]]
                         decision.type = 'start_pick'
-                else:
-                    self.get_next_action()
-                    decision.type = 'wait' 
-            else:
-                decision.type = 'wait'
-
-        elif self.current_action == "handing":
-            if not self.check_busy_pred(pred_list, "left"):
-                if not self.check_picked_pred(pred_list, self.current_action_param[0]):
-                    if not self.check_at_home_pred(pred_list, "left"):
-                        decision.type = 'start_go_home_left'
-                    else:
-                        decision.parameters = self.current_action_param
-                        decision.type = 'start_pick' 
-                elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
-                    decision.parameters = self.current_action_param
-                    decision.type = 'start_give'
                 else:
                     self.get_next_action()
                     decision.type = 'wait'
@@ -146,28 +161,33 @@ class Server(object):
                 if not self.check_is_holding(pred_list, self.current_action_param[0]):
                     decision.parameters = [self.current_action_param[0], '0']
                     decision.type = 'start_hold'
-                else:
                     self.get_next_action()
-                    descision.type = 'wait'
             else:
                 decision.type = 'wait'
 
         elif self.current_action == "screwing":
-            if not self.check_is_holding(pred_list, self.current_action_param[1]):
-                decision.parameters = [self.current_action_param[1], '0']
-                decision.type = 'start_hold'
-            elif not self.check_attached_pred(pred_list, self.current_action_param[1],
+            if not self.check_attached_pred(pred_list, self.current_action_param[1],
                                               self.current_action_param[0]):
-                decision.type = 'wait'
+                if not self.check_is_holding(pred_list, self.current_action_param[1]):
+                    decision.parameters = [self.current_action_param[1], '0']
+                    decision.type = 'start_hold'
+                else:
+                    decision.type = 'wait'
             else:
                 self.get_next_action()
                 decision.type = 'wait'
 
         elif self.current_action == "finished":
             if not self.check_at_home_pred(pred_list, "right"):
-                decision.type = 'start_go_home_right'
+                if not self.check_busy_pred(pred_list, "right"):
+                    decision.type = 'start_go_home_right'
+                else:
+                    decision.type = 'wait'
             elif not self.check_at_home_pred(pred_list, "left"):
-                decision.type = 'start_go_home_left'
+                if not self.check_busy_pred(pred_list, "left"):
+                    decision.type = 'start_go_home_left'
+                else:
+                    decision.type = 'wait'
             else:
                 decision.type = 'wait'
 
