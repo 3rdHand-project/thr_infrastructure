@@ -2,6 +2,7 @@ from . action import Action
 from baxter_commander.persistence import dicttostate
 import rospy
 import transformations
+import json
 
 
 class Give(Action):
@@ -16,18 +17,23 @@ class Give(Action):
         rospy.loginfo("[ActionServer] Executing give{}".format(str(parameters)))
         object = parameters[0]
 
+        if len(parameters) > 2:
+            give_pose = dicttostate(json.loads(parameters[2]))
+        else:
+            give_pose = self.default_give_pose    
+
         if not self.commander.gripping():
             rospy.logerr('Object {} is no longer gripped'.format(object))
             return False
 
-        rospy.loginfo("Giving {} to default give pose".format(object))
+        rospy.loginfo("Giving {}".format(object))
 
         def stop_test():
             return not self.commander.gripping() or self.stop_test()
 
         # Give to default arm pose
         if not self._should_interrupt():
-            self.commander.move_to_controlled(self.default_give_pose, stop_test=stop_test, pause_test=self.pause_test)
+            self.commander.move_to_controlled(give_pose, stop_test=stop_test, pause_test=self.pause_test)
 
         if not self.commander.gripping():
             rospy.logwarn("[ActionServer] Executed give{} failed: object dropped".format(str(parameters)))
