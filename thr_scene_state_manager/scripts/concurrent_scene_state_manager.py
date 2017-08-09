@@ -99,11 +99,13 @@ class ConcurrentSceneStateManager(object):
                         self.at_home['left'] = True
                     elif msg.type==ActionHistoryEvent.FINISHED_SUCCESS and msg.action.type=='go_home_right':
                         self.at_home['right'] = True
-                    elif msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
+                    
+                    if msg.type==ActionHistoryEvent.STARTING and msg.action.type=='hold':
                         self.held = msg.action.parameters
                     elif msg.type in [ActionHistoryEvent.FINISHED_SUCCESS, ActionHistoryEvent.FINISHED_FAILURE] and msg.action.type=='hold':
                         self.held = []
-                    elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
+                    
+                    if msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='right' and msg.action.type!='go_home_right':
                         self.at_home['right'] = False
                     elif msg.type==ActionHistoryEvent.STARTING and self.abilities[msg.action.type]=='left' and msg.action.type!='go_home_left':
                         self.at_home['left'] = False

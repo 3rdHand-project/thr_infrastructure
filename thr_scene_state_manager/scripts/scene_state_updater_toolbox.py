@@ -89,6 +89,20 @@ class ToolBoxSceneStateUpdater(object):
                 return cart_dist < self.config['attached']['tool_position_tolerance']
         return False
 
+    def pred_placed(self, obj):
+        try:
+            # WARNING: Do not ask the relative tf directly, it is outdated!
+            tf_slave = self.tfl.lookupTransform(self.world, obj, rospy.Time(0))
+            tf_master = self.tfl.lookupTransform(self.world, "tableC", rospy.Time(0))
+        except Exception as e:
+            pass
+        else:
+            relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
+            constraint = self.poses["tableC"]['placement'][0][obj]
+            cart_dist = abs(constraint[0][1] - relative[0][1])
+            is_placed = (cart_dist < .03 and relative[0][0] > 0 and relative[0][2] < 0)
+            return is_placed
+        return False
 
     def pred_positioned(self, master, slave, atp):
         """
@@ -211,6 +225,11 @@ class ToolBoxSceneStateUpdater(object):
                 current_predicates = []
                 # Update the scene state predicates
                 state = self.getscene(GetSceneStateRequest()).state
+                for obj in self.objects:
+                    if not obj in self.poses['tableC']['placement'][0]:
+                        continue
+                    if self.pred_placed(obj):
+                        current_predicates.append(Predicate(type='placed', parameters=[obj]))
                 for master, slave, atp in product(self.objects, self.objects, [0, 1]):
                     if not ('constraints' in self.poses[master] and len(
                             [c for c in self.poses[master]['constraints'] if slave in c]) > 0):

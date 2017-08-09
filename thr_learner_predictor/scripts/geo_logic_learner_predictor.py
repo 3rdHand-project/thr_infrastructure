@@ -23,7 +23,7 @@ class Server(object):
         # get plan from planner
         try:
             proxy_plan = rospy.ServiceProxy('/geo_logic_planner/proxy_plan', Plan)
-            res = proxy_plan('no_reba', 'exp_baxter', True, 4, False)
+            res = proxy_plan('reba', 'exp_baxter', True, 4, False)
             self.planned_actions = res.geo_logic_sequence
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
@@ -69,6 +69,10 @@ class Server(object):
         return len([p for p in predicate_list if 
             p.type == 'held' and obj in p.parameters]) == 1
 
+    def check_placed(self, predicate_list, obj):
+        return len([p for p in predicate_list if 
+            p.type == 'placed' and obj in p.parameters]) == 1
+
     def get_current_action(self):
         if self.current_action_idx < len(self.planned_actions):
             self.slide_pub.publish(ShowSlide(self.current_action_idx))
@@ -97,10 +101,11 @@ class Server(object):
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
         decision = Decision()
+        self.slide_pub.publish(ShowSlide(self.current_action_idx))
 
         if self.current_action == "grasping":
             if not self.check_busy_pred(pred_list, "left"):
-                if not self.check_picked_pred(pred_list, self.current_action_param[0]):
+                if not self.check_picked_pred(pred_list, self.current_action_param[0]) and not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
                     if not self.check_at_home_pred(pred_list, "left"):
                         decision.type = 'start_go_home_left'
                     else:
@@ -130,14 +135,14 @@ class Server(object):
         #         decision.type = 'wait'
 
         elif self.current_action == "placing":
-            if not self.check_busy_pred(pred_list, "left"):
+            if self.check_placed(pred_list, self.current_action_param[0]):
+                self.get_next_action()
+                decision.type = 'wait'
+            else:
                 if not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
                     decision.type = 'wait'
                 else:
-                    self.get_next_action()
                     decision.type = 'wait'
-            else:
-                decision.type = 'wait'
 
         elif self.current_action == "handing":
             if not self.check_busy_pred(pred_list, "left"):
@@ -158,7 +163,7 @@ class Server(object):
 
         elif self.current_action == "holding":
             if not self.check_busy_pred(pred_list, "right"):
-                if not self.check_is_holding(pred_list, self.current_action_param[0]):
+                if not self.check_is_holding(pred_list, self.current_action_param[0]) and self.check_placed(pred_list, self.current_action_param[0]):
                     decision.parameters = [self.current_action_param[0], '0']
                     decision.type = 'start_hold'
                     self.get_next_action()
