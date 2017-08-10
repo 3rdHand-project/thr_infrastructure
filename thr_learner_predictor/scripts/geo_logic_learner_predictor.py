@@ -9,6 +9,9 @@ from geo_logic_planner.srv import Plan
 from geo_logic_planner.msg import ShowSlide
 from baxter_commander.persistence import statetodict
 import json
+import sys
+import rospkg
+from os.path import join
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>" and complete the pre-filled request message before <ENTER>
 
@@ -17,26 +20,37 @@ class Server(object):
         self.learner_name = '/thr/learner'
         self.predictor_name = '/thr/predictor'
         self.start_stop_service_name = '/thr/learner_predictor/start_stop'
-        self.current_action_idx = -1
         rospy.Service(self.start_stop_service_name, StartStopEpisode, self.cb_start_stop)
         rospy.wait_for_service('/geo_logic_planner/proxy_plan')
-        # get plan from planner
+        self.slide_pub = rospy.Publisher('/geo_logic_planner/show_slide', ShowSlide, queue_size=10)
+        # initialize with the wait action 
+        self.current_action = 'wait'
+        self.current_action_idx = -1
+        rospack = rospkg.RosPack()
+        self.results_path = join(rospack.get_path('geo_logic_planner'), 'results')
+
+    def get_plan(self):
+        if rospy.has_param('/geo_logic_planner/exp_type'):
+            exp_type = rospy.get_param('/geo_logic_planner/exp_type')
+        else:
+            exp_type = 'no_reba'
         try:
             proxy_plan = rospy.ServiceProxy('/geo_logic_planner/proxy_plan', Plan)
-            res = proxy_plan('reba', 'exp_baxter', True, 4, False)
+            res = proxy_plan(exp_type, join(self.results_path, 'exp_baxter'), True, 0, False)
             self.planned_actions = res.geo_logic_sequence
         except rospy.ServiceException, e:
             print "Service call failed: %s"%e
-        self.slide_pub = rospy.Publisher('/geo_logic_planner/show_slide', ShowSlide, queue_size=10)
-        # initialize with the first action 
-        self.get_next_action()
-
+            sys.exit(1)
 
     def cb_start_stop(self, request):
         if request.command == StartStopEpisodeRequest.START:
-            pass
+            self.current_action_idx = -1
+            self.get_plan()
+
+            rospy.sleep(15)
+            self.get_next_action()
         elif request.command == StartStopEpisodeRequest.STOP:
-            pass
+            self.current_action = 'wait'
         return StartStopEpisodeResponse()
 
     def check_attached_pred(self, predictate_list, obj1, obj2, id_c=None):
@@ -75,7 +89,6 @@ class Server(object):
 
     def get_current_action(self):
         if self.current_action_idx < len(self.planned_actions):
-            self.slide_pub.publish(ShowSlide(self.current_action_idx))
             literals = self.planned_actions[self.current_action_idx].literals
             self.current_action = literals[0][9:]
             self.current_action_param = literals[2:]
@@ -83,7 +96,7 @@ class Server(object):
             str_state = json.dumps(statetodict(self.planned_actions[self.current_action_idx].agents_states[0]))
             self.current_action_param.append(str_state)
         else:
-            self.current_action = "finished"
+            self.current_action = 'wait'
             self.current_action_param = []
 
     def get_next_action(self):
@@ -101,16 +114,13 @@ class Server(object):
         in_hws_list = [o for o in obj_list if self.check_in_hws_pred(pred_list, o)]
 
         decision = Decision()
-        self.slide_pub.publish(ShowSlide(self.current_action_idx))
+        self.slide_pub.publish(ShowSlide(self.current_action_idx + 1))
 
         if self.current_action == "grasping":
             if not self.check_busy_pred(pred_list, "left"):
                 if not self.check_picked_pred(pred_list, self.current_action_param[0]) and not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
-                    if not self.check_at_home_pred(pred_list, "left"):
-                        decision.type = 'start_go_home_left'
-                    else:
-                        decision.parameters = self.current_action_param
-                        decision.type = 'start_pick' 
+                    decision.parameters = self.current_action_param
+                    decision.type = 'start_pick' 
                 else:
                     self.get_next_action()
                     decision.type = 'wait'
@@ -150,11 +160,8 @@ class Server(object):
                     decision.parameters = self.current_action_param
                     decision.type = 'start_give'
                 elif not self.check_in_hws_pred(pred_list, self.current_action_param[0]):
-                    if not self.check_at_home_pred(pred_list, "left"):
-                        decision.type = 'start_go_home_left'
-                    else:
-                        decision.parameters = [self.current_action_param[0]]
-                        decision.type = 'start_pick'
+                    decision.parameters = [self.current_action_param[0]]
+                    decision.type = 'start_pick'
                 else:
                     self.get_next_action()
                     decision.type = 'wait'
@@ -182,7 +189,7 @@ class Server(object):
                 self.get_next_action()
                 decision.type = 'wait'
 
-        elif self.current_action == "finished":
+        elif self.current_action == "wait":
             if not self.check_at_home_pred(pred_list, "right"):
                 if not self.check_busy_pred(pred_list, "right"):
                     decision.type = 'start_go_home_right'
