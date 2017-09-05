@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+import rospy
+import json
+import yaml
+from os.path import join
+import tf
+import rospkg
+
+
+class PoseRecorder(object):
+    def __init__(self):
+        self.tfl = tf.TransformListener()
+        rospy.sleep(1)
+        # initialize file parameters
+        rospack = rospkg.RosPack()
+        pkg_scene = rospack.get_path('thr_scenes')
+        self.pose_file = join(pkg_scene, 'config', 'shapeo', 'poses.json')
+        # open the file to write the pose
+        with open(self.pose_file) as datafile:
+            self.pose_data = json.load(datafile)
+        # open file to read the shapes list
+        self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        shape_file = join(self.pkg_expe, 'config', 'shapes.yaml')
+        with open(shape_file) as datafile:
+            self.shape_list = yaml.load(datafile)
+        self.laterality = ['right', 'left']
+        self.pkg_reba = rospack.get_path('reba_optim')
+
+    def do_again(self, task):
+        rospy.loginfo('Redo ' + task + '? y/N')
+        return (raw_input() == 'y')
+
+    def record_shapeo(self):
+        if not self.do_again('shapeo calibration recording'):
+            return 0
+        pose = []
+        while not pose and not rospy.is_shutdown():
+            rospy.loginfo('Recording transformation between shapeo and gripper')
+            rospy.loginfo('Press enter when ready')
+            raw_input()
+            try:
+                pose = self.tfl.lookupTransform('right_gripper', 'shapeo_calibr', rospy.Time(0))
+            except:
+                rospy.logerr('Cannot record transformation')
+                pose = []
+
+        if rospy.is_shutdown():
+            return 1
+        # write it into the yaml file
+        with open(join(self.pkg_expe, 'config', 'shapeo_calibration.yaml'), 'w') as outfile:
+            yaml.dump(pose, outfile, default_flow_style=True)
+        return 0
+
+    def _record_pose(self, shape, laterality, orientation):
+        # ask tf for the transformation
+        while not self.tfl.canTransform('/shapeo_calibr', '/human/tracker/' + laterality + '_hand',
+                                        rospy.Time(0)) and not rospy.is_shutdown():
+            rospy.logwarn('Frames not visible, move a little bit')
+            rospy.sleep(1)
+        if rospy.is_shutdown():
+            return 1
+        # record pose
+        pose = self.tfl.lookupTransform('/shapeo_calibr', '/human/tracker/' + laterality + '_hand',
+                                        rospy.Time(0))
+        # update pose value
+        self.pose_data['/shapeo']['carry'][laterality][shape][orientation] = pose
+        # rewrite file
+        with open(self.pose_file, 'w') as outfile:
+            json.dump(self.pose_data, outfile, sort_keys=True, indent=4)
+        return 0
+
+    def record_all_poses(self):
+        if not self.do_again('insertion poses recording'):
+            return 0
+        for l in self.laterality:
+            if rospy.is_shutdown():
+                break
+            for s in self.shape_list:
+                if rospy.is_shutdown():
+                    break
+                for o in range(4):
+                    if rospy.is_shutdown():
+                        break
+                    rospy.loginfo('Recording ' + l + ' ' + s + ' with orientation ' + str(o))
+                    rospy.loginfo('Press enter when ready')
+                    raw_input()
+                    # record corresponding pose
+                    self._record_pose(s, l, o)
+        return 0
+
+    def record_fixed_pose(self):
+        if not self.do_again('fixed pose recording'):
+            return 0
+        fixed_pose = []
+        while not fixed_pose and not rospy.is_shutdown():
+            rospy.loginfo('Recording fixed pose')
+            rospy.loginfo('Press enter when ready')
+            raw_input()
+            try:
+                fixed_pose = self.tfl.lookupTransform('base', 'shapeo_calibr', rospy.Time(0))
+            except:
+                rospy.logerr('Cannot record transformation')
+                fixed_pose = []
+
+        if rospy.is_shutdown():
+            return 1
+        # write it into the yaml file
+        with open(join(self.pkg_reba, 'config', 'fixed_pose.yaml'), 'w') as outfile:
+            yaml.dump(fixed_pose, outfile, default_flow_style=True)
+        return 0
+
+    def record_relative_pose(self):
+        if not self.do_again('relative pose recording'):
+            return 0
+        relative_pose = {}
+        laterality = ['right', 'left']
+        for l in laterality:
+            if rospy.is_shutdown():
+                break
+            pose = []
+            while not pose and not rospy.is_shutdown():
+                rospy.loginfo('Recording relative pose ' + l)
+                rospy.loginfo('Press enter when ready')
+                raw_input()
+                try:
+                    pose = self.tfl.lookupTransform('/human/tracker/base', '/human/tracker/' + l + '_hand',
+                                                    rospy.Time(0))
+                except:
+                    rospy.logerr('Cannot record transformation')
+                    pose = []
+            relative_pose[l] = pose
+
+        # write the json config file
+        with open(join(self.pkg_reba, 'config', 'relative_pose.json'), 'w') as outfile:
+            json.dump(relative_pose, outfile, sort_keys=True, indent=4)
+        return 0
+
+if __name__ == '__main__':
+    rospy.init_node('pose_recorder')
+    rec = PoseRecorder()
+    rec.record_shapeo()
+    rec.record_all_poses()
+    rec.record_fixed_pose()
+    rec.record_relative_pose()
+    rospy.loginfo('Recording is finished')

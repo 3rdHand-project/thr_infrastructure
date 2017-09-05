@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="scene" default="shapeo"/>
+    <arg name="use_kinect" default="false"/>
+    <arg name="use_vrep" default="false"/>
+    <arg name="gui" default="false"/>
+    <arg name="right_home_pose" default="$(find thr_xp_human_comfort)/config/shapeo_home_pose.json" /> <!-- Path to the home pose file-->
+
+    <param name="/vrep/use" type="bool" value="$(arg use_vrep)" />
+
+    <include file="$(find thr_interaction_controller)/launch/manual.launch" >
+    	<arg name="scene" value="$(arg scene)"/>
+    	<arg name="load_optitrack_config" value="False"/>
+        <arg name="display" value="action"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="right_home_pose" value="$(arg right_home_pose)" />
+    </include>
+
+    <include file="$(find human_moveit_config)/launch/human_tracker.launch">
+    	<arg name="use_kinect" value="$(arg use_kinect)"/>
+    </include>
+
+    <node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="screen" required="True"/>
+    <node name="vrep_ik_srv" pkg="vrep_ik_bridge" type="vrep_ik_srv" output="log" required="True"/>
+
+    <node name="shapeo_publisher" pkg="thr_xp_human_comfort" type="shapeo_publisher" output="screen" required="True"/>
+
+    <node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
+</launch>

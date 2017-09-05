@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="use_kinect" default="false"/>
+	<arg name="launch_tracker" default="false"/>
+
+	<include if="$(arg launch_tracker)" file="$(find human_moveit_config)/launch/human_tracker.launch">
+    	<arg name="use_kinect" value="$(arg use_kinect)"/>
+	</include>
+
+	<node name="reba_calculator" pkg="reba_optim" type="reba_calculator" output="screen" required="true"/>
+</launch>

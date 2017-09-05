@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="laterality" default="right"/>
+	<arg name="method" default="reba"/>
+	<arg name="shape" default="ellipse"/>
+	
+	<node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="screen" required="True"/>
+
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find thr_xp_human_comfort)/config/grid_vizualizer.rviz" required="true" />
+
+	<node name="grid_vizualizer" pkg="thr_xp_human_comfort" type="grid_vizualizer" output="screen" required="true" args="$(arg laterality) $(arg method) $(arg shape)"/>
+</launch>

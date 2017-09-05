@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find baxter_commander)/launch/commander.launch"/>
+
+	<include file="$(find human_moveit_config)/launch/human_tracker.launch">
+    	<arg name="use_kinect" value="False"/>
+	</include>
+
+	<node name="vrep_frames_publisher" pkg="vrep_ik_bridge" type="vrep_frames_publisher" output="log" required="True"/>
+    <node name="shapeo_publisher" pkg="thr_xp_human_comfort" type="shapeo_publisher" output="log" required="True"/>
+	<node name="get_carry_pose_srv" pkg="reba_optim" type="get_carry_pose_srv" output="screen" required="True"/>
+
+	<node name="grid_recorder" pkg="thr_xp_human_comfort" type="record_grid" output="screen" required="True"/>
+</launch>

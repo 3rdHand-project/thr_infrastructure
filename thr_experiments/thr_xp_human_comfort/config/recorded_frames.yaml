@@ -1,0 +1,38 @@
+# kinect frames
+- /kinect/human/head
+- /kinect/human/neck
+- /kinect/human/shoulder_center
+- /kinect/human/spine
+- /kinect/human/left_shoulder
+- /kinect/human/left_elbow
+- /kinect/human/left_wrist
+- /kinect/human/left_hand
+- /kinect/human/right_shoulder
+- /kinect/human/right_elbow
+- /kinect/human/right_wrist
+- /kinect/human/right_hand
+- /kinect/human/left_hip
+- /kinect/human/left_knee
+- /kinect/human/left_ankle
+- /kinect/human/left_foot
+- /kinect/human/right_hip
+- /kinect/human/right_knee
+- /kinect/human/right_ankle
+- /kinect/human/right_foot
+# optitrack frames
+- /opt/human/head
+- /opt/human/shoulder_center
+- /opt/human/left_elbow
+- /opt/human/left_hand
+- /opt/human/right_elbow
+- /opt/human/right_hand
+# human tracker frames
+- /human/tracker/base
+- /human/tracker/shoulder_center
+- /human/tracker/right_hand
+- /human/tracker/left_hand
+- /human/tracker/right_elbow
+- /human/tracker/left_elbow
+- /human/tracker/head
+# robot frames
+- /shapeo

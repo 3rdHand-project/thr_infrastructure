@@ -1,0 +1,26 @@
+[
+    [
+        "fixed", 
+        "relative"
+    ], 
+    [
+        "fixed", 
+        "reba"
+    ], 
+    [
+        "relative", 
+        "fixed"
+    ], 
+    [
+        "relative", 
+        "reba"
+    ], 
+    [
+        "reba", 
+        "fixed"
+    ], 
+    [
+        "reba", 
+        "relative"
+    ]
+]

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="launch_rviz" default="true"/>
+	<arg name="id_expe" default="248"/>
+	<arg name="filename" default="pose"/>
+
+	<node pkg="tf" type="static_transform_publisher" name="human_broadcaster" args="0. 0. 0. 0. 0. 0. 1. /base /human/base 100" />
+	
+	<include file="$(find human_moveit_config)/launch/demo.launch">
+		<arg name="launch_rviz" value="$(arg launch_rviz)"/>
+	</include>
+	
+	<rosparam command="load" file="$(find human_moveit_config)/tmp/human_length.json" param="human/lengths"/>
+
+	<node name="welding_pose_visualizer" pkg="thr_xp_human_comfort" type="welding_pose_visualizer" output="screen" required="True" args="$(arg id_expe) $(arg filename)"/>
+</launch>

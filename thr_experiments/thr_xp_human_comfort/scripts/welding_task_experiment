@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+import rospy
+import json
+from os.path import join
+from baxter_commander.persistence import dicttostate
+from reba_optim.reba_assess import RebaAssess
+import rospkg
+import pylab as plt
+from scipy.stats import sem
+from numpy import mean
+from subprocess import check_call
+from glob import glob
+from random import randint
+from numpy.random import uniform
+from numpy.linalg import norm
+from os.path import exists
+from os import makedirs
+import sys
+from numpy import arange
+from os.path import isdir
+from numpy import array
+
+
+class WeldingTask(object):
+    def __init__(self):
+        self.reba = RebaAssess()
+        self.conditions = [['fixed', 0], ['position_only', 3],
+                           ['orientation_only', 4], ['pose', 7]]
+        self.labels = ['Fixed', 'Position free', 'Orientation free', 'Pose free']
+
+        rospack = rospkg.RosPack()
+        pkg_dir = rospack.get_path('thr_xp_human_comfort')
+        self.save_directory = join(pkg_dir, 'results', 'welding_simulation')
+
+    def start_simulation(self, optimizer, method, condition, run_id, nb_points=10):
+        res_dir = join(self.save_directory, run_id)
+        if not exists(res_dir):
+            makedirs(res_dir)
+        savefile = join(res_dir, condition[0] + '.json')
+        command = ['roslaunch', 'reba_optim', 'optimize_task.launch']
+        args = ['task:=welding', 'object_dof:=' + str(condition[1]),
+                'number_of_points:=' + str(nb_points), 'savefile:=' + savefile,
+                'launch_rviz:=false', 'optimizer:=' + optimizer, 'wait:=false',
+                'assessment_method:=' + method, 'update_config:=false']
+        command += args
+        check_call(command)
+        return savefile
+
+    def plot_analysis(self, resdir):
+        resfiles = [join(resdir, c[0] + '.json') for c in self.conditions]
+        width = 0.25
+        ind = arange(4) + 1
+
+        fig = plt.figure(facecolor="white")
+        ax = fig.add_subplot(111)
+        plt.rcParams['font.size'] = 20
+
+        output_dict = {}
+
+        score = {}
+        score['reba'] = []
+        score['task'] = []
+        score['sight'] = []
+        # plot figure for each result file
+        for i in range(len(resfiles)):
+            with open(resfiles[i]) as data_file:
+                data = json.load(data_file)
+            score['reba'].append([])
+            for state in data['state']:
+                rs = dicttostate(state)
+                # assess the state
+                score['reba'][-1].append(self.reba.assess_posture(rs, method='neural_network'))
+            task_cost = 50 * array(data['trajectory_costs']['task'])
+            score['task'].append(task_cost.tolist())
+            sight_cost = 5 * array(data['trajectory_costs']['sight'])
+            score['sight'].append(sight_cost.tolist())
+
+            # save the score in dict
+            output_dict[self.conditions[i][0]] = {}
+            for key, value in score.iteritems():
+                output_dict[self.conditions[i][0]][key] = value[-1]
+                output_dict[self.conditions[i][0]]['mean_' + key] = mean(value[-1])
+                output_dict[self.conditions[i][0]]['sem_' + key] = sem(value[-1])
+
+        ax.bar(ind - 3 * width / 2, mean(score['task'], axis=1), width, color='#b2df8a', label='50 x task constraint')
+        (line, caps, _) = plt.errorbar(ind - width, mean(score['task'], axis=1), sem(score['task'], axis=1),
+                                       capsize=3, elinewidth=2, ecolor='k')
+
+        line.remove()
+        for cap in caps:
+            cap.set_color('k')
+            cap.set_markeredgewidth(3)
+
+        ax.bar(ind - width / 2, mean(score['sight'], axis=1), width, color='#fb9a99', label='5 x visibility')
+        (line, caps, _) = plt.errorbar(ind, mean(score['sight'], axis=1), sem(score['sight'], axis=1),
+                                       capsize=3, elinewidth=2, ecolor='k')
+
+        line.remove()
+        for cap in caps:
+            cap.set_color('k')
+            cap.set_markeredgewidth(3)
+
+        ax.bar(ind + width / 2, mean(score['reba'], axis=1), width, color='#a6cee3', label='REBA score')
+        (line, caps, _) = plt.errorbar(ind + width, mean(score['reba'], axis=1), sem(score['reba'], axis=1),
+                                       capsize=3, elinewidth=2, ecolor='k')
+
+        line.remove()
+        for cap in caps:
+            cap.set_color('k')
+            cap.set_markeredgewidth(3)
+
+        legend = ax.legend(loc='upper right')
+        # Set the fontsize
+        for label in legend.get_texts():
+            label.set_fontsize('small')
+
+        for label in legend.get_lines():
+            label.set_linewidth(1.5)  # the legend line width
+
+        ax.set_ylabel('Average REBA Score')
+        ax.set_ylim([0, 8])
+        plt.xticks(ind, self.labels)
+        ax.set_xlim([0, 5])
+
+        # save svg file
+        savefile = join(resdir, 'cost_details')
+        fig.set_size_inches(12.8, 10.24)
+        plt.savefig(savefile + '.svg', dpi=100, facecolor=fig.get_facecolor(), transparent=False)
+        plt.close()
+
+        # save file with reba scores
+        with open(savefile + '.json', 'w') as outfile:
+            json.dump(output_dict, outfile, sort_keys=True, indent=4)
+
+    def get_object_pose(self):
+        # pose = [[0.5, 0.0, 0.3], [0.0, 0.0, 0.0, 1.0]]
+        pose = [[0.4585648647500603,
+                 -0.06682060152351216,
+                 0.33430043960142325],
+                [0.7524200102372722,
+                 0.07388114592357427,
+                 -0.6443816613567191,
+                 0.08302244282772364]]
+        return pose
+
+    def run(self, optimizer, method, nb_eval=10, nb_points=10, reset=True):
+        # set laterality as default right-handed
+        rospy.set_param('/human/laterality', 'right')
+        i = 0
+        while i < nb_eval and not rospy.is_shutdown() and reset:
+            id_list = glob(self.save_directory)
+            id_simulation = randint(0, 9999)
+            # check the id is not already used
+            while id_simulation in id_list:
+                id_simulation = randint(0, 9999)
+            # set current run id
+            run_id = str(id_simulation)
+            # create random object pose
+            obj_pose = self.get_object_pose()
+            # set parameter
+            rospy.set_param('/object/pose', obj_pose)
+            # loop trough all conditions
+            resfiles = []
+            j = 0
+            while j < len(self.conditions) and not rospy.is_shutdown():
+                resfiles.append(self.start_simulation(optimizer, method,
+                                                      self.conditions[j],
+                                                      run_id, nb_points))
+                # check that the file was correctly created
+                if not exists(resfiles[-1]):
+                    rospy.logerr('Error with simulation ' + run_id + ' ' + self.conditions[j][0])
+                    rospy.logerr('Retry simulation')
+                    del resfiles[-1]
+                else:
+                    j += 1
+            # analyze results when all conditions are finished
+            if not rospy.is_shutdown():
+                resdir = join(self.save_directory, run_id)
+                self.plot_analysis(resdir)
+            i += 1
+        if not reset:
+            dir_list = [fn for fn in glob(join(self.save_directory, '*'))
+                        if isdir(fn)]
+            for directory in dir_list:
+                self.plot_analysis(directory)
+
+if __name__ == '__main__':
+    rospy.init_node('welding_analysis')
+    nb_eval = int(sys.argv[1])
+    nb_points = int(sys.argv[2])
+    optimizer = sys.argv[3]
+    method = sys.argv[4]
+
+    # cretate analyzer object
+    task = WeldingTask()
+    task.run(optimizer=optimizer, method=method, nb_eval=nb_eval,
+             nb_points=nb_points, reset=True)

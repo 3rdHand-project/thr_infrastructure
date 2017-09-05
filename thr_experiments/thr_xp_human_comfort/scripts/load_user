@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+import rospy
+import sys
+from os.path import join
+import rospkg
+from shutil import copy
+
+
+def run(id_user):
+    def apply_results(directory, files_list, folder=''):
+        for f in files_list:
+            src_folder = join(res_dir, folder)
+            src = join(src_folder, f)
+            dst = join(directory, f)
+            copy(src, dst)
+
+    rospack = rospkg.RosPack()
+    # collect all directories
+    pkg_human = rospack.get_path('human_moveit_config')
+    pkg_reba = rospack.get_path('reba_optim')
+    pkg_expe = rospack.get_path('thr_xp_human_comfort')
+    # collect all files related to the model
+    model_dir = join(pkg_human, 'tmp')
+    model_files = []
+    model_files.append('human.urdf')
+    model_files.append('human_length.json')
+    model_files.append('sensor_calibration.json')
+    # collect file of the expe configuration
+    config_dir = join(pkg_expe, 'tmp')
+    config_files = []
+    config_files.append('user_config.json')
+    # collect desired and reba poses
+    pose_dir = join(pkg_reba, 'tmp')
+    pose_files = []
+    pose_files.append('desired_pose.json')
+    pose_files.append('reba_pose.json')
+    # replace files from result
+    res_dir = join(pkg_expe, 'results', id_user)
+    # save the files
+    apply_results(model_dir, model_files, 'model')
+    apply_results(config_dir, config_files, '')
+    apply_results(pose_dir, pose_files, 'poses')
+    # save the urdf in its specific folder
+    urdf_dir = join(pkg_human, 'urdf')
+    urdf_file = []
+    urdf_file.append('human.urdf')
+    apply_results(urdf_dir, urdf_file, 'model')
+    return 0
+
+if __name__ == '__main__':
+    rospy.init_node('load_user')
+    id_user = sys.argv[1]
+    # set the user id on parameter
+    rospy.set_param('/human/id', id_user)
+    run(id_user)

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="record_head" default="True"/>
+    <arg name="record_path" default="$(find thr_xp_human_comfort)/results/"/>
+
+	<rosparam command="load" file="$(find thr_xp_human_comfort)/config/recorded_frames.yaml" param="recorder/frames"/>
+
+    <include file="$(find recorder)/launch/record.launch">
+        <arg name="load_frames" value="False"/>
+        <arg name="left" value="False"/>
+        <arg name="right" value="False"/>
+        <arg name="head" value="$(arg record_head)"/>
+        <arg name="path" value="$(arg record_path)"/>
+        <arg name="compression" value="True"/>
+    </include>
+</launch>

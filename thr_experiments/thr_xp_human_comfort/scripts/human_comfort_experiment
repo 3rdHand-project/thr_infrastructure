@@ -1,0 +1,471 @@
+#!/usr/bin/env python
+from subprocess import check_call
+from random import shuffle
+from random import randint
+from copy import deepcopy
+import itertools
+import rospkg
+import json
+import yaml
+import rospy
+import os
+import sys
+import actionlib
+from thr_infrastructure_msgs.msg import *
+from thr_infrastructure_msgs.srv import *
+from actionlib_msgs.msg import GoalStatus
+from recorder.srv import RecordingCommand
+from recorder.srv import RecordingCommandRequest
+from os.path import join
+from os.path import exists
+from shutil import copyfile
+from threading import Lock
+from os import system
+from shapeo_verification.msg import VerifyInsertionAction, VerifyInsertionGoal
+
+
+class ComfortExperiment(object):
+    def __init__(self, new_subject=True, recording=True, autonomous=False, forced_conditions=False):
+        rospack = rospkg.RosPack()
+        self.pkg_human = rospack.get_path('human_moveit_config')
+        self.pkg_reba = rospack.get_path('reba_optim')
+        self.pkg_expe = rospack.get_path('thr_xp_human_comfort')
+        self.new_subject = new_subject
+        self.recording = recording
+        self.autonomous = autonomous
+        self.forced_conditions = forced_conditions
+        self.shapes = ['slice', 'trapezium', 'hexagon', 'ellipse', 'star']
+        self.conditions = ['reba', 'fixed', 'relative']
+        self.config_file = join(self.pkg_expe, 'tmp', 'user_config.json')
+        self.current_perm_file = join(self.pkg_expe, 'config', 'current_perm.json')
+        self.controller = None
+        # create recorder service
+        self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
+        self.rate = rospy.Rate(20)
+        self.home_pose = join(self.pkg_expe, 'config', 'shapeo_home_pose.json')
+        if forced_conditions:
+            with open(join(self.pkg_expe, 'config', 'forced_conditions.yaml')) as datafile:
+                conditions = yaml.load(datafile)
+            rospy.set_param('/thr_experiments/human_comfort/conditions', conditions)
+
+    def start_launchfile(self, pkg, launchfile, args=[]):
+        command = ['roslaunch', pkg, launchfile + '.launch']
+        command += args
+        check_call(command)
+
+    def start_node(self, pkg, node, args=[]):
+        command = ['rosrun', pkg, node]
+        command += args
+        check_call(command)
+
+    def do_again(self, task):
+        if not self.new_subject:
+            rospy.loginfo('Redo ' + task + '? y/N')
+            return (raw_input() == 'y')
+        return True
+
+    def generate_model(self):
+        if self.do_again('model generation'):
+            rospy.loginfo('Generating Human model, press enter when subject is ready')
+            raw_input()
+            self.start_launchfile('human_moveit_config', 'generate_model')
+
+    def generate_calibration(self, type_calibr='full'):
+        if self.do_again('optitrack calibration'):
+            rospy.loginfo('Generating Human calibrations, press enter when subject is ready')
+            raw_input()
+            args = ['sensor:=opt', 'reset_pose:=True', 'parameter:=' + type_calibr]
+            self.start_launchfile('human_moveit_config', 'calibration', args)
+
+    def generate_reba_pose(self):
+        if self.do_again('reba calculation'):
+            rospy.loginfo('Optimize REBA pose')
+            self.start_launchfile('reba_optim', 'optimize_task')
+
+    def record_desired_pose(self):
+        if self.do_again('record desired pose'):
+            rospy.loginfo('Ready to record desired pose. Press enter when subject has made his choice')
+            raw_input()
+            self.start_launchfile('reba_optim', 'record_desired_pose')
+
+    def get_conditions(self):
+        # get the list of permutations
+        perm_list_file = join(self.pkg_expe, 'config', 'permutations.json')
+        with open(perm_list_file) as data_file:
+            perm_list = json.load(data_file)
+        # get the number of possible permutations
+        nb_permuts = len(perm_list)
+        # if the file does not exist get initial permutation
+        if not os.path.exists(self.current_perm_file):
+            # force the new user to be set to True
+            self.new_subject = True
+            # cretate the config directory
+            perm_dict = {}
+            perm_dict['id_permutation'] = 0
+            user_dict = {}
+        else:
+            # load the current permutation
+            with open(self.current_perm_file) as data_file:
+                perm_dict = json.load(data_file)
+            # check current user parameters
+            if not os.path.exists(self.config_file):
+                self.new_subject = True
+                user_dict = {}
+            else:
+                with open(self.config_file) as data_file:
+                    user_dict = json.load(data_file)
+            # get next permutation
+            if self.new_subject:
+                perm_dict['id_permutation'] = (perm_dict['id_permutation'] + 1) % nb_permuts
+        # get corresponding permutation values
+        if not self.forced_conditions:
+            permutation = perm_list[perm_dict['id_permutation']]
+            rospy.set_param('/thr_experiments/human_comfort/conditions', permutation)
+            user_dict['conditions'] = permutation
+        else:
+            user_dict['conditions'] = rospy.get_param('/thr_experiments/human_comfort/conditions')
+        # remove conditions that are not in the current experiment
+        for c in self.conditions:
+            if c not in user_dict['conditions']:
+                perm_dict.pop(c, None)
+        # return current config
+        return perm_dict, user_dict
+
+    def get_user_id(self):
+        id_file = join(self.pkg_human, 'tmp', 'id_list.json')
+        if not os.path.exists(id_file):
+            id_list = []
+        else:
+            with open(id_file) as data_file:
+                id_list = json.load(data_file)
+        # generate a random id between 0 and 9999
+        id_user = randint(0, 9999)
+        # check the id is not already used
+        while id_user in id_list:
+            id_user = randint(0, 9999)
+        # append to the list and write the file
+        id_list.append(id_user)
+        with open(id_file, 'w') as outfile:
+            json.dump(id_list, outfile)
+        # return a string for the id
+        return str(id_user)
+
+    def get_user_laterality(self):
+        if self.new_subject:
+            # ask subject laterality
+            lat = ''
+            while (lat != 'right' and lat != 'left') and not rospy.is_shutdown():
+                rospy.loginfo('What is the subject laterality?')
+                lat = raw_input()
+        return lat
+
+    def generate_experimental_conditions(self, nb_shapes=5):
+        # get both conditions
+        perm_dict, expe_dict = self.get_conditions()
+        # get the user laterality
+        if self.new_subject:
+            expe_dict['laterality'] = self.get_user_laterality()
+        # write the laterality on the parameter server
+        rospy.set_param('/human/laterality', expe_dict['laterality'])
+        # generate new id for the user
+        if self.new_subject:
+            expe_dict['user_id'] = self.get_user_id()
+        # keep the current user on parameter server
+        rospy.set_param('/human/id', expe_dict['user_id'])
+        rospy.logwarn('User ID is ' + expe_dict['user_id'] +
+                      '. Fill limesurvey field and press enter to continue.')
+        raw_input()
+        # write the shapes permutation
+        if self.do_again('shapes permutations'):
+            rospy.loginfo('Generating shapes permutations')
+            for c in expe_dict['conditions']:
+                # generate a random permutation of shapes
+                if nb_shapes == len(self.shapes):
+                    list_shape = deepcopy(self.shapes)
+                    shuffle(list_shape)
+                    expe_dict[c] = list_shape
+                else:
+                    perms = itertools.permutations(self.shapes, nb_shapes)
+                    id_perm = randint(0, len(perms))
+                    expe_dict[c] = perms[id_perm]
+            # erase current shpae as they were permuted
+            expe_dict['current_shape'] = ''
+        # write the current configuration
+        if self.do_again('current configuration'):
+            expe_dict['current_condition'] = ''
+            expe_dict['current_shape'] = ''
+        # write the config file
+        with open(self.config_file, 'w') as outfile:
+            json.dump(expe_dict, outfile, sort_keys=True, indent=4)
+        # write the config file
+        with open(self.current_perm_file, 'w') as outfile:
+            json.dump(perm_dict, outfile, sort_keys=True, indent=4)
+        # store it for reuse when running the experiment
+        self.experiment_parameters = expe_dict
+
+    def send_go_home(self):
+        decision = Decision(type='start_go_to_js_right', parameters=[self.home_pose])
+        # decision = Decision(type='start_go_to_js_right', parameters=['default'])
+        self.controller.run_decision(decision)
+
+    def announce_next_part(self, shape):
+        decision = Decision(type='display', parameters=['Prepare', shape, 'for insertion'])
+        self.controller.run_decision(decision)
+
+    def check_insertion(self, shape):
+        decision = Decision(type='display', parameters=['Insertion', 'is being', 'checked'])
+        self.controller.run_decision(decision)
+        verify_client = actionlib.SimpleActionClient('verify_insertion', VerifyInsertionAction)
+        verify_client.wait_for_server()
+        verify_goal = VerifyInsertionGoal()
+        verify_goal.shape = shape
+        verify_client.send_goal(verify_goal)
+        verify_client.wait_for_result()
+        inserted = verify_client.get_result().is_inserted
+        if inserted:
+            decision = Decision(type='display', parameters=['Insertion', 'correct', ''])
+            self.controller.run_decision(decision)
+        else:
+            decision = Decision(type='display', parameters=['Wrong', 'insertion', ''])
+            self.controller.run_decision(decision)
+        rospy.sleep(2)
+        return inserted
+
+    def run_condition(self, condition, shape):
+        rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
+        # ensure that the robot is ready to receive new command
+        self.controller.check_for_previous_decisions()
+        # announce next part
+        self.announce_next_part(shape)
+        # create a decision
+        dec_type = 'start_carry'
+        parameters = ['/shapeo', condition, shape]
+        decision = Decision(type=dec_type, parameters=parameters)
+        # loop till decision is successed
+        success = False
+        # send decision
+        while not success and not rospy.is_shutdown():
+            if self.autonomous:
+                rospy.sleep(1)
+                system('beep')
+            else:
+                rospy.loginfo('Press enter to execute the action.')
+                raw_input()
+            with self.controller.lock:
+                self.controller.action_finished = False
+                self.controller.action_success = False
+            # ensure that the robot is ready to receive new command
+            self.controller.check_for_previous_decisions()
+            # start recording
+            if self.recording:
+                self.recorder(RecordingCommandRequest(start=True,
+                                                      files_hierarchy=[rospy.get_param('/human/id'),
+                                                                       'records',
+                                                                       condition,
+                                                                       shape],
+                                                      allow_overwriting=True))
+            self.controller.run_decision(decision)
+            if self.autonomous:
+                rospy.loginfo('Waiting for action to finish.')
+                while not self.controller.action_finished and not rospy.is_shutdown():
+                    self.rate.sleep()
+                success = self.controller.action_success
+                if success:
+                    rospy.loginfo('Action finished succesfully.')
+                    system('beep')
+                else:
+                    rospy.loginfo('Problem with action. Retry.')
+                    system('beep')
+                    rospy.sleep(0.5)
+                    system('beep')
+                    rospy.sleep(2)
+                    system('beep')
+            else:
+                rospy.loginfo('Action complete? [Y]/n.')
+                res = raw_input()
+                success = (res != 'n')
+            # stop recording
+            if self.recording:
+                self.recorder(RecordingCommandRequest(start=False))
+            rospy.sleep(0.5)
+            # check the insertion
+            if success:
+                try:
+                    success = self.check_insertion(shape)
+                except:
+                    rospy.logerr('Problem with the insertion checking server')
+                    success = False
+            # ensure that the robot is ready to receive new command
+            self.controller.check_for_previous_decisions()
+            # go home
+            if self.autonomous:
+                rospy.sleep(4)
+            rospy.loginfo('Action finished going home.')
+            self.send_go_home()
+            if self.autonomous:
+                rospy.sleep(1)
+
+    def run_experiment(self):
+        if self.recording:
+            # wait for the recorder service in case it is not started
+            rospy.wait_for_service('recorder/triggering')
+        # get the conditions
+        conditions = self.experiment_parameters['conditions']
+        # get starting index from previous condition in case of crash
+        prev_cond = self.experiment_parameters['current_condition']
+        if prev_cond:
+            cond_index = conditions.index(prev_cond)
+        else:
+            cond_index = 0
+        # get shape index from previous shape in case of crash
+        prev_shape = self.experiment_parameters['current_shape']
+        # loop through all conditions
+        while cond_index < len(conditions) and not rospy.is_shutdown():
+            condition = conditions[cond_index]
+            self.experiment_parameters['current_condition'] = condition
+            shapes = self.experiment_parameters[condition]
+            if prev_shape:
+                shape_index = shapes.index(prev_shape)
+            else:
+                shape_index = 0
+            # loop through all the shapes
+            while shape_index < len(shapes) and not rospy.is_shutdown():
+                shape = shapes[shape_index]
+                # write the config file
+                self.experiment_parameters['current_shape'] = shape
+                with open(self.config_file, 'w') as outfile:
+                    json.dump(self.experiment_parameters, outfile, sort_keys=True, indent=4)
+                # run the condition with the parameters
+                self.run_condition(condition, shape)
+                # increment index
+                shape_index += 1
+            # erase previous condition
+            prev_shape = ''
+            # increment index
+            cond_index += 1
+            rospy.logwarn('Starting new condition. Please empty the shapeo and press enter to start.')
+            raw_input()
+
+    def collect_results(self):
+        def save_results(directory, files_list, folder=''):
+            for f in files_list:
+                src = join(directory, f)
+                dst_folder = join(save_directory, folder)
+                if not exists(dst_folder):
+                    os.makedirs(dst_folder)
+                dst = join(dst_folder, f)
+                copyfile(src, dst)
+        # user results are stored under his id
+        save_directory = join(self.pkg_expe, 'results', 'user_study',
+                              rospy.get_param('/human/id'))
+        # collect all files related to the model
+        model_dir = join(self.pkg_human, 'tmp')
+        model_files = []
+        model_files.append('human.urdf')
+        model_files.append('human_length.json')
+        model_files.append('sensor_calibration.json')
+        # collect file of the expe configuration
+        config_dir = join(self.pkg_expe, 'tmp')
+        config_files = []
+        config_files.append('user_config.json')
+        # collect desired and reba poses
+        pose_dir = join(self.pkg_reba, 'tmp')
+        pose_files = []
+        laterality = rospy.get_param('/human/laterality')
+        pose_files.append(laterality + '_reba_receive_pose.json')
+        # save the files
+        save_results(model_dir, model_files, 'model')
+        save_results(config_dir, config_files, '')
+        save_results(pose_dir, pose_files, 'poses')
+
+    def sync_results(self):
+        self.start_node('thr_xp_human_comfort', 'sync_results')
+
+
+class InteractionController(object):
+    def __init__(self):
+        self.running = True
+        self.current_scene = None
+        self.previous_decision = Decision(type='wait')
+        self.scene_before_decision = None
+        self.run_decision_name = '/thr/run_decision'
+        self.scene_state_service = '/thr/scene_state'
+        self.rate = rospy.Rate(20)
+        self.lock = Lock()
+        self.logs = []
+        # Initiating topics ands links to services/actions
+        self.run_decision_client = actionlib.SimpleActionClient(self.run_decision_name, RunDecisionAction)
+        rospy.loginfo("Waiting action client {}...".format(self.run_decision_name))
+        self.run_decision_client.wait_for_server()
+        self.services = [self.scene_state_service]
+        for service in self.services:
+            rospy.loginfo("Waiting service {}...".format(service))
+            rospy.wait_for_service(service)
+        rospy.Subscriber('/thr/action_history', ActionHistoryEvent, self.cb_action_event_received)
+        self.start_or_stop_episode(True)  # Start a new (and unique) episode
+
+    def cb_action_event_received(self, event):
+        if event.type == ActionHistoryEvent.FINISHED_SUCCESS and event.action.type == 'carry':
+            with self.lock:
+                self.action_finished = True
+                self.action_success = True
+        elif event.type == ActionHistoryEvent.FINISHED_FAILURE and event.action.type == 'carry':
+            with self.lock:
+                self.action_finished = True
+                self.action_success = False
+
+    def start_or_stop_episode(self, start=True):
+        for node in ['scene_state_manager', 'action_server']:
+            url = '/thr/{}/start_stop'.format(node)
+            rospy.wait_for_service(url)
+            rospy.ServiceProxy(url, StartStopEpisode).call(StartStopEpisodeRequest(
+                command=StartStopEpisodeRequest.START if start else
+                StartStopEpisodeRequest.STOP))
+
+    def run_decision(self, decision):
+        self.run_decision_client.cancel_all_goals()
+        self.scene_before_decision = self.current_scene
+        goal = RunDecisionGoal()
+        goal.decision = decision
+        self.run_decision_client.send_goal(goal)
+        self.previous_decision = decision
+        rospy.loginfo("You're asking to run decision {}({})".format(decision.type, ', '.join(decision.parameters)))
+
+    def check_for_previous_decisions(self):
+        while (self.run_decision_client.get_state() in [GoalStatus.PENDING, GoalStatus.ACTIVE] and
+               not rospy.is_shutdown()):
+            self.rate.sleep()
+
+
+if __name__ == '__main__':
+    rospy.init_node('human_comfort_experiment')
+    new_subject = (sys.argv[1] == 'True')
+    recording = (sys.argv[2] == 'True')
+    autonomous = (sys.argv[3] == 'True')
+    forced_conditions = (sys.argv[5] == 'True')
+    expe = ComfortExperiment(new_subject, recording, autonomous, forced_conditions)
+    # start expe configuration
+    expe.generate_experimental_conditions()
+    # start model generation
+    expe.generate_model()
+    # optimize the reba pose of the user
+    expe.generate_reba_pose()
+    # start the optitrack calibration
+    expe.generate_calibration(type_calibr=sys.argv[4])
+    # ask the user for his desired pose
+    # expe.record_desired_pose()
+    # tell the user to start the launchfile to run the experiment
+    rospy.logwarn('Configuration finished. Please launch global launchfile and press enter to start the experiment')
+    raw_input()
+    # create interaction controller
+    ic = InteractionController()
+    expe.controller = ic
+    # put the robot in home configuration
+    expe.send_go_home()
+    # run the experiment
+    expe.run_experiment()
+    # collect the results before to close
+    if recording:
+        expe.collect_results()
+        # synchronize result folder
+        expe.sync_results()
