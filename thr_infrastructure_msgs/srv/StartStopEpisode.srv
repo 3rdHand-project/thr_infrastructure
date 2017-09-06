@@ -1,6 +1,7 @@
 # Service to start or stop an episode
-uint8 START = 0
-uint8 STOP = 1
+uint8 SETUP = 0
+uint8 START = 1
+uint8 STOP = 2
 
 uint8 command  # START or STOP
 ---

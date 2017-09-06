@@ -12,6 +12,7 @@ import json
 import sys
 import rospkg
 from os.path import join
+from recorder.srv import RecordingCommand, RecordingCommandRequest
 
 # To test this server, try: "rosservice call [/thr/learner or /thr/predictor] <TAB>" and complete the pre-filled request message before <ENTER>
 
@@ -28,6 +29,7 @@ class Server(object):
         self.current_action_idx = -1
         rospack = rospkg.RosPack()
         self.results_path = join(rospack.get_path('geo_logic_planner'), 'results')
+        self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
 
     def get_plan(self):
         if rospy.has_param('/geo_logic_planner/exp_type'):
@@ -43,13 +45,13 @@ class Server(object):
             sys.exit(1)
 
     def cb_start_stop(self, request):
-        if request.command == StartStopEpisodeRequest.START:
+        if request.command == StartStopEpisodeRequest.SETUP:
             self.current_action_idx = -1
             self.get_plan()
-
-            rospy.sleep(15)
+        if request.command == StartStopEpisodeRequest.START:
             self.get_next_action()
         elif request.command == StartStopEpisodeRequest.STOP:
+            self.recorder(RecordingCommandRequest(start=False))
             self.current_action = 'wait'
         return StartStopEpisodeResponse()
 
@@ -96,6 +98,7 @@ class Server(object):
             str_state = json.dumps(statetodict(self.planned_actions[self.current_action_idx].agents_states[0]))
             self.current_action_param.append(str_state)
         else:
+            self.recorder(RecordingCommandRequest(start=False))
             self.current_action = 'wait'
             self.current_action_param = []
 
