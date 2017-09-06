@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+import rospy
+from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest
+import sys
+from recorder.srv import RecordingCommand, RecordingCommandRequest
+
+class PlannerExperiment(object):
+    def __init__(self):
+        self.pkg_exp = rospack.get_path('thr_xp_human_comfort')
+        start_stop_service_name = '/thr/learner_predictor/start_stop'
+        rospy.wait_for_service(start_stop_service_name)
+        self.start_srv = rospy.ServiceProxy(start_stop_service_name, StartStopEpisode)
+        rospy.wait_for_service('recorder/triggering')
+        self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
+
+    def get_user_id(self, new_user):
+        tmp_dir = join(self.pkg_exp, 'tmp', 'planner_exp')
+        id_file = join(tmp_dir, 'id_list.json')
+        if not os.path.isdir(join(self.pkg_human, 'tmp')):
+            os.makedirs(tmp_dir)
+        if not os.path.exists(id_file):
+            id_list = []
+        else:
+            with open(id_file) as data_file:
+                id_list = json.load(data_file)
+        if not id_list or new_user:
+            # generate a random id between 0 and 9999
+            self.id_user = randint(0, 9999)
+            # check the id is not already used
+            while self.id_user in id_list:
+                self.id_user = randint(0, 9999)
+            # append to the list and write the file
+            id_list.append(self.id_user)
+            with open(id_file, 'w') as outfile:
+                json.dump(id_list, outfile)
+        else:
+            self.id_user = id_list[-1]
+
+    def start_recording(self, condition):
+        self.recorder(RecordingCommandRequest(start=True,
+                                              files_hierarchy=['planner_exp',
+                                                               self.id_user,
+                                                               condition],
+                                              allow_overwriting=True))
+
+    def run(self, new_user):
+        self.get_user_id(new_user)
+        conditions = ['no_reba', 'reba']
+        for c in conditions:
+            rospy.set_param('/geo_logic_planner/exp_type', c)
+            res = start_srv(0)
+            rospy.logwarn("Experiment ready to start for condition " + c)
+            rospy.loginfo("Refresh all displays and press enter when ready")
+            raw_input()
+            rospy.sleep(5)
+
+            rospy.loginfo("Experiment starting")
+            self.start_recording(c)
+            res = start_srv(1)
+
+            rospy.loginfo("Press enter when experiment is finished")
+            raw_input()
+            res = start_srv(2)
+
+
+if __name__ == '__main__':
+    rospy.init_node('baxter_experiment')    
+    exp = PlannerExperiment()
+    exp.run()
