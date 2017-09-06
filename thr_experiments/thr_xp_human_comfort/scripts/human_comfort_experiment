@@ -21,7 +21,7 @@ from os.path import exists
 from shutil import copyfile
 from threading import Lock
 from os import system
-from shapeo_verification.msg import VerifyInsertionAction, VerifyInsertionGoal
+# from shapeo_verification.msg import VerifyInsertionAction, VerifyInsertionGoal
 
 
 class ComfortExperiment(object):
@@ -132,7 +132,10 @@ class ComfortExperiment(object):
         return perm_dict, user_dict
 
     def get_user_id(self):
-        id_file = join(self.pkg_human, 'tmp', 'id_list.json')
+        tmp_dir = join(self.pkg_human, 'tmp')
+        id_file = join(tmp_dir, 'id_list.json')
+        if not os.path.isdir(join(self.pkg_human, 'tmp')):
+            os.makedirs(tmp_dir)
         if not os.path.exists(id_file):
             id_list = []
         else:
@@ -212,24 +215,24 @@ class ComfortExperiment(object):
         decision = Decision(type='display', parameters=['Prepare', shape, 'for insertion'])
         self.controller.run_decision(decision)
 
-    def check_insertion(self, shape):
-        decision = Decision(type='display', parameters=['Insertion', 'is being', 'checked'])
-        self.controller.run_decision(decision)
-        verify_client = actionlib.SimpleActionClient('verify_insertion', VerifyInsertionAction)
-        verify_client.wait_for_server()
-        verify_goal = VerifyInsertionGoal()
-        verify_goal.shape = shape
-        verify_client.send_goal(verify_goal)
-        verify_client.wait_for_result()
-        inserted = verify_client.get_result().is_inserted
-        if inserted:
-            decision = Decision(type='display', parameters=['Insertion', 'correct', ''])
-            self.controller.run_decision(decision)
-        else:
-            decision = Decision(type='display', parameters=['Wrong', 'insertion', ''])
-            self.controller.run_decision(decision)
-        rospy.sleep(2)
-        return inserted
+    # def check_insertion(self, shape):
+    #     decision = Decision(type='display', parameters=['Insertion', 'is being', 'checked'])
+    #     self.controller.run_decision(decision)
+    #     verify_client = actionlib.SimpleActionClient('verify_insertion', VerifyInsertionAction)
+    #     verify_client.wait_for_server()
+    #     verify_goal = VerifyInsertionGoal()
+    #     verify_goal.shape = shape
+    #     verify_client.send_goal(verify_goal)
+    #     verify_client.wait_for_result()
+    #     inserted = verify_client.get_result().is_inserted
+    #     if inserted:
+    #         decision = Decision(type='display', parameters=['Insertion', 'correct', ''])
+    #         self.controller.run_decision(decision)
+    #     else:
+    #         decision = Decision(type='display', parameters=['Wrong', 'insertion', ''])
+    #         self.controller.run_decision(decision)
+    #     rospy.sleep(2)
+    #     return inserted
 
     def run_condition(self, condition, shape):
         rospy.loginfo('condition: ' + condition + ', shape: ' + shape)
@@ -291,7 +294,8 @@ class ComfortExperiment(object):
             # check the insertion
             if success:
                 try:
-                    success = self.check_insertion(shape)
+                    # success = self.check_insertion(shape)
+                    success = True
                 except:
                     rospy.logerr('Problem with the insertion checking server')
                     success = False
