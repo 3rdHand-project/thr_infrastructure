@@ -1,3 +1,6 @@
 /thr_action_server/src/thr_decisions/*.pyc
 /thr_action_server/src/thr_actions/*.pyc
 /thr_experiments/thr_xp_human_comfort/notebooks/.ipynb_checkpoints/analyse_posture-checkpoint.ipynb
+/thr_experiments/thr_xp_human_comfort/notebooks/.ipynb_checkpoints/extract_planner_exp_results-checkpoint.ipynb
+/thr_experiments/thr_xp_human_comfort/results
+/thr_experiments/thr_xp_human_comfort/tmp/
