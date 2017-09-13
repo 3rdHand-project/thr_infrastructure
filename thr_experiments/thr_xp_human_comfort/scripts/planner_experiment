@@ -1,22 +1,54 @@
 #!/usr/bin/env python
 import rospy
+import rospkg
 from thr_infrastructure_msgs.srv import StartStopEpisode, StartStopEpisodeRequest
 import sys
 from recorder.srv import RecordingCommand, RecordingCommandRequest
+from subprocess import check_call
+from random import randint
+from os.path import join
+from os.path import exists
+from os import makedirs
+import os
+import json
+
 
 class PlannerExperiment(object):
-    def __init__(self):
+    def __init__(self, new_user=False, recording=False):
+        rospack = rospkg.RosPack()
         self.pkg_exp = rospack.get_path('thr_xp_human_comfort')
-        start_stop_service_name = '/thr/learner_predictor/start_stop'
-        rospy.wait_for_service(start_stop_service_name)
-        self.start_srv = rospy.ServiceProxy(start_stop_service_name, StartStopEpisode)
-        rospy.wait_for_service('recorder/triggering')
+        rospy.set_param('/recorder/path', join(self.pkg_exp, 'results'))
+
+        self.new_user = new_user
+        self.recording = recording
+        self.get_user_id(new_user)
+
+        self.start_stop_service_name = '/thr/learner_predictor/start_stop'
+        self.start_srv = rospy.ServiceProxy(self.start_stop_service_name, StartStopEpisode)
         self.recorder = rospy.ServiceProxy('recorder/triggering', RecordingCommand)
+
+    def start_launchfile(self, pkg, launchfile, args=[]):
+        command = ['roslaunch', pkg, launchfile + '.launch']
+        command += args
+        check_call(command)
+
+    def do_again(self, task):
+        rospy.loginfo('Redo ' + task + '? y/N')
+        return (raw_input() == 'y')
+
+    def generate_calibration(self, type_calibr='full'):
+        if self.do_again('optitrack calibration'):
+            rospy.loginfo('Generating Human calibrations, press enter when subject is ready')
+            raw_input()
+            args = ['sensor:=opt', 'reset_pose:=True', 'parameter:=' + type_calibr]
+            self.start_launchfile('human_moveit_config', 'calibration', args)
+            return True
+        return False
 
     def get_user_id(self, new_user):
         tmp_dir = join(self.pkg_exp, 'tmp', 'planner_exp')
         id_file = join(tmp_dir, 'id_list.json')
-        if not os.path.isdir(join(self.pkg_human, 'tmp')):
+        if not os.path.isdir(tmp_dir):
             os.makedirs(tmp_dir)
         if not os.path.exists(id_file):
             id_list = []
@@ -39,31 +71,50 @@ class PlannerExperiment(object):
     def start_recording(self, condition):
         self.recorder(RecordingCommandRequest(start=True,
                                               files_hierarchy=['planner_exp',
-                                                               self.id_user,
+                                                               str(self.id_user),
                                                                condition],
                                               allow_overwriting=True))
 
-    def run(self, new_user):
-        self.get_user_id(new_user)
-        conditions = ['no_reba', 'reba']
+    def run(self):
+        rospy.wait_for_service(self.start_stop_service_name)
+        if self.recording:
+            rospy.wait_for_service('recorder/triggering')
+        conditions = ['no_reba', 'reba']
         for c in conditions:
             rospy.set_param('/geo_logic_planner/exp_type', c)
-            res = start_srv(0)
+            res = self.start_srv(0)
             rospy.logwarn("Experiment ready to start for condition " + c)
             rospy.loginfo("Refresh all displays and press enter when ready")
             raw_input()
             rospy.sleep(5)
 
             rospy.loginfo("Experiment starting")
-            self.start_recording(c)
-            res = start_srv(1)
+            if self.recording:
+                self.start_recording(c)
+            res = self.start_srv(1)
 
             rospy.loginfo("Press enter when experiment is finished")
             raw_input()
-            res = start_srv(2)
+            res = self.start_srv(2)
 
 
 if __name__ == '__main__':
-    rospy.init_node('baxter_experiment')    
-    exp = PlannerExperiment()
+    rospy.init_node('baxter_experiment')
+    new_subject = (sys.argv[1] == 'True')
+    recording = (sys.argv[2] == 'True')
+    exp = PlannerExperiment(new_subject, recording)
+
+    rospy.logwarn("Starting experiment for subject " + str(exp.id_user))
+    # start the optitrack calibration
+    calibrated = False
+    while not calibrated:
+        if exp.generate_calibration():
+            rospy.loginfo("Calibration finished. Is it correct? y/N")
+            calibrated = (raw_input() == 'y')
+        else:
+            calibrated = True
+    # start the human tracker
+    rospy.loginfo("Start the human tracker in a separate terminal. Press enter when ready.")
+    raw_input()
+    # start the experiment
     exp.run()

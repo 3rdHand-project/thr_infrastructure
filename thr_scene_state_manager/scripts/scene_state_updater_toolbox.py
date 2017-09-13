@@ -100,7 +100,7 @@ class ToolBoxSceneStateUpdater(object):
             relative = transformations.multiply_transform(transformations.inverse_transform(tf_master), tf_slave)
             constraint = self.poses["tableC"]['placement'][0][obj]
             cart_dist = abs(constraint[0][1] - relative[0][1])
-            is_placed = (cart_dist < .03 and relative[0][0] > 0 and relative[0][2] < 0)
+            is_placed = (cart_dist < .03 and relative[0][0] < 0 and relative[0][2] > 0)
             return is_placed
         return False
 

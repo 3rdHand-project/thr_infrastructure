@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <launch>
 	<arg name="new_user" default="True" />
+	<arg name="recording" default="True" />
 	
-	<include file="$(find recorder)/launch/record.launch" />
+	<include file="$(find thr_interaction_controller)/launch/geo_logic_predictor.launch" />
 
 	<node name="planner_experiment" pkg="thr_xp_human_comfort" type="planner_experiment" output="screen" required="true" args="$(arg new_user) $(arg recording)"/>
 </launch>

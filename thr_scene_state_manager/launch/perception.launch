@@ -5,14 +5,14 @@
     <arg name="scene"/>
 
     <param name="/thr/scene" value="$(arg scene)"/> 
-    <rosparam command="load" file="$(find thr_scenes)/config/$(arg scene)/tracked_objects.yaml" param="optitrack/objects"/>
+    <rosparam command="load" file="$(find human_moveit_config)/config/tracked_objects.yaml" param="optitrack/objects"/>
     <rosparam command="load" file="$(find thr_scenes)/config/scenes.yaml" param="/thr/objects"/>
     
-    <include file="$(find optitrack_publisher)/launch/optitrack_publisher.launch" >
-      <arg name="ip" value="$(arg ip)"/> <!-- IP of the VRPN server (like Motive or Arena) -->
-      <arg name="port" value="$(arg port)"/> <!-- Port of the VRPN server (default 3883) -->
+    <!-- <include file="$(find optitrack_publisher)/launch/optitrack_publisher.launch" >
+      <arg name="ip" value="$(arg ip)"/> 
+      <arg name="port" value="$(arg port)"/>
       <arg name="output" value="log"/>
-    </include>
+    </include> -->
     
     <node pkg="thr_scene_state_manager" name="concurrent_scene_state_manager" type="concurrent_scene_state_manager.py" output="screen"/>
     <node pkg="thr_scene_state_manager" name="scene_state_updater_$(arg scene)" type="scene_state_updater_$(arg scene).py" output="screen"/>

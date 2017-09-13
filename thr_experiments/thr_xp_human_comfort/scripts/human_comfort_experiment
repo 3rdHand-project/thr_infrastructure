@@ -18,6 +18,7 @@ from recorder.srv import RecordingCommand
 from recorder.srv import RecordingCommandRequest
 from os.path import join
 from os.path import exists
+from os.path import makedirs
 from shutil import copyfile
 from threading import Lock
 from os import system
