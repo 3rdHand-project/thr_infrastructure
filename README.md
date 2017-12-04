@@ -200,9 +200,9 @@ The action server works with 2 types of actions: **Non-blocking** [`Decision`](t
 
 ## New objects/scene?
 Scenes are selected thanks to the argument `scene:=toolbox`, all accepted scenes are described within the `thr_scenes` package.
-Adding new objects in a new scene will require to add/change:
- *  The file [`config/scenes.yaml`](thr_scenes/config/scenes.yaml) which describes the available scenes
- *  [`config/<new_scene>/tracked_objects.yaml`](thr_scenes/config/toolbox/tracked_objects.yaml) which describes which objects must be tracked by optitrack, if needed
+Adding or changing objects in a new scene will require to add/change the files hereunder. Fortunately there is [a notebook](https://github.com/3rdHand-project/thr_infrastructure/tree/master/thr_scenes/notebooks) to give you a hand.
+ *  The file [`config/scenes.yaml`](thr_scenes/config/scenes.yaml) which describes the available scenes and objects
+ *  [`config/<new_scene>/tracked_objects.yaml`](thr_scenes/config/toolbox/tracked_objects.yaml) which describes which objects must be tracked by optitrack. The number of objects here must be higher or equal to the number in `config/scenes.yaml`
  *  The file [`config/<new_scene>/poses.json`](thr_scenes/config/toolbox/poses.json) which describes, for its objects, a bunch of hardcoded poses relative to that object:
     * If the action has 2 objects involved there's a *master* and a *slave* object: the master is the host for the slave
     * In `poses.json`, hierarchy is *master first, then slave*, so if a table is a host for an object, browse the tree be looking the table, then its slave object
