@@ -17,7 +17,7 @@
         "inter_goal_sleep": 0.4
     },
     "place": {
-        "sphere_radius": 0.015,
+        "sphere_radius": 0.15,
         "inter_goal_sleep": 0.4
     },
     "pick": {
